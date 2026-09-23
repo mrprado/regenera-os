@@ -2,13 +2,15 @@
 
 **Status: draft for review (Sep 23, 2026). Not started.** Building begins only after (a) Prado approves this plan and (b) phase 0 is signed off (SPEC rule: no phase starts before the previous one passes). Planning ahead lets the account setup for phase 0 and the review of this plan run in parallel.
 
+**Updated Sep 23, 2026:** Apollo.io's layout in Regenera's brand, with the Apollo API as the prospect data layer (SPEC sections 11 and 12). This adds the Apollo integration (section 2d), lists and saved searches, and Apollo-style People and Companies screens.
+
 **Goal (SPEC section 15).** The first 25 real prospects are researched, scored and emailed from the app, and the tracker's history is visible in the OS. The acceptance criteria are in SPEC section 26, phase 1, and are restated at the end of this plan.
 
 ## Decisions needed from Prado before building
 
 | # | Decision | Why it matters | Default if unanswered |
 |---|---|---|---|
-| 1 | **Enrichment provider (paid).** Approve Apollo now, or defer | The spec says to verify every address before sending. Without enrichment, phase 1 can still send manually to addresses you supply, but they show as "unverified" | Build the provider interface and a manual "verified by Prado" flag; add the Apollo adapter only when approved |
+| 1 | **Apollo plan and monthly credit budget.** Apollo is decided; which plan (Basic, Professional or Organization) and how many credits per month the OS may spend | The plan sets API rate limits. Enrichment spends credits (1 per email found, never mobile numbers by default) | Search works on any plan with API access. Enrichment stays off until `APOLLO_API_KEY` and `APOLLO_MONTHLY_CREDIT_BUDGET` are set |
 | 2 | **Changes to the live regenera.bio site.** The site must post inquiries and referrals to the OS and expose a token-protected export | This touches production. It is small (two webhook calls, one export route) and goes in its own commit in `regenera-development-office` for you to publish | Written, tested locally and committed on a branch there, **not published** until you say so |
 | 3 | **Anthropic API monthly budget** | Research stops enqueueing when month-to-date `ai_runs` cost reaches the cap | US$50/month (enough for about 150 full dossiers at the estimates below) |
 | 4 | **Test inbox for acceptance** | "A manual email sends to a test inbox and threads correctly" needs a real inbox you control | An address you name. Staging sends are restricted to it |
@@ -34,6 +36,11 @@ These are the tables from SPEC section 9 that phase 1 needs. Every mandate-scope
 | `suppression` | Checked inside the send claim | Unsubscribes arrive in phase 2, but the check exists from the first send |
 | `prompts`, `ai_runs` | AI contracts (SPEC section 22) | Prompts are versioned and never edited in place. Runs log tokens, cache tokens, web searches, cost and latency |
 | `merges` | Dedupe audit | Keeps the before-state of every merge |
+| `lists`, `list_members` | Apollo-style lists | Static lists of people or companies; mandate-scoped |
+| `saved_views` | Saved searches | A filter set + columns + sort for People or Companies (local or Apollo tab), with a shareable URL |
+| `provider_calls` | Apollo usage ledger | Endpoint, credits consumed, rate-limit headers, status. Feeds the monthly credit budget |
+
+Contacts and organizations also get `apollo_person_id` / `apollo_org_id` (unique) plus Apollo firmographics (headcount, industry, founded year, HQ), so re-finding a person never creates a duplicate.
 
 Seed: segments, the phase 1 prompts (section 4 below) and the default scoring weights 40/35/25.
 
@@ -64,13 +71,24 @@ Seed: segments, the phase 1 prompts (section 4 below) and the default scoring we
   - Referral → referral + deal, with conflict check.
 - **Site side** (separate commit in `regenera-development-office`, decision #2): after the existing D1 insert in `/api/inquiries` and the referral routes, `waitUntil` a signed POST to the OS. Add a token-protected export route. The site keeps working exactly as today if the OS is unreachable.
 
-### 2c. CSV import (Prospecting screen)
+### 2c. CSV import (People and Companies screens)
 
 - Upload goes to R2, then an `imports` row, then chunked `process-import` jobs (200 rows each, to stay inside the tick budget).
 - Column mapping UI with auto-detect for common headers (Sales Navigator and Apollo export shapes). A preview shows the first 10 rows before commit.
-- Per row: normalize, dedupe (below), create or update, then set lead_state `sourced`, which enqueues research by tier.
+- per row: normalize, dedupe (section 2e), create or update, then set lead_state `sourced`, which enqueues research by tier.
 
-### 2d. Dedupe (`lib/dedupe/`)
+### 2d. Apollo integration (`lib/apollo/`)
+
+- **Client:** `fetch` against `https://api.apollo.io/api/v1`, with the key in the `x-api-key` header, server-side only. Every response is validated with zod. Timeouts and 3 retries with backoff; a 429 honors `Retry-After` and pauses Apollo jobs for the window.
+- **People API Search** (`POST mixed_people/api_search`, 0 credits) powers the **Find in Apollo** tab. Filters map from the segment config and the filter panel: titles, seniorities, person and organization locations, organization domains, keywords. Results show in the table without being saved (Apollo returns no emails here). Paging is 100 per page, and Apollo caps results at 50,000, so the UI nudges you to add filters.
+- **Organization Search** (0 credits) powers the Companies "Find in Apollo" tab.
+- **Save** turns a selected result into an OS contact and organization (dedupe on the Apollo ID first, then the section 2e rules), with source `apollo` and lead_state `sourced`. That queues research.
+- **People Enrichment** (`POST people/match`, bulk up to 10 per call) runs only on save or an explicit "Enrich" bulk action. `reveal_phone_number` is never set, so no 8-credit mobile charges. `match_confidence` is stored, and email status comes from Apollo's verification.
+- **Organization Enrichment** fills sector, headcount, HQ and domain for companies.
+- **Credit guard:** before any enrichment the OS estimates credits (1 per person), checks the month-to-date spend in `provider_calls` against `APOLLO_MONTHLY_CREDIT_BUDGET`, and shows the estimate in the confirm dialog. Over budget blocks the action with a clear message. Settings → Apollo shows credits used this month and the rate limits reported by Apollo's usage endpoint.
+- **Not used:** Apollo sequences, mailboxes, CRM contacts and deals. Outreach runs through the OS and Gmail so the approval gates, house style and compliance rules (SPEC sections 8 and 13) apply to every send.
+
+### 2e. Dedupe (`lib/dedupe/`)
 
 - **Contacts:** match on lower(email), then canonical LinkedIn URL (strip query, trailing slash, locale subdomain), then normalized name + organization.
 - **Organizations:** match on registrable domain (strip `www.`, ignore free-mail domains such as gmail.com), then normalized name (lowercase, strip legal suffixes like S.A. de C.V., Ltd, GmbH, LLC, and punctuation).
@@ -131,18 +149,27 @@ The spec requires sources for every claim. Citations can't be combined with stru
 - Light (mass tier): about US$0.05–0.10.
 - The acceptance run of 10 test organizations: about US$3–4.
 
-## 6. Screens
+## 6. Screens (Apollo layout, Regenera brand, SPEC section 11)
+
+The phase 0 shell already has the white header, fern sidebar and nav groups. Phase 1 builds the shared table system and the screens on top of it.
+
+**Shared table system** (`components/data-table/`):
+- A filter panel on the left and an active-filter chip row above the table.
+- A checkbox column with select-all-matching, and a bulk action bar.
+- Customizable and reorderable columns (saved per view), sortable headers and URL-synced state.
+- Compact 36px rows, a keyboard row cursor, a side panel preview on row click, and empty and loading states.
+- Server-side filtering and pagination against D1 (indexes added for every filterable column).
+- Tables collapse to cards on phones.
 
 | Screen | Phase 1 content |
 |---|---|
-| **Today** | Live counts: new site inquiries and referrals, leads awaiting research, dossiers ready to review, flagged conflicts, open deals without a next action, and dead jobs |
-| **Prospecting** | CSV import with mapping and preview, the import history, research status per lead, and score-ranked lists filterable by segment, tier, sector and region |
-| **Pipeline** | Kanban by deal stage with drag to move (a server action, audited) and filters for mandate, path, segment, sector, region and engagement. It also has the fee calculator carried over from the tracker |
-| **Record** (org and contact) | Dossier with sources and confidence, mandate parameters or readiness position, "why" lines for score and match, a trigger list with "add trigger", the touch timeline, deals, "Paste LinkedIn profile", "Re-run research", and the compose box |
-| **Compose** (on Record) | A manual email from the primary mailbox. Creating it = Prado approving it (a `messages` row, `approved`). The send is idempotent on `messages.id` with suppression checked in the same D1 batch, and it records `gmail_thread_id`/`Message-ID`. Replies in the same thread are handled in phase 2 |
-
-- **Design:** CSS Modules on the phase 0 tokens. The Record page uses the split layout (dossier panel beside the timeline).
-- **Mobile:** Today and Record are readable on a phone.
+| **Home** | Live counts: new site inquiries and referrals, leads awaiting research, dossiers ready to review, flagged conflicts, open deals without a next action, Apollo credits left this month, and dead jobs |
+| **People** | Tabs: **Saved** (OS contacts) and **Find in Apollo**. Filters: segment, sector, region, title, seniority, tier, score range, trigger, email status, list, source, stage. **Bulk actions:** save, enrich (credit estimate first), research, score, add to list, export CSV. Import CSV (column mapping, preview) |
+| **Companies** | The same pattern for organizations, including mandate parameters (ticket, stage, structure), headcount and sector, with a people-at-company count |
+| **Lists** | Static lists and saved searches with live counts. Open a list to see the table filtered to it |
+| **Person / Company record** | **Header:** name, title, org, score chip, tier, email status and quick actions (email, add to list, research, enrich). **Tabs:** Overview (dossier with sources and confidence, "why" lines), Activity (timeline including tracker history), Deals, Emails, Notes. **Right panel:** readiness position or mandate parameters. It also has "Paste LinkedIn profile" and a compose box |
+| **Deals** | Kanban (default) and table views by stage. Drag to move (a server action, audited). Filters for mandate, path, segment, sector, region and engagement. The fee calculator carried over from the tracker |
+| **Compose** (record, and side panel) | A manual email from the primary mailbox. Creating it = Prado approving it (a `messages` row, `approved`). The send is idempotent on `messages.id` with suppression checked in the same D1 batch, and it records `gmail_thread_id`/`Message-ID` |
 
 ## 7. Send safety (phase 1)
 
@@ -165,7 +192,8 @@ The spec requires sources for every claim. Citations can't be combined with stru
 ## 9. Tests (added to `npm run ci`)
 
 - **Unit:**
-  - dedupe normalization and matching, with the tricky cases (legal suffixes, free-mail domains, LinkedIn URL variants, accents)
+  - Apollo response parsing (recorded fixtures), filter-to-query mapping and the credit estimator
+- dedupe normalization and matching, with the tricky cases (legal suffixes, free-mail domains, LinkedIn URL variants, accents)
   - scoring math and tiers
   - screening quadrant
   - the tracker mapping for every stage, engagement and fee
@@ -181,6 +209,8 @@ The spec requires sources for every claim. Citations can't be combined with stru
   - suppression inside the claim
   - investment-mandate compose refused
   - the non-production recipient guard
+  - the Apollo credit budget blocks enrichment when reached, and a 429 pauses Apollo jobs (Apollo calls mocked, no credits spent)
+  - saving the same Apollo person twice creates one contact
 - **AI contract tests:** 5 recorded fixtures per prompt.
 - **End to end (Playwright, staging):** import, research (recorded), record, compose, send to the test inbox, then a stage move.
 
@@ -189,6 +219,8 @@ The spec requires sources for every claim. Citations can't be combined with stru
 - An import of a 100-row CSV dedupes correctly against seeded duplicates.
 - The tracker export imports with every stage, engagement and fee mapped, and the counts match.
 - A test site inquiry of each kind arrives via webhook and creates the right records. An invalid signature is rejected.
+- An Apollo search returns results in the Find in Apollo tab without spending credits. Saving and enriching 5 people creates 5 deduped contacts and records the credits in `provider_calls`.
+- Filters, saved views, lists and bulk actions work on People and Companies.
 - Dossiers are generated with sources for 10 test organizations.
 - Scores and tiers are assigned with rationales.
 - The Record and Pipeline screens work.

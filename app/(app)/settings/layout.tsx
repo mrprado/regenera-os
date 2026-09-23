@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/page";
 import { requireOsUser } from "@/lib/auth";
 import styles from "./settings.module.css";
 
@@ -6,7 +7,7 @@ export default async function SettingsLayout({ children }: Readonly<{ children: 
   await requireOsUser("/settings");
   return (
     <section>
-      <p className="eyebrow">Settings</p>
+      <PageHeader title="Settings" />
       <nav className={styles.tabs} aria-label="Settings sections">
         <Link href="/settings/connections">Connections</Link>
         <Link href="/settings/jobs">Jobs</Link>

@@ -1,17 +1,22 @@
+import { House } from "lucide-react";
+import { EmptyState, PageHeader } from "@/components/page";
 import { requireOsUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Today" };
+export const metadata = { title: "Home" };
 
-export default async function TodayPage() {
-  await requireOsUser("/today");
+export default async function HomePage() {
+  const user = await requireOsUser("/today");
+  const first = user.displayName.split(/[\s@]/)[0];
   return (
-    <section>
-      <p className="eyebrow">Today</p>
-      <h1>What needs you now.</h1>
-      <p style={{ color: "var(--text-muted)", maxWidth: 620 }}>
-        Queue, replies, meetings, overdue actions and new triggers arrive here from phase 1.
-      </p>
-    </section>
+    <>
+      <PageHeader title={`Good to see you, ${first}`} />
+      <EmptyState
+        icon={House}
+        title="Your day starts here"
+        body="Approvals waiting, replies to handle, meetings with briefs, overdue next actions, new site inquiries and the top new triggers."
+        phase={1}
+      />
+    </>
   );
 }

@@ -74,7 +74,7 @@ Regenera OS **replaces the Pipeline Tracker** now running at `regenera.bio/track
 | Email (system) | **Resend** from `mail.regenera.bio`, as the site already uses | Daily digest, alerts, notifications |
 | Calendar / files | Google Calendar and Drive APIs | Meetings to deals, proposals to records |
 | Booking | Existing Google appointment schedule `https://calendar.app.google/FDK2Hz8rs3VpZSRp7` (the site's "Schedule a scoping call" link) | Link in interested-reply drafts |
-| Enrichment | Apollo or equivalent | Emails, firmographics |
+| Prospect data | **Apollo.io API** (decided Sep 23, 2026) | Net-new people and company search (0 credits), person and company enrichment with email verification (credits), job postings and news for triggers |
 | Web research | Anthropic API web search tool + page fetch | Contact and firm websites, news triggers |
 | LinkedIn | Assisted queue (phase 1), optional Unipile API later | Connection notes, messages |
 
@@ -187,7 +187,7 @@ The trigger engine is the core of Regenera OS. It scans news, filings, tenders, 
 
 ## 5. Prospecting funnels and key searches
 
-Nine funnels feed the CRM. Each is tagged as the lead's source so conversion can be compared. The source values extend the tracker's lead sources (`website`, `organic`, `linkedin`, `google`, `referral`, `email`, `event`, `other`).
+Ten funnels feed the CRM. Each is tagged as the lead's source so conversion can be compared. The source values extend the tracker's lead sources (`website`, `organic`, `linkedin`, `google`, `referral`, `email`, `event`, `other`).
 
 | Funnel | Source value | What it captures | Tier |
 |---|---|---|---|
@@ -200,6 +200,11 @@ Nine funnels feed the CRM. Each is tagged as the lead's source so conversion can
 | Warm network | `organic` | Introductions through existing relationships | Manual, introduction asks |
 | Inbound | `website` | regenera.bio inquiry form (capital mandate and project diagnostic) | Auto-qualified |
 | Event | `event` | Speaker, exhibitor and attendee lists | Mass before, targeted after |
+| Apollo search | `apollo` | Net-new people and companies found with the segment's saved Apollo filters (titles, seniority, locations, industries, headcount) | Mass by default; targeted when a trigger or mandate match exists |
+
+### Apollo saved searches
+
+Each segment in section 3 stores an Apollo filter set: `person_titles[]`, `person_seniorities[]`, `person_locations[]`, `organization_locations[]`, industry keywords and headcount ranges. These mirror the Sales Navigator Booleans below. Running one is free, because search uses 0 credits. Only people Prado saves or bulk-selects are enriched, which is what spends credits.
 
 ### Sales Navigator (Boolean on title)
 
@@ -449,31 +454,51 @@ Daily send caps per domain ramp up during warm-up, and pause automatically if th
 
 ## 11. UX and UI
 
-The app is built for a 15-minute daily session: open, clear the queue, handle replies, check the pipeline. Everything else runs underneath.
+**Apollo.io's layout and working patterns, in Regenera's brand** (decided Sep 23, 2026). The OS works like Apollo: a searchable database of people and companies, dense tables with a filter panel, saved lists, bulk actions and sequences. It looks like regenera.bio: the same tokens, typeface and gold wordmark. The daily rhythm is still about 15 minutes (section 16). The density is there for the weekly prospecting and list-building sessions.
+
+### Shell
+
+- **Header:** white, full width, 1px `--line` rule and the gold REGENERA wordmark, the same treatment as the regenera.bio header. Global search sits here (phase 1), with the account menu on the right.
+- **Sidebar:** fern (`--fern`), fixed on the left under the header. Nav groups use Apollo's structure in Regenera's vocabulary:
+  - **Home**
+  - **Prospect:** People, Companies, Lists, Triggers
+  - **Engage:** Sequences, Approval queue, Tasks, Inbox
+  - **Win:** Deals, Partners, Reports
+  - **Settings** at the foot
+
+  The active item gets a pollen marker.
+- **Responsive:** icon rail between 821 and 1100px. On a phone, a white header with a menu button and the fern menu dropping down beneath it.
 
 ### Screens
 
-| Screen | Purpose | Key elements |
+| Screen | Apollo equivalent | Key elements |
 |---|---|---|
-| Today | Home: what needs Prado now | Queue count, replies to handle, meetings today with briefs, overdue actions, top 5 new triggers, new inquiries and referrals |
-| Trigger feed | Opportunity radar | Trigger cards with decision read, organization, suggested contacts; pursue, watch, dismiss |
-| Prospecting | Build pipeline | Import (CSV, paste, Sales Navigator), saved searches, research status, score-ranked lists by segment |
-| Approval queue | Review outreach | Draft cards grouped by tier; approve, edit, regenerate angle, skip; bulk approve for mass tier |
-| Inbox | Handle replies | Threads with classification, dossier sidebar, suggested reply, one-click send |
-| Pipeline | Deal flow | Kanban by stage; filters for mandate, path, segment, sector, region, engagement; drag to move; success-fee and partner-fee calculator carried over from the tracker |
-| Record | Organization or contact | Dossier, readiness or mandate parameters, trigger history, touch timeline, deals, partners, Drive docs, compose box |
-| Partners | Partner Network and channel map | Partners by type, tier and geography; referrals and their status; linked projects; co-bid history |
-| Reports | Performance | Funnel conversion, reply and meeting rates by segment and angle, forecast, weekly summary |
-| Settings | Configuration | Mandates, segments, sequences, offers, scoring weights, send caps, connections, prompts, dead jobs and "Run jobs now" |
+| Home | Home | Queue count, replies to handle, meetings today with briefs, overdue actions and tasks, top 5 new triggers, new site inquiries and referrals |
+| People | People search | **Two tabs:** "Saved" (people in the OS) and "Find in Apollo" (net-new via the Apollo API, section 12). Filter panel on the left: segment, sector, region, title, seniority, tier, score, trigger, email status, list, stage. The table has a checkbox column, customizable columns and sorting. **Bulk actions:** save, add to list, enrich, research, score, add to sequence, export. Clicking a row opens a side panel preview. Import CSV |
+| Companies | Companies search | The same pattern for organizations: sector, region, segment, mandate parameters (ticket, stage, structure), trigger history, headcount, and people at the company |
+| Lists | Lists | Static lists and saved searches (a filter set with its own count), usable as sequence audiences |
+| Triggers | (no Apollo equivalent) | Trigger cards with decision read, organization and suggested contacts. Pursue, watch or dismiss |
+| Sequences | Sequences | Steps, audiences, stats per step and per angle, pause and resume. Mass and targeted defaults from section 8 |
+| Approval queue | (Apollo manual email tasks) | Draft cards grouped by tier. Approve, edit, regenerate angle or skip. Bulk approve for the mass tier only |
+| Tasks | Tasks | LinkedIn steps, calls, follow-ups and next actions due, filterable by type and due date |
+| Inbox | Emails / Conversations | Threads with classification, dossier sidebar, suggested reply and one-click send |
+| Deals | Deals | Kanban and table views by stage. Filters for mandate, path, segment, sector, region and engagement. Drag to move. Success-fee and partner-fee calculator carried over from the tracker |
+| Person / Company record | Contact / Account page | **Header:** name, title, org, score chip, tier and quick actions (email, sequence, add to list, research). **Tabs:** Overview (dossier with sources), Activity (timeline), Deals, Emails, Notes. Readiness or mandate parameters in a right-hand panel |
+| Partners | (no Apollo equivalent) | Partner Network by tier and geography, referrals and their status, linked projects, co-bid history |
+| Reports | Analytics | Funnel conversion, reply and meeting rates by segment, angle and tier, forecast and weekly summary |
+| Settings | Settings | Mandates, segments, sequences, offers, scoring weights, mailboxes and send caps, Apollo connection and credit budget, prompts, members, jobs |
 
 ### Interaction patterns
 
-- **Ask the OS.** A command bar (Cmd+K, built on `cmdk`, which the site already depends on) where Prado types plain requests. Examples: "show family offices in LatAm with a trigger this month", or "draft a follow-up to everyone who opened the energy developers sequence." Claude executes against the database.
-- **Keyboard-first queue.** A approves, E edits, R regenerates, S skips, and the arrow keys move between drafts.
-- **Split view.** Every draft and reply shows the dossier beside it, so review never needs a second tab.
-- **Explainability.** Every score, match and classification shows a "why" line with sources.
-- **Mobile triage.** Today, Inbox and Queue work fully on a phone. Configuration is desktop only.
-- **Undo window.** A 60-second unsend on every approved message before it leaves the queue.
+- **Filter panel + table** is the core pattern: filters on the left, results in the table and an active-filter chip row above it. Every filter state has a shareable URL and can be saved as a list.
+- **Row selection + bulk action bar:** select rows, and a bar appears with the actions allowed for that selection. Investment-mandate records never offer mass or sequence actions.
+- **Side panel preview:** a row opens a right-hand panel (dossier summary, score "why", last touches, quick actions) without leaving the table. "Open" goes to the full record.
+- **Credit awareness:** any action that spends Apollo credits (enrich, reveal) shows the estimated credits before it runs, and the month's remaining budget.
+- **Ask the OS:** a command bar (Cmd+K, built on `cmdk`) where Prado types plain requests. Examples: "show family offices in LatAm with a trigger this month", or "draft a follow-up to everyone who opened the energy developers sequence." Claude executes against the database.
+- **Keyboard-first queue:** A approves, E edits, R regenerates, S skips, and the arrow keys move between drafts.
+- **Explainability:** every score, match and classification shows a "why" line with sources.
+- **Mobile triage:** Home, Inbox, Approval queue and records work fully on a phone. Tables collapse to cards. Configuration is desktop only.
+- **Undo window:** a 60-second unsend on every approved message before it leaves the queue.
 
 **Design system (live regenera.bio).** The app copies the tokens from `regenera-development-office/app/globals.css`:
 
@@ -490,7 +515,7 @@ The app is built for a 15-minute daily session: open, clear the queue, handle re
 | `--line` | `rgba(13,18,14,.18)` | Rules and borders |
 
 - **Typography.** Helvetica Neue (fallback Helvetica, Arial), body 16px/1.45. Headings are weight 600 with tight tracking (`-.055em` for display sizes). Eyebrows are 12px uppercase, `.16em` tracking, weight 700, in `--leaf`.
-- **Components.** Pill buttons (`border-radius: 999px`), with pollen fill for primary actions. 1px `--line` rules instead of heavy shadows. Arrow-link pattern (`↗︎`) for navigation.
+- **Components.** Pill buttons (`border-radius: 999px`), with pollen fill for primary actions. 1px `--line` rules instead of heavy shadows. Icons are `lucide-react`, the set the site already uses. Tables are compact (36px rows, 13px text) for Apollo-level density; page and record chrome keeps the site's spacing.
 - **Styling approach.** Global tokens in `styles/tokens.css`, plus CSS Modules per screen, the same pattern as `app/tracker/tracker.module.css` and `app/partners/partners.module.css` on the site.
 - **Dark mode.** The site is light only. The OS adds a dark theme derived from `--fern` as the ground, with `--wax` text and `--pollen` accents. It is defined as tokens only and never hard-coded.
 - **Colour meaning.** Trigger urgency and deal stages get consistent colour tokens that never rely on colour alone.
@@ -509,7 +534,7 @@ Gmail, Calendar and Drive connect through one Google login. LinkedIn is the only
 | LinkedIn (phase 1) | Assisted queue + browser extension | App drafts the note and opens the profile; Prado sends; extension logs the action back |
 | LinkedIn (optional, later) | Unipile or similar API | Full automation; account restriction risk accepted knowingly, low daily limits |
 | Sales Navigator | CSV export import | Weekly saved-search exports feed prospecting and people triggers |
-| Enrichment | Apollo or equivalent API | Email finding and verification before any send |
+| Apollo.io | REST API (`api.apollo.io/api/v1`), API key in `x-api-key` header, server-side only | **People API Search** (`mixed_people/api_search`) and **Organization Search** cost 0 credits but return no emails or phones. **People Enrichment** (`people/match`, bulk up to 10 per call) costs 1 credit when an email or demographics are found, plus 8 if a mobile number is revealed; 0 when nothing is found. Organization enrichment and job postings feed firmographics and triggers. Rate limits are per team, per endpoint and depend on the plan (e.g. Basic/Professional: 200 search requests per minute, 6,000 per hour; enrichment 1,000 per minute). The OS enforces a monthly credit budget, never reveals mobile numbers by default, and stores each Apollo ID for dedupe. Apollo's own sequences, CRM records and mailboxes are not used |
 | Web research | Anthropic API web search tool + page fetch | Dossiers and trigger scan |
 | Anthropic API | Server-side only | Research, scoring, drafting, triage, reports; prompts versioned in the database |
 | regenera.bio site | Signed webhook from the site + authenticated reconcile endpoint | Inquiries (`/api/inquiries`) and Partner Network referrals flow into the OS (section 24) |
@@ -772,8 +797,9 @@ regenera-os/
   docs/SPEC.md, docs/plans/
   app/
     (auth)/                 (403 "not on the allowlist" page; sign-in itself is platform-owned)
-    (app)/today, triggers, prospecting, queue, inbox, pipeline,
-          orgs/[id], contacts/[id], partners, reports, settings
+    (app)/today, people, companies, lists, triggers, sequences, queue,
+          tasks, inbox, deals, people/[id], companies/[id], partners,
+          reports, settings
     api/
       webhooks/site, webhooks/extension, unsubscribe/[token]
       oauth/google/callback
@@ -812,7 +838,8 @@ Prado sets up the accounts, and Claude Code wires the variables. Secrets live in
 | `ANTHROPIC_API_KEY` | Secret | Anthropic Console | AI jobs |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Secret | Google Cloud, internal OAuth app | OAuth, Gmail, Calendar, Drive |
 | `TOKEN_ENCRYPTION_KEY` | Secret | Generated, 32 bytes | Encrypting stored OAuth tokens |
-| `ENRICHMENT_API_KEY` | Secret | Apollo or equivalent | Import processor |
+| `APOLLO_API_KEY` | Secret | Apollo.io (Settings → Integrations → API) | People and company search, enrichment |
+| `APOLLO_MONTHLY_CREDIT_BUDGET` | Var | Prado | Blocks enrichment when reached |
 | `RESEND_API_KEY`, `RESEND_FROM` | Secret | Resend (existing account used by the site) | Digest and alerts |
 | `NOTIFY_EMAIL` | Var | `alanprado@regenera.bio` (the site's current notification address) | Digest recipient |
 | `SITE_WEBHOOK_SECRET` | Secret | Generated, shared with the site | regenera.bio webhooks |
@@ -832,7 +859,7 @@ Prado sets up the accounts, and Claude Code wires the variables. Secrets live in
 - MFA turned on for the ChatGPT account(s) that sign in to the OS
 - Scheduler host (section 23): a free Cloudflare account with one cron Worker, or GitHub Actions
 - Anthropic API account with a monthly spend limit
-- Enrichment provider
+- Apollo.io paid plan with API access (plan decides rate limits and credits)
 - Google Postmaster Tools for both domains
 
 ## 21. Enumerations and schema rules
@@ -858,7 +885,7 @@ D1 is SQLite, so closed sets are enforced three ways: Drizzle `text(..., { enum 
 | ticket_band | under_1m, 1m_5m, 5m_25m, 25m_100m, over_100m |
 | audience_type | investor, fund, family_office, institution, strategic_partner, developer, sponsor, landowner, operator |
 | role_band | founder_ceo, managing_partner_principal, director, vp_head, analyst_associate, other |
-| lead_source | website, organic, linkedin, google, referral, email, event, trigger, mandate_match, procurement, compliance, channel, other |
+| lead_source | website, organic, linkedin, google, referral, email, event, trigger, mandate_match, procurement, compliance, channel, apollo, other |
 | tier | targeted, mass, watchlist, parked |
 | trigger_type | people, capital, regulatory, crisis, project, procurement, commitment, event |
 | trigger_status | new, pursued, watched, dismissed |
@@ -1111,7 +1138,7 @@ Claude Code must not assume answers to these. The scheduler host and the tracker
 | Tracker cut-over | `/tracker` is the live pipeline today | Import and retire, or keep both in sync for a period | Import in phase 1, read-only after sign-off |
 | Post-industrial land segment (was Mining) | Mining removed from all client-facing content | Keep renamed, or drop | Seed as disabled until confirmed |
 | Email platform for outreach | `alanprado@regenera.bio` receives notifications; booking uses a Google appointment schedule, which points to Google Workspace; system mail goes via Resend | Gmail API (Workspace), or another provider | Workspace, after Prado confirms |
-| Enrichment provider | none | Apollo, or an equivalent with a verification step | Apollo |
+| Apollo plan and credit budget | Apollo chosen as the data layer (Sep 23, 2026) | Basic, Professional or Organization; monthly credits to spend through the OS | Ask Prado; enrichment disabled until a key and budget are set |
 | Outreach languages at launch | Site locales: English, Spanish, French, Chinese (Field Notes English only) | Any subset; Portuguese would be new | English and Spanish |
 | LinkedIn automation in phase 4 | none | Stay assisted, or adopt an API with account restriction risk | Stay assisted |
 | Entry offers and pricing | Site states no prices | Prado to finalize per segment (section 3) | Drafts, pricing hidden |

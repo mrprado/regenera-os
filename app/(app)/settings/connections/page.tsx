@@ -33,7 +33,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <h1>Connections</h1>
+      <h2>Connections</h2>
       {notice && <p className={`${styles.notice} ${notice[1] ? styles.noticeOk : ""}`}>{notice[0]}</p>}
       {!configured && (
         <p className={styles.notice}>Google OAuth is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY and APP_BASE_URL (docs/ENV.md).</p>

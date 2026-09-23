@@ -1,24 +1,19 @@
 import Link from "next/link";
+import { Menu } from "lucide-react";
 import { chatGPTSignOutPath } from "@/lib/chatgpt-auth";
 import { requireOsUser } from "@/lib/auth";
 import { schedulerStatus } from "@/lib/settings";
+import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
 
 export const dynamic = "force-dynamic";
 
-const NAV = [
-  ["/today", "Today"],
-  ["/triggers", "Triggers"],
-  ["/prospecting", "Prospecting"],
-  ["/queue", "Queue"],
-  ["/inbox", "Inbox"],
-  ["/pipeline", "Pipeline"],
-  ["/partners", "Partners"],
-  ["/reports", "Reports"],
-  ["/settings", "Settings"],
-] as const;
+function initials(name: string): string {
+  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
+  return (parts[0]?.[0] ?? "?").concat(parts[1]?.[0] ?? "").toUpperCase();
+}
 
-
+// White header like regenera.bio, fern sidebar for navigation (Apollo layout, Regenera brand).
 // Pages also call requireOsUser themselves: a layout guard alone does not cover every request path.
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireOsUser("/today");
@@ -27,21 +22,33 @@ export default async function AppLayout({ children }: Readonly<{ children: React
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link href="/today" className={styles.brand}>REGENERA <span>OS</span></Link>
-        <nav className={styles.nav}>
-          {NAV.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}
-        </nav>
-        <div className={styles.user}>
-          <span>{user.displayName}</span>
-          <a href={chatGPTSignOutPath("/")} target="_top">Sign out</a>
+        {/* Phone: the sidebar becomes a disclosure menu under the header, no client JS needed. */}
+        <details className={styles.mobileMenu}>
+          <summary aria-label="Menu"><Menu size={20} aria-hidden /></summary>
+          <div className={styles.mobilePanel}><SidebarNav /></div>
+        </details>
+        <Link href="/today" className={styles.brand}>REGENERA <b>OS</b></Link>
+        <div className={styles.headerSlot} />
+        <div className={styles.account}>
+          <span className={styles.accountName} title={user.email}>{user.displayName}</span>
+          <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>
+          <a href={chatGPTSignOutPath("/")} target="_top" className={styles.signOut}>Sign out</a>
         </div>
       </header>
-      {schedulerStale && (
-        <div className={styles.banner} role="status">
-          Automation is paused: the job scheduler has not run {lastTick ? "in the last 30 minutes" : "yet"}. <Link href="/settings/jobs">Check jobs</Link>
-        </div>
-      )}
-      <main className={styles.main}>{children}</main>
+
+      <aside className={styles.sidebar}>
+        <SidebarNav />
+      </aside>
+
+      <div className={styles.content}>
+        {schedulerStale && (
+          <div className={styles.banner} role="status">
+            Automation is paused: the job scheduler has not run {lastTick ? "in the last 30 minutes" : "yet"}.
+            <Link href="/settings/jobs">Check jobs</Link>
+          </div>
+        )}
+        <main className={styles.main}>{children}</main>
+      </div>
     </div>
   );
 }

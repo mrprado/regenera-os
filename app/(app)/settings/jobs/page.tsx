@@ -23,7 +23,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <h1>Jobs</h1>
+      <h2>Jobs</h2>
       {params.ran && <p className={`${styles.notice} ${styles.noticeOk}`}>Ran one tick.</p>}
       {stale && <p className={styles.notice}>The scheduler has not called /api/jobs/tick in the last 30 minutes. Last tick: {ago(lastTick)}.</p>}
 
@@ -44,7 +44,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         </article>
       </div>
 
-      <h2>Schedules</h2>
+      <h3>Schedules</h3>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead><tr><th>Job</th><th>Cadence (ET)</th><th>Next run</th><th>Last run</th></tr></thead>
@@ -57,7 +57,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         </table>
       </div>
 
-      <h2>Recent jobs</h2>
+      <h3>Recent jobs</h3>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead><tr><th>Type</th><th>Status</th><th>Attempts</th><th>Updated</th><th>Last error</th><th /></tr></thead>

@@ -73,6 +73,7 @@ export const LEAD_SOURCES = {
   procurement: "Procurement",
   compliance: "Compliance-driven",
   channel: "Channel recruitment",
+  apollo: "Apollo search",
   other: "Other",
 } as const;
 

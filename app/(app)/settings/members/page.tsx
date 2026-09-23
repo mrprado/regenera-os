@@ -15,7 +15,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <h1>Members</h1>
+      <h2>Members</h2>
       <p style={{ color: "var(--text-muted)", maxWidth: 640 }}>
         Access is by mandate. A member signs in with Sign in with ChatGPT using this email and only sees that mandate&apos;s records.
       </p>

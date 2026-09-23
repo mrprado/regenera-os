@@ -18,6 +18,8 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   classification and extraction
 - Google APIs: Gmail, Calendar, Drive (OAuth, internal Workspace app)
 - Resend (mail.regenera.bio) for system notifications only
+- Apollo.io API is the prospect data layer: search (0 credits) and enrichment
+  (credits, budget-guarded). Apollo sequences, mailboxes and CRM are not used
 - zod for all external and AI payloads
 
 ## Commands
@@ -52,7 +54,10 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
 - Design tokens from styles/tokens.css only (copied from
   regenera-development-office/app/globals.css): paper, ink, fern, leaf, reed,
   water, wax, pollen, line. Font: Helvetica Neue. Pollen is for primary
-  actions and urgency only. CSS Modules per screen. No Tailwind.
+  actions and urgency only. CSS Modules per screen. No Tailwind. Icons: lucide-react.
+- UX is Apollo.io's layout in Regenera's brand (SPEC section 11): white header,
+  fern sidebar, filter panel + dense table + bulk action bar + side panel preview.
+  Use components/page.tsx (PageHeader, EmptyState) for page chrome.
 - Write JS regex and embedded scripts in their own files and run node --check.
   Avoid ID-level display overrides in CSS.
 - Tests required for: dedupe, scoring, screening matrix, send idempotency,
