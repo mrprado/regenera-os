@@ -28,10 +28,10 @@
   --radius-card: 12px;
 }
 
-/* Dark theme: fern ground, wax text, pollen accents (SPEC section 11). */
+/* Dark theme: ink ground (fern stays the sidebar), wax text, pollen accents (SPEC section 11). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: var(--fern);
+    --bg: var(--ink);
     --surface: #1b251b;
     --text: var(--wax);
     --text-muted: #b5bdb0;
@@ -42,7 +42,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: var(--fern);
+  --bg: var(--ink);
   --surface: #1b251b;
   --text: var(--wax);
   --text-muted: #b5bdb0;
