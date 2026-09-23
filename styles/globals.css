@@ -1,0 +1,20 @@
+@import "./tokens.css";
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+::selection { background: var(--pollen); color: var(--fern); }
+
+h1, h2, h3, p { margin-top: 0; }
+h1, h2 { font-weight: 600; letter-spacing: -.035em; line-height: 1; color: var(--heading); }
+h1 { font-size: clamp(32px, 3.2vw, 48px); }
+h2 { font-size: clamp(24px, 2.2vw, 32px); }
+h3 { font-size: 18px; line-height: 1.15; letter-spacing: -.02em; color: var(--heading); }
+
+.eyebrow { margin: 0 0 14px; font-size: 12px; line-height: 1.2; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; color: var(--eyebrow); }
+
+.btn { display: inline-flex; align-items: center; gap: 10px; height: 34px; padding: 0 18px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: transparent; color: var(--text); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.btn--primary { background: var(--action); color: var(--action-text); border-color: var(--action); }
+.btn--primary:hover { background: color-mix(in srgb, var(--pollen) 82%, black); }

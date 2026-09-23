@@ -1,0 +1,20 @@
+.shell { min-height: 100vh; }
+.header {
+  position: sticky; top: 0; z-index: 30; height: 64px; display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 32px; padding: 0 28px;
+  background: color-mix(in srgb, var(--bg) 96%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(15px);
+}
+.brand { color: var(--pollen); font-weight: 700; letter-spacing: .08em; }
+.brand span { color: var(--heading); }
+.nav { display: flex; gap: clamp(14px, 1.6vw, 26px); overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a, .user a { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; color: var(--heading); white-space: nowrap; }
+.user { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--text-muted); }
+.main { max-width: 1400px; margin: 0 auto; padding: 40px 28px 80px; }
+
+@media (max-width: 820px) {
+  .header { grid-template-columns: 1fr auto; height: auto; padding: 12px 16px; gap: 10px; }
+  .nav { grid-column: 1 / -1; grid-row: 2; }
+  .user span { display: none; }
+  .main { padding: 24px 16px 60px; }
+}

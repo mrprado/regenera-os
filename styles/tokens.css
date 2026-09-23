@@ -1,0 +1,53 @@
+/* Copied from regenera-development-office/app/globals.css (live regenera.bio). Do not add ad-hoc colors. */
+:root {
+  --paper: #ffffff;
+  --white: #ffffff;
+  --ink: #0d120e;
+  --fern: #131b13;
+  --leaf: #7a8675;
+  --reed: #a9c799;
+  --water: #476b5e;
+  --wax: #efe9dc;
+  --pollen: #c9a84d;
+  --line: rgba(13, 18, 14, 0.18);
+
+  /* OS semantic tokens, derived from the palette above */
+  --bg: var(--paper);
+  --surface: var(--wax);
+  --text: var(--ink);
+  --text-muted: #566158;
+  --heading: var(--fern);
+  --eyebrow: var(--leaf);
+  --action: var(--pollen);
+  --action-text: var(--fern);
+  --link: var(--water);
+  --positive: var(--reed);
+
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --radius-pill: 999px;
+  --radius-card: 12px;
+}
+
+/* Dark theme: fern ground, wax text, pollen accents (SPEC section 11). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--fern);
+    --surface: #1b251b;
+    --text: var(--wax);
+    --text-muted: #b5bdb0;
+    --heading: var(--wax);
+    --eyebrow: var(--reed);
+    --link: var(--reed);
+    --line: rgba(239, 233, 220, 0.18);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: var(--fern);
+  --surface: #1b251b;
+  --text: var(--wax);
+  --text-muted: #b5bdb0;
+  --heading: var(--wax);
+  --eyebrow: var(--reed);
+  --link: var(--reed);
+  --line: rgba(239, 233, 220, 0.18);
+}
