@@ -14,7 +14,7 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   the guard. Anonymous routes are only the five listed in SPEC section 23
 - NO Supabase, ever
 - Anthropic API server-side only. Models: claude-sonnet-5 for research,
-  scoring, drafting, reports; claude-haiku-4-5-20251001 for reply
+  scoring, drafting, reports; claude-haiku-4-5 for reply
   classification and extraction
 - Google APIs: Gmail, Calendar, Drive (OAuth, internal Workspace app)
 - Resend (mail.regenera.bio) for system notifications only
