@@ -1,0 +1,9 @@
+// Deployed separately to a (free) Cloudflare account. See scheduler/README.md.
+{
+  "name": "regenera-os-scheduler",
+  "main": "worker.ts",
+  "compatibility_date": "2026-05-15",
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": { "TICK_URL": "https://os.regenera.bio/api/jobs/tick" },
+  "observability": { "enabled": true }
+}

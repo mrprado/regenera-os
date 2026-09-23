@@ -1,10 +1,7 @@
-export const metadata = { title: "Settings" };
+import { redirect } from "next/navigation";
+import { requireOsUser } from "@/lib/auth";
 
-export default function SettingsPage() {
-  return (
-    <section>
-      <p className="eyebrow">Settings</p>
-      <h1>Arrives in phase 0.</h1>
-    </section>
-  );
+export default async function SettingsPage() {
+  await requireOsUser("/settings");
+  redirect("/settings/connections");
 }

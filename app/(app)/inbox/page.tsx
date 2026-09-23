@@ -1,6 +1,10 @@
+import { requireOsUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Inbox" };
 
-export default function InboxPage() {
+export default async function InboxPage() {
+  await requireOsUser("/inbox");
   return (
     <section>
       <p className="eyebrow">Inbox</p>

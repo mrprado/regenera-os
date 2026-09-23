@@ -23,10 +23,17 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
 ## Commands
 - npm run dev (vinext, port 5180 via -- --port 5180; local mock sign-in at /signin-with-chatgpt?return_to=/today
   as seedy@sites.test) / build / start / lint / typecheck / test
-- npm run db:generate (drizzle-kit); apply local migrations with
-  node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/<file>.sql
-  (build once first to generate dist/server/wrangler.json). Production migrations apply on Sites publish
-- Local secrets in .dev.vars (ignored)
+- npm run db:generate (drizzle-kit) after editing db/schema.ts
+- npm run build once, then npm run db:migrate:local and npm run db:seed:local for the
+  local preview D1 (.wrangler/state). Production migrations apply on Sites publish
+- npm run ci = lint + typecheck + test + build. Tests use real local D1 via
+  wrangler getPlatformProxy (tests/helpers/d1.ts); "cloudflare:workers" is stubbed in vitest.config.ts
+- Code that touches the DB takes a `db: Db` parameter so it is testable; only
+  route/page/action edges call appDb() or read `env`
+- Local secrets in .dev.vars (ignored). Local tick:
+  curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/api/jobs/tick
+- If a dev route 500s with "Network connection lost" right after startup, it is a stale
+  module from dependency optimization; touch the file or restart the dev server
 
 ## Rules
 - Never send email or LinkedIn actions without an approved messages row.

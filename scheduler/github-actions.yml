@@ -1,0 +1,17 @@
+# Fallback scheduler. Copy to .github/workflows/regenera-os-tick.yml in any GitHub repository
+# and add the repository secret JOBS_TICK_TOKEN. GitHub may run this several minutes late.
+name: Regenera OS tick
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call /api/jobs/tick
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.JOBS_TICK_TOKEN }}" \
+            https://os.regenera.bio/api/jobs/tick

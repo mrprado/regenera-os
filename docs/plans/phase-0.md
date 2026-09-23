@@ -1,5 +1,21 @@
 # Phase 0 plan: Foundations
 
+**Status (Sep 23, 2026): approved and built. Everything that can run locally is done and verified. Six criteria wait on accounts only Prado can create.**
+
+## Acceptance report (SPEC section 26, phase 0)
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Sign in with ChatGPT works; non-allowlisted account gets 403 | Pass (local) | Mock sign-in lands on Today; excluded email lands on /not-allowed; first allowlisted sign-in becomes owner (tests/integration/membership.test.ts) |
+| Route-guard test: only listed anonymous routes reachable without a session | Pass | tests/unit/route-guard.test.ts walks every page, API route and server action |
+| Both mailboxes connected via OAuth | **Blocked on Prado** | Flow verified locally up to Google: correct scopes, callback URL, browser-bound signed state; forged or declined callbacks rejected. Needs real `GOOGLE_CLIENT_ID`/`SECRET` |
+| Drizzle migrations apply cleanly to a fresh local and staging D1 | Local pass; **staging blocked** | tests/integration/migrations.test.ts + `npm run db:migrate:local`. Staging needs the Sites project |
+| Seed loads | Pass | tests/integration/seed.test.ts (idempotent) + `npm run db:seed:local` |
+| Scheduler pings /api/jobs/tick and a test job runs | Endpoint pass; **scheduler deploy blocked** | Tick with the token runs `system.heartbeat`; wrong or missing token gets 401; overlap, retry, dead and budget covered by tests/integration/jobs.test.ts. Scheduler Worker needs a Cloudflare account (scheduler/README.md) |
+| Lint, typecheck and CI green | Pass (local) | `npm run ci`: 42 tests, build OK. No git remote yet, so CI is not wired to a service |
+| os.regenera.bio published as the second Sites project | **Blocked on Prado** | Build output is ready (`npm run build`) |
+| No Supabase dependency | Pass | No Supabase references in code or lockfile |
+
 Goal (SPEC section 15): login works, Gmail connected, domain warming, job engine proven. The acceptance criteria are in SPEC section 26, phase 0.
 
 ## Already done (scaffold, Sep 23 2026)

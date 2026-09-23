@@ -1,6 +1,10 @@
+import { requireOsUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Approval queue" };
 
-export default function ApprovalqueuePage() {
+export default async function ApprovalqueuePage() {
+  await requireOsUser("/queue");
   return (
     <section>
       <p className="eyebrow">Approval queue</p>

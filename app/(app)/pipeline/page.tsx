@@ -1,6 +1,10 @@
+import { requireOsUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Pipeline" };
 
-export default function PipelinePage() {
+export default async function PipelinePage() {
+  await requireOsUser("/pipeline");
   return (
     <section>
       <p className="eyebrow">Pipeline</p>

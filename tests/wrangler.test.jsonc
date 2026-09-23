@@ -1,0 +1,8 @@
+// Local-only D1 for tests (wrangler getPlatformProxy). Never deployed.
+{
+  "name": "regenera-os-test",
+  "compatibility_date": "2026-05-15",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "regenera-os-test", "database_id": "00000000-0000-4000-8000-0000000000e5" }
+  ]
+}
