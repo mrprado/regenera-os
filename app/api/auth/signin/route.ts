@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { redirectTo, sameOrigin, sessionCookie } from "@/lib/auth-http";
 import { appDb } from "@/lib/db/scoped";
 import { parseAllowlist } from "@/lib/membership";
-import { fixedPasswordCheck, normalizeEmail, safeReturnTo, SESSION_COOKIE, SESSION_DAYS, trackerPasswordCheck, verifyPassword } from "@/lib/session";
+import { fixedPasswordCheck, hasMembers, normalizeEmail, safeReturnTo, SESSION_COOKIE, SESSION_DAYS, trackerPasswordCheck, verifyPassword } from "@/lib/session";
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return new Response("Forbidden", { status: 403 });
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
   const email = normalizeEmail(form.get("email"));
   const back = (error: string) => redirectTo(request, `/signin?error=${error}&return_to=${encodeURIComponent(returnTo)}`);
   if (!email) return back("invalid");
+  // Say so plainly when nobody can sign in yet, instead of "incorrect".
+  if (!env.OS_ALLOWLIST && !(await hasMembers(appDb()))) return back("setup");
   // OS_PASSWORD (a Worker secret) is the password when set; otherwise the tracker password is checked.
   const check = env.OS_PASSWORD
     ? fixedPasswordCheck(env.OS_PASSWORD)

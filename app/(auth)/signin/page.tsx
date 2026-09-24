@@ -8,6 +8,7 @@ export const metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   invalid: "Email or password is incorrect.",
+  setup: "Sign-in is not set up yet: no email is allowed (OS_ALLOWLIST).",
   unavailable: "Sign-in could not reach the password check. Try again shortly.",
 };
 

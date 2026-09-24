@@ -28,6 +28,11 @@ export function safeReturnTo(value: unknown) {
   return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") && v.length < 500 ? v : "/today";
 }
 
+export async function hasMembers(db: Db) {
+  const [row] = await db.select({ email: mandateMembers.email }).from(mandateMembers).limit(1);
+  return Boolean(row);
+}
+
 /** True for an existing mandate member, or an allowlisted email while no member exists yet (bootstrap). */
 export async function mayHaveAccess(db: Db, email: string, allowlist: Set<string>) {
   const [member] = await db.select({ email: mandateMembers.email }).from(mandateMembers).where(eq(mandateMembers.email, email)).limit(1);
