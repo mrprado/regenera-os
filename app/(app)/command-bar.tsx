@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { confirmProposalAction, rejectProposalAction } from "./intel-actions";
 import styles from "./command-bar.module.css";
+import { withBase } from "@/lib/base-path";
 
 type Turn = { role: "user" | "assistant"; text: string; proposals?: { id: string; title: string }[] };
 
@@ -52,7 +53,7 @@ export default function CommandBar() {
     setValue("");
     setBusy("Thinking");
     try {
-      const res = await fetch("/api/command", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q, history }) });
+      const res = await fetch(withBase("/api/command"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q, history }) });
       if (!res.ok || !res.body) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
         setTurns(t => [...t, { role: "assistant", text: err.error ?? `Error ${res.status}` }]);

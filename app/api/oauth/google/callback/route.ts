@@ -1,3 +1,4 @@
+import { withBase } from "@/lib/base-path";
 import { audit } from "@/lib/audit";
 import { getOsApiUser } from "@/lib/auth";
 import { appDb, isOwner } from "@/lib/db/scoped";
@@ -14,8 +15,8 @@ function back(status: string) {
   return new Response(null, {
     status: 302,
     headers: {
-      location: `/settings/connections?google=${encodeURIComponent(status)}`,
-      "set-cookie": `${STATE_COOKIE}=; Path=/api/oauth/google; HttpOnly; SameSite=Lax; Max-Age=0`,
+      location: withBase(`/settings/connections?google=${encodeURIComponent(status)}`),
+      "set-cookie": `${STATE_COOKIE}=; Path=${withBase("/api/oauth/google")}; HttpOnly; SameSite=Lax; Max-Age=0`,
     },
   });
 }

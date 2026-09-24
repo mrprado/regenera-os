@@ -4,6 +4,6 @@
   "main": "worker.ts",
   "compatibility_date": "2026-05-15",
   "triggers": { "crons": ["*/5 * * * *"] },
-  "vars": { "TICK_URL": "https://os.regenera.bio/api/jobs/tick" },
+  "vars": { "TICK_URL": "https://regenera.bio/os/api/jobs/tick" },
   "observability": { "enabled": true }
 }

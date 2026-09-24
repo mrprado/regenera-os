@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import { chatGPTSignOutPath } from "@/lib/chatgpt-auth";
+import { withBase } from "@/lib/base-path";
 import { requireOsUser } from "@/lib/auth";
 import { inArray } from "drizzle-orm";
 import { mandates } from "@/db/schema";
@@ -43,7 +43,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         <div className={styles.account}>
           <span className={styles.accountName} title={user.email}>{user.displayName}</span>
           <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>
-          <a href={chatGPTSignOutPath("/")} target="_top" className={styles.signOut}>Sign out</a>
+          <form method="post" action={withBase("/api/auth/signout")}><button type="submit" className={styles.signOut}>Sign out</button></form>
         </div>
       </header>
 

@@ -22,7 +22,7 @@
 .account { display: flex; align-items: center; gap: 12px; }
 .accountName { font-size: 13px; color: color-mix(in srgb, var(--wax) 75%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 .avatar { width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--pollen); color: var(--fern); font-size: 12px; font-weight: 700; }
-.signOut { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--wax); }
+.signOut { background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--wax); }
 .signOut:hover { color: var(--pollen); }
 
 /* Sidebar: fern, sits under the header. */

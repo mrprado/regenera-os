@@ -5,6 +5,7 @@ import { playbookDrafts } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { listPlaybooks, REGIONS } from "@/lib/radar/playbooks";
 import styles from "./prospecting.module.css";
+import { withBase } from "@/lib/base-path";
 
 const GROUP_LABEL: Record<string, string> = { capital: "Capital partners", corporate: "Corporate", public: "Public sector", channel: "Partner Network (channel)", community: "Community" };
 const REGION_LABEL: Record<string, string> = { latam: "Latin America", mena: "Middle East and North Africa", africa: "Sub-Saharan Africa", europe: "Europe", north_america: "North America", asia_pacific: "Asia Pacific" };
@@ -20,7 +21,7 @@ export default async function PlaybooksTab({ region, scope }: { region?: string;
         One playbook per segment and partnership type: who to reach, the keywords that match Regenera&apos;s services, one clear message, and the searches.
         LinkedIn and Google open in your browser (sign in to LinkedIn first). Apollo runs automatically and free with Scan now. Save the people you want with the extension or from New people.
       </p>
-      <form className={styles.regionBar} action="/prospecting">
+      <form className={styles.regionBar} action={withBase("/prospecting")}>
         <label htmlFor="region">Region for LinkedIn and Google</label>
         <select id="region" name="region" defaultValue={r ?? ""}>
           <option value="">Any region</option>

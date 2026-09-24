@@ -26,11 +26,15 @@ const ANONYMOUS_API: Record<string, RegExp> = {
   "api/mcp/route.ts": /handleMcp\(/,
   "api/oauth/mcp/register/route.ts": /registerClient\(/,
   "api/oauth/mcp/token/route.ts": /exchangeToken\(/,
+  // Email + password sign-in (docs/DEPLOY.md): each checks Origin and does only its own step.
+  "api/auth/signin/route.ts": /verifyPassword\(/,
+  "api/auth/signout/route.ts": /endSession\(/,
 };
 // Pages reachable without an OS membership. Each is listed with why.
 const ANONYMOUS_PAGES: Record<string, string> = {
   "page.tsx": "redirects to /today, renders nothing",
   "(auth)/not-allowed/page.tsx": "the 403 page itself",
+  "(auth)/signin/page.tsx": "the sign-in form",
 };
 
 describe("route guard", () => {
@@ -74,5 +78,9 @@ describe("route guard", () => {
 
   it("anonymous pages list only existing files", () => {
     for (const path of Object.keys(ANONYMOUS_PAGES)) expect(files.some(f => f.path === path), path).toBe(true);
+  });
+
+  it("nothing trusts identity headers a client could send (the OS runs on a plain Worker)", () => {
+    for (const f of files) expect(f.src.includes("oai-authenticated"), `${f.path} reads a Sites identity header`).toBe(false);
   });
 });

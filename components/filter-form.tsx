@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
+import { withBase } from "@/lib/base-path";
 
 /** A GET filter form that updates the URL on change (selects) or submit (text), so filter state is shareable. */
 export default function FilterForm({ action, children, className }: { action: string; children: React.ReactNode; className?: string }) {
@@ -18,7 +19,7 @@ export default function FilterForm({ action, children, className }: { action: st
     <form
       ref={ref}
       className={className}
-      action={action}
+      action={withBase(action)}
       onSubmit={e => { e.preventDefault(); push(); }}
       onChange={e => { if ((e.target as HTMLElement).tagName === "SELECT") push(); }}
     >

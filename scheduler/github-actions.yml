@@ -14,4 +14,4 @@ jobs:
         run: |
           curl --fail-with-body -sS -X POST \
             -H "Authorization: Bearer ${{ secrets.JOBS_TICK_TOKEN }}" \
-            https://os.regenera.bio/api/jobs/tick
+            https://regenera.bio/os/api/jobs/tick

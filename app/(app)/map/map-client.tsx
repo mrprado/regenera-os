@@ -9,8 +9,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Compass, Globe2, Layers, Mountain, Search, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
 import styles from "./map.module.css";
+import { withBase } from "@/lib/base-path";
 
-maplibregl.setWorkerUrl("/maplibre-gl-worker.js");
+maplibregl.setWorkerUrl(withBase("/maplibre-gl-worker.js"));
 
 // Regenera tokens (styles/tokens.css) as literal colors for WebGL paint properties.
 const C = { fern: "#131b13", ink: "#0d120e", wax: "#efe9dc", pollen: "#c9a84d", reed: "#a9c799", water: "#476b5e", leaf: "#7a8675", ember: "#c8553d", sky: "#7fb7d6" };
@@ -184,7 +185,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
       t0 = performance.now();
       requestAnimationFrame(pulse);
 
-      fetch("/api/map/features").then(r => (r.ok ? r.json() as Promise<MapPayload> : Promise.reject(new Error(String(r.status))))).then((d: MapPayload) => {
+      fetch(withBase("/api/map/features")).then(r => (r.ok ? r.json() as Promise<MapPayload> : Promise.reject(new Error(String(r.status))))).then((d: MapPayload) => {
         setData(d);
         (map.getSource("organizations") as GeoJSONSource).setData(d.organizations);
         (map.getSource("deals") as GeoJSONSource).setData(d.deals);
@@ -196,7 +197,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
           map.fitBounds(b, { padding: 120, maxZoom: 5, duration: 2600, essential: true });
         }
       }).catch(e => setLoadError(`Map data could not load (${e.message}).`));
-      fetch("/api/map/hazards").then(r => r.json() as Promise<FeatureCollection>).then(d => {
+      fetch(withBase("/api/map/hazards")).then(r => r.json() as Promise<FeatureCollection>).then(d => {
         setHazardCount(d.features?.length ?? 0);
         (map.getSource("hazards") as GeoJSONSource).setData(d);
       }).catch(() => {});

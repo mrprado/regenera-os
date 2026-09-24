@@ -1,3 +1,4 @@
+import { withBase } from "@/lib/base-path";
 import { getOsApiUser } from "@/lib/auth";
 import { isOwner } from "@/lib/db/scoped";
 import { googleConfig } from "@/lib/google/config";
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     status: 302,
     headers: {
       location: authUrl({ clientId: cfg.clientId, redirectUri: redirectUri(cfg.appBaseUrl), state }),
-      "set-cookie": `${STATE_COOKIE}=${nonce}; Path=/api/oauth/google; HttpOnly; SameSite=Lax; Max-Age=600${secure}`,
+      "set-cookie": `${STATE_COOKIE}=${nonce}; Path=${withBase("/api/oauth/google")}; HttpOnly; SameSite=Lax; Max-Age=600${secure}`,
     },
   });
 }

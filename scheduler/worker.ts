@@ -1,6 +1,6 @@
 // Regenera OS scheduler (SPEC section 23). Holds no data: every 5 minutes it asks the OS to run due jobs.
 interface Env {
-  TICK_URL: string;          // https://os.regenera.bio/api/jobs/tick
+  TICK_URL: string;          // https://regenera.bio/os/api/jobs/tick
   JOBS_TICK_TOKEN: string;   // same value as the OS secret
 }
 

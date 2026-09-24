@@ -13,6 +13,7 @@ import { appDb, isOwner } from "@/lib/db/scoped";
 import { erasePersonAction } from "../../intel-actions";
 import { DEAL_STAGES, ENGAGEMENTS, PRACTICES } from "@/lib/vocab";
 import { addNote, pasteLinkedin, researchOne, sendEmail } from "../../crm-actions";
+import { withBase } from "@/lib/base-path";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Person" };
@@ -115,7 +116,7 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
             <section className={r.panel}>
               <p className={r.panelTitle}>Privacy request</p>
               <p className={r.why} style={{ marginTop: 0 }}>For an access or erasure request from this person (GDPR, LGPD and similar). Both are logged without the address.</p>
-              <a className="btn" href={`/api/privacy/export/${c.id}`}>Export their data (JSON)</a>
+              <a className="btn" href={withBase(`/api/privacy/export/${c.id}`)}>Export their data (JSON)</a>
               <form action={erasePersonAction} className={r.form} style={{ marginTop: 10 }}>
                 <input type="hidden" name="id" value={c.id} />
                 <input name="confirm" placeholder="Type ERASE to confirm" aria-label="Type ERASE to confirm" autoComplete="off" />

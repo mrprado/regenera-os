@@ -43,6 +43,27 @@
       "when": 1790280114309,
       "tag": "0005_magical_network",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790282482971,
+      "tag": "0006_thick_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790284148106,
+      "tag": "0007_lyrical_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790284152269,
+      "tag": "0008_fine_toad_men",
+      "breakpoints": true
     }
   ]
 }

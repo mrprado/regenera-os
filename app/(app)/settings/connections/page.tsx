@@ -4,6 +4,7 @@ import { googleConfig } from "@/lib/google/config";
 import { listConnections } from "@/lib/settings";
 import { sendTestEmail } from "../actions";
 import styles from "../settings.module.css";
+import { withBase } from "@/lib/base-path";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Connections" };
@@ -59,7 +60,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
               )}
               {owner && configured && (
                 <div className={styles.actions}>
-                  <a className={`btn ${acct ? "" : "btn--primary"}`} href={`/api/oauth/google/start?mailbox=${m.role}`}>{acct ? "Reconnect" : "Connect Google"}</a>
+                  <a className={`btn ${acct ? "" : "btn--primary"}`} href={withBase(`/api/oauth/google/start?mailbox=${m.role}`)}>{acct ? "Reconnect" : "Connect Google"}</a>
                   {acct && (
                     <form action={sendTestEmail}>
                       <input type="hidden" name="mailbox" value={m.role} />

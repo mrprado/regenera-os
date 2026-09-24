@@ -1,5 +1,5 @@
-import { chatGPTSignOutPath } from "@/lib/chatgpt-auth";
 import { currentUser } from "@/lib/auth";
+import { withBase } from "@/lib/base-path";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Not allowed" };
@@ -13,7 +13,7 @@ export default async function NotAllowedPage() {
       <p style={{ color: "var(--text-muted)" }}>
         {user ? `Signed in as ${user.email}. ` : ""}Ask the Regenera OS owner to add this email.
       </p>
-      <a className="btn" href={chatGPTSignOutPath("/")} target="_top">Sign out</a>
+      <form method="post" action={withBase("/api/auth/signout")}><button className="btn" type="submit">Sign out</button></form>
     </main>
   );
 }

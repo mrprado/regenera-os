@@ -2,10 +2,10 @@ import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { getChatGPTUser, requireChatGPTUser, type ChatGPTUser } from "./chatgpt-auth";
 import { appDb, isOwner, type UserScope } from "./db/scoped";
 import { narrowScope } from "./mandates";
 import { parseAllowlist, resolveMembership } from "./membership";
+import { SESSION_COOKIE, sessionEmail } from "./session";
 
 export const MANDATE_COOKIE = "os_mandate";
 
@@ -21,11 +21,21 @@ const toOsUser = cache(async (userId: string, email: string, displayName: string
   return { userId, email: scope.email, displayName, scope: narrowScope(scope, focus) };
 });
 
-const fromChatGPT = (u: ChatGPTUser) => toOsUser(u.userId, u.email, u.displayName);
+/** The email of the signed-in session (email-link sign-in, lib/session.ts), or null. Cached per request. */
+export const currentEmail = cache(async (): Promise<string | null> => {
+  let token: string | undefined;
+  try { token = (await cookies()).get(SESSION_COOKIE)?.value; } catch { return null; }
+  return sessionEmail(appDb(), token);
+});
+
+// The verified email is the identity; membership rows bind to this id on first sign-in.
+const fromEmail = (email: string) => toOsUser(`email:${email}`, email, email);
 
 /** Guard for every page under app/(app). Sends anonymous visitors to sign-in, others to /not-allowed. */
 export async function requireOsUser(returnTo: string): Promise<OsUser> {
-  const os = await fromChatGPT(await requireChatGPTUser(returnTo));
+  const email = await currentEmail();
+  if (!email) redirect(`/signin?return_to=${encodeURIComponent(returnTo)}`);
+  const os = await fromEmail(email);
   if (!os) redirect("/not-allowed");
   return os;
 }
@@ -38,8 +48,8 @@ export async function requireOsOwner(returnTo: string): Promise<OsUser> {
 
 /** For API route handlers: returns null instead of redirecting. */
 export async function getOsApiUser(): Promise<OsUser | null> {
-  const user = await getChatGPTUser();
-  return user ? fromChatGPT(user) : null;
+  const email = await currentEmail();
+  return email ? fromEmail(email) : null;
 }
 
 /** Wrap every server action body. Throws rather than redirecting so a forged call gets nothing. */
@@ -50,6 +60,7 @@ export async function withOsUser<T>(fn: (user: OsUser) => Promise<T>, opts: { ow
   return fn(os);
 }
 
-export async function currentUser(): Promise<ChatGPTUser | null> {
-  return getChatGPTUser();
+export async function currentUser(): Promise<{ email: string } | null> {
+  const email = await currentEmail();
+  return email ? { email } : null;
 }

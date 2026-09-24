@@ -1,0 +1,18 @@
+{
+  "worker": "regenera-os",
+  "zone": "regenera.bio",
+  "routes": [
+    "regenera.bio/os",
+    "regenera.bio/os/*",
+    "regenera.bio/.well-known/oauth-authorization-server/os*",
+    "regenera.bio/.well-known/oauth-protected-resource/os*"
+  ],
+  "cron": "*/5 * * * *",
+  "d1": { "name": "regenera-os-d1", "id": "f4a65ebf-a0dd-4d6b-b960-1c125d073c46" },
+  "r2": null,
+  "vars": {
+    "APP_BASE_URL": "https://regenera.bio/os",
+    "SITE_BASE_URL": "https://regenera.bio",
+    "SEND_ALLOWED_DOMAINS": "regenera.bio"
+  }
+}
