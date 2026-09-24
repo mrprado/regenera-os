@@ -16,3 +16,8 @@ export function apolloConfig(): ApolloConfig | null {
 export function mapConfig() {
   return { esriKey: env.ESRI_API_KEY ?? null };
 }
+
+export function siteConfig(): { baseUrl: string; token: string } | null {
+  if (!env.SITE_EXPORT_TOKEN) return null;
+  return { baseUrl: env.SITE_BASE_URL ?? "https://regenera.bio", token: env.SITE_EXPORT_TOKEN };
+}

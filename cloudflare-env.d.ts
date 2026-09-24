@@ -20,6 +20,7 @@ declare namespace Cloudflare {
     NOTIFY_EMAIL?: string;
     SITE_WEBHOOK_SECRET?: string;
     SITE_EXPORT_TOKEN?: string;
+    SITE_BASE_URL?: string;
     EXTENSION_TOKEN_SECRET?: string;
     UNSUBSCRIBE_SIGNING_SECRET?: string;
     APP_BASE_URL?: string;

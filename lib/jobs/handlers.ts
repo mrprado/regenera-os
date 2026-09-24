@@ -1,11 +1,12 @@
 import type { Db } from "@/db";
 import { AiBudgetError } from "@/lib/ai/run";
-import { aiConfig } from "@/lib/config";
+import { aiConfig, siteConfig } from "@/lib/config";
+import { reconcileSite } from "@/lib/crm/site-intake";
 import { geocodeOrganization } from "@/lib/crm/geo";
 import { enrichOrganizationIdentity } from "@/lib/crm/identity-enrich";
 import { gatherStep, scoreContact, synthesizeStep } from "@/lib/crm/research";
 import { freshnessSince } from "@/lib/freshness";
-import { setState } from "@/lib/state";
+import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
 
@@ -66,6 +67,14 @@ export const handlers: Record<string, JobHandler> = {
   "score.match": async ctx => {
     await deferOnBudget(ctx, () => scoreContact(ctx.db, requireAi(), String(ctx.job.payload.contactId)));
   },
+  "site.reconcile": async ({ db, now }) => {
+    const cfg = siteConfig();
+    if (!cfg) return; // not connected yet (SITE_EXPORT_TOKEN)
+    const since = (await getState(db, "site_reconcile_since")) ?? freshnessSince(now).toISOString();
+    const r = await reconcileSite(db, cfg, since.slice(0, 19).replace("T", " "));
+    await setState(db, "site_reconcile_since", new Date(now.getTime() - 3_600_000).toISOString());
+    await setState(db, "site_reconcile_last", JSON.stringify({ at: now.toISOString(), ...r }));
+  },
   "geo.org": async ({ db, job, now }) => {
     const r = await geocodeOrganization(db, String(job.payload.orgId));
     if (r === "retry") await enqueue(db, "geo.org", job.payload, { runAfter: new Date(now.getTime() + 60_000), now });
@@ -76,4 +85,5 @@ export const handlers: Record<string, JobHandler> = {
 export const DEFAULT_SCHEDULES: Record<string, string> = {
   "system.heartbeat": "every:5m",
   "triggers.scan": "every:15m",
+  "site.reconcile": "every:1h",
 };

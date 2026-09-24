@@ -17,7 +17,8 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | `ESRI_API_KEY` | 1 (optional) | Free ArcGIS Location Platform account → API key with the basemap tiles privilege, referrer-restricted to os.regenera.bio. Enables satellite imagery on the Map; without it the Map uses NASA Blue Marble relief |
 | `AI_MONTHLY_BUDGET_USD` | 1 | Monthly Anthropic spend cap for research and triggers. Default 50 |
 | `APOLLO_PLAN` | 1 | `free` (default). Sets the rate limits the OS enforces |
-| `SITE_WEBHOOK_SECRET`, `SITE_EXPORT_TOKEN` | 1 | Generate; the same values are set on the regenera.bio Sites project |
+| `SITE_WEBHOOK_SECRET`, `SITE_EXPORT_TOKEN` | 1 | Generate. On the regenera.bio Sites project set the same values as `OS_WEBHOOK_SECRET` and `OS_EXPORT_TOKEN`, plus `OS_WEBHOOK_URL=https://os.regenera.bio/api/webhooks/site` (site branch `os-integration`) |
+| `SITE_BASE_URL` | 1 | `https://regenera.bio` (default) |
 | `RESEND_API_KEY`, `RESEND_FROM` | 2 | Existing Resend account the site uses; `RESEND_FROM` e.g. `Regenera OS <os@mail.regenera.bio>` |
 | `NOTIFY_EMAIL` | 2 | `alanprado@regenera.bio` |
 | `BOOKING_URL` | 2 | `https://calendar.app.google/FDK2Hz8rs3VpZSRp7` |
