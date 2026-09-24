@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db";
 import { contacts, organizations, type FieldSources } from "@/db/schema";
 import { canonicalLinkedin, normalizeEmail, normalizeOrgName, normalizePersonName, registrableDomain, splitName } from "@/lib/dedupe/normalize";
+import { enqueue } from "@/lib/jobs/queue";
 import type { LEAD_SOURCES } from "@/lib/vocab";
 
 type Source = keyof typeof LEAD_SOURCES;
@@ -86,6 +87,8 @@ export async function upsertOrganization(db: Db, mandateId: string, input: OrgIn
       mandateId, name: input.name.trim(), nameNormalized: normalized, source, fieldSources: sources,
       ...Object.fromEntries(ORG_FIELDS.map(f => [f, clean[f] ?? null])),
     }).returning();
+    // Every new organization gets free identity enrichment, which then places it on the map.
+    await enqueue(db, "identity.enrich", { orgId: row.id }, { dedupeKey: `identity:${row.id}` });
     return { row, created: true, conflicts: [] };
   }
 

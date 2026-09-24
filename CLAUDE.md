@@ -32,6 +32,9 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   wrangler getPlatformProxy (tests/helpers/d1.ts); "cloudflare:workers" is stubbed in vitest.config.ts
 - Code that touches the DB takes a `db: Db` parameter so it is testable; only
   route/page/action edges call appDb() or read `env`
+- node scripts/dev-post-site-event.mjs <event.json> posts a signed regenera.bio event to the local webhook
+- Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
+  lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:
   curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/api/jobs/tick
 - If a dev route 500s with "Network connection lost" right after startup, it is a stale

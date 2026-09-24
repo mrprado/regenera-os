@@ -551,7 +551,7 @@ Regenera OS uses no paid data subscriptions. Every source below is free and publ
 
 | Source | What it gives | Access | Phase |
 |---|---|---|---|
-| **Apollo.io free plan** | Net-new people and company search by title, seniority, location, domain and keywords (0 credits). Person and company enrichment including verified email, within free monthly credits | API key from a free work-email account. As published: 50 requests per minute, 200 per hour, 600 per day | 1 |
+| **Apollo.io free plan** | Net-new people search by title, seniority, location, domain and keywords (0 credits); company search costs 1 credit per page of up to 100. Person and company enrichment including verified email, within free monthly credits | API key from a free work-email account. As published: 50 requests per minute, 200 per hour, 600 per day | 1 |
 | **Company website** (via Claude web search and web fetch) | About, team, portfolio or projects, news, sustainability report, careers | Anthropic API | 1 |
 | **GLEIF LEI API** | Legal entity name, jurisdiction, registration and parent/child ownership for funds, banks, DFIs and corporates | Free, no key | 1 |
 | **Wikidata** (SPARQL and entity API) | Canonical org identity, HQ, industry, official website, parent org, notable people and roles | Free, no key; User-Agent required | 1 |
@@ -559,6 +559,8 @@ Regenera OS uses no paid data subscriptions. Every source below is free and publ
 | **UK Companies House API** | UK companies, officers, filings | Free API key | 3 |
 | **Email pattern inference + DNS** | When enrichment is unavailable: infer the address pattern from known emails at the same domain, then check the domain's MX records over DNS-over-HTTPS (Cloudflare 1.1.1.1). Marked `inferred`, never `verified`: manual targeted sends only, never the mass tier | Free | 1 |
 | **Public job boards** (Greenhouse and Lever public JSON boards) | Open roles at companies that use them, a hiring signal and a people-trigger source | Free, no key | 3 |
+
+**Built in phase 1 (Sep 24, 2026):** Apollo free plan, company website research, GLEIF, Wikidata, SEC EDGAR, email MX checks and Nominatim geocoding above, plus the trigger sources GDELT, TED, World Bank, SEC Form D and GDACS below. The trigger engine moved from phase 3 into phase 1.
 
 #### Triggers and signals (phase 3 trigger engine)
 

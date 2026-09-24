@@ -1,6 +1,30 @@
 # Phase 1 plan: CRM core
 
-**Status: approved by Prado ("finish"), Sep 23, 2026, and in build.** Phase 0 acceptance items that need Prado's accounts (Sites project, Google OAuth, scheduler, sending domain) run in parallel; they gate go-live, not the build. Open decisions use the defaults below.
+**Status (Sep 24, 2026): built and verified locally. 85 automated tests on real local D1. Live verification waits on keys only Prado can create (Anthropic, Apollo, Google, Esri, Sites project).**
+
+### Build report
+
+| Area | State | Verified how |
+|---|---|---|
+| CRM schema (orgs, contacts, dossiers, triggers, scores, deals, activities, messages, lists, imports, ledgers) | Done | Migrations apply to fresh D1; CHECK constraints tested |
+| Free data layer: Apollo free plan, GLEIF, Wikidata, SEC EDGAR, GDELT, TED, World Bank, GDACS, DNS MX, Nominatim | Done | Live calls from local dev: about 400 current 2026 signals scanned; Brookfield enriched (Wikidata, SEC CIK) and placed in Toronto |
+| Current-data policy | Done | Tests drop pre-2026 items and closed tenders at the source |
+| Trigger engine (scan, Haiku classify, Sonnet decision read, org + map) | Done | Tests with a fake Anthropic client; needs `ANTHROPIC_API_KEY` to run live |
+| Research dossiers + scoring + screening | Done | Unit tests (source enforcement, weights, tiers, quadrant); needs the key live |
+| Map (Google Earth Pro style) | Done | Globe, imagery, terrain, borders, layers verified in the browser |
+| People, Companies, records, Lists, Find in Apollo | Done | Browser-verified; Apollo tab needs `APOLLO_API_KEY` |
+| Deals board, site webhook, reconcile, tracker import | Done | Signed test inquiry created a deal once, replay ignored, bad signature rejected; drag-to-stage saved and logged |
+| Manual email with guarded send | Done | Tests: single send under 5 parallel senders, suppression at claim, investment refusal, test-domain allowlist, style validator |
+| CSV import | Done | Browser upload, mapping and preview; 250-row chunked test |
+| regenera.bio side (webhook + export) | Done on branch `os-integration`, not published | Typechecked; publish when ready |
+
+**Moved into phase 1 at Prado's request:** the trigger engine (was phase 3) and the Map (new).
+
+**Found and fixed during the build:** contacts with different emails merging on name; email-derived domains merging different companies; coarse Wikidata coordinates overriding a stated location; AI jobs dying without a key (they now wait).
+
+---
+
+**Original status: approved by Prado ("finish"), Sep 23, 2026.** Phase 0 acceptance items that need Prado's accounts (Sites project, Google OAuth, scheduler, sending domain) run in parallel; they gate go-live, not the build. Open decisions use the defaults below.
 
 **Updated Sep 23, 2026:** Apollo.io's layout in Regenera's brand, with the Apollo API as the prospect data layer (SPEC sections 11 and 12). This adds the Apollo integration (section 2d), lists and saved searches, and Apollo-style People and Companies screens.
 
