@@ -27,7 +27,7 @@ describe("job engine", () => {
     };
     for (let i = 0; i < 30; i++) await enqueue(t.db, "test.count", { i }, { now: NOW });
 
-    const opts = { now: () => NOW, handlers, schedules: {}, batch: 3 };
+    const opts = { now: () => NOW, handlers, schedules: {}, batch: 3, skipReferenceData: true };
     await Promise.all([tick(t.db, opts), tick(t.db, opts), tick(t.db, opts)]);
 
     expect(runs.size).toBe(30);
@@ -46,7 +46,7 @@ describe("job engine", () => {
     const handlers = { "test.fail": async () => { throw new Error("boom"); } };
     await enqueue(t.db, "test.fail", {}, { now: NOW, maxAttempts: 3 });
     let clock = NOW.getTime();
-    const opts = { now: () => new Date(clock), handlers, schedules: {} };
+    const opts = { now: () => new Date(clock), handlers, schedules: {}, skipReferenceData: true };
 
     const first = await tick(t.db, opts);
     expect(first.retried).toBe(1);
@@ -74,7 +74,7 @@ describe("job engine", () => {
 
   it("fails unknown job types instead of dropping them", async () => {
     await enqueue(t.db, "test.unknown", {}, { now: NOW, maxAttempts: 1 });
-    const r = await tick(t.db, { now: () => NOW, handlers: {}, schedules: {} });
+    const r = await tick(t.db, { now: () => NOW, handlers: {}, schedules: {}, skipReferenceData: true });
     expect(r.dead).toBe(1);
     const [row] = await t.db.select().from(jobs);
     expect(row.lastError).toMatch(/No handler/);
@@ -83,14 +83,14 @@ describe("job engine", () => {
   it("reclaims jobs whose lock expired", async () => {
     await enqueue(t.db, "test.ok", {}, { now: NOW });
     await t.db.update(jobs).set({ status: "running", lockedUntil: new Date(NOW.getTime() - 1000).toISOString() });
-    const r = await tick(t.db, { now: () => NOW, handlers: { "test.ok": async () => {} }, schedules: {} });
+    const r = await tick(t.db, { now: () => NOW, handlers: { "test.ok": async () => {} }, schedules: {}, skipReferenceData: true });
     expect(r.ran).toBe(1);
   });
 
   it("materializes a schedule slot once even when ticks overlap, and records ticks", async () => {
     const handlers = { "system.heartbeat": async () => {} };
     const schedules = { "system.heartbeat": "every:5m" };
-    const opts = { now: () => NOW, handlers, schedules };
+    const opts = { now: () => NOW, handlers, schedules, skipReferenceData: true };
     await Promise.all([tick(t.db, opts), tick(t.db, opts)]);
     const created = await t.db.select().from(jobs).where(eq(jobs.type, "system.heartbeat"));
     expect(created).toHaveLength(1);
@@ -102,7 +102,7 @@ describe("job engine", () => {
   it("stops at the time budget and leaves work queued", async () => {
     const handlers = { "test.slow": async () => { await new Promise(r => setTimeout(r, 30)); } };
     for (let i = 0; i < 10; i++) await enqueue(t.db, "test.slow", { i }, { now: NOW });
-    const r = await tick(t.db, { now: () => NOW, handlers, schedules: {}, batch: 1, budgetMs: 50 });
+    const r = await tick(t.db, { now: () => NOW, handlers, schedules: {}, batch: 1, budgetMs: 50, skipReferenceData: true });
     expect(r.stoppedForBudget).toBe(true);
     expect(r.ran).toBeLessThan(10);
     const queued = await t.db.select().from(jobs).where(eq(jobs.status, "queued"));

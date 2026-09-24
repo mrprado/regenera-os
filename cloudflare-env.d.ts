@@ -9,7 +9,12 @@ declare namespace Cloudflare {
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
     TOKEN_ENCRYPTION_KEY?: string;
-    ENRICHMENT_API_KEY?: string;
+    APOLLO_API_KEY?: string;
+    APOLLO_MONTHLY_CREDIT_BUDGET?: string;
+    AI_MONTHLY_BUDGET_USD?: string;
+    ESRI_API_KEY?: string;
+    APP_ENV?: string;
+    SEND_ALLOWED_DOMAINS?: string;
     RESEND_API_KEY?: string;
     RESEND_FROM?: string;
     NOTIFY_EMAIL?: string;

@@ -96,3 +96,17 @@ export const zEngagement = z.enum(keys(ENGAGEMENTS));
 export const zFeeType = z.enum(keys(FEE_TYPES));
 export const zDealStage = z.enum(keys(DEAL_STAGES));
 export const zLeadSource = z.enum(keys(LEAD_SOURCES));
+
+// CRM closed sets (SPEC section 21).
+export const SEGMENT_GROUPS = ["capital", "corporate", "public", "channel", "community"] as const;
+export const LEAD_STATES = ["sourced", "researched", "qualified", "parked", "queued", "contacted", "engaged", "nurture"] as const;
+export const TIERS = ["targeted", "mass", "watchlist", "parked"] as const;
+export const EMAIL_STATUSES = ["unknown", "inferred", "unverified", "verified_manual", "verified_provider", "invalid"] as const;
+export const TRIGGER_TYPES = ["people", "capital", "regulatory", "crisis", "project", "procurement", "commitment", "event"] as const;
+export const TRIGGER_STATUSES = ["new", "pursued", "watched", "dismissed"] as const;
+export const CHANNELS = ["email", "linkedin_connect", "linkedin_message", "call", "meeting", "note"] as const;
+export const MESSAGE_STATUSES = ["draft", "style_failed", "pending_approval", "approved", "sending", "sent", "failed", "cancelled"] as const;
+export const CONSENT_BASES = ["legitimate_interest", "consent", "existing_relationship", "none"] as const;
+export const PARTNER_TYPES = ["epc", "engineering", "law", "big4", "architect", "bank_lender", "fund_manager", "operator", "technology"] as const;
+export const ACTIVITY_TYPES = ["email", "call", "meeting", "note", "linkedin", "stage_change", "import", "research", "site_inquiry", "referral"] as const;
+export const APOLLO_SENIORITIES = ["owner", "founder", "c_suite", "partner", "vp", "head", "director", "manager", "senior", "entry", "intern"] as const;

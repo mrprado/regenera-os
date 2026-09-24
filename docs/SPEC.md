@@ -74,7 +74,7 @@ Regenera OS **replaces the Pipeline Tracker** now running at `regenera.bio/track
 | Email (system) | **Resend** from `mail.regenera.bio`, as the site already uses | Daily digest, alerts, notifications |
 | Calendar / files | Google Calendar and Drive APIs | Meetings to deals, proposals to records |
 | Booking | Existing Google appointment schedule `https://calendar.app.google/FDK2Hz8rs3VpZSRp7` (the site's "Schedule a scoping call" link) | Link in interested-reply drafts |
-| Prospect data | **Apollo.io API** (decided Sep 23, 2026) | Net-new people and company search (0 credits), person and company enrichment with email verification (credits), job postings and news for triggers |
+| Prospect data | **Apollo.io API on the free plan** (decided Sep 23, 2026: no paid Apollo subscription) plus public sources | Net-new people and company search (0 credits), person and company enrichment with email verification (credits), job postings and news for triggers |
 | Web research | Anthropic API web search tool + page fetch | Contact and firm websites, news triggers |
 | LinkedIn | Assisted queue (phase 1), optional Unipile API later | Connection notes, messages |
 
@@ -534,11 +534,69 @@ Gmail, Calendar and Drive connect through one Google login. LinkedIn is the only
 | LinkedIn (phase 1) | Assisted queue + browser extension | App drafts the note and opens the profile; Prado sends; extension logs the action back |
 | LinkedIn (optional, later) | Unipile or similar API | Full automation; account restriction risk accepted knowingly, low daily limits |
 | Sales Navigator | CSV export import | Weekly saved-search exports feed prospecting and people triggers |
-| Apollo.io | REST API (`api.apollo.io/api/v1`), API key in `x-api-key` header, server-side only | **People API Search** (`mixed_people/api_search`) and **Organization Search** cost 0 credits but return no emails or phones. **People Enrichment** (`people/match`, bulk up to 10 per call) costs 1 credit when an email or demographics are found, plus 8 if a mobile number is revealed; 0 when nothing is found. Organization enrichment and job postings feed firmographics and triggers. Rate limits are per team, per endpoint and depend on the plan (e.g. Basic/Professional: 200 search requests per minute, 6,000 per hour; enrichment 1,000 per minute). The OS enforces a monthly credit budget, never reveals mobile numbers by default, and stores each Apollo ID for dedupe. Apollo's own sequences, CRM records and mailboxes are not used |
+| Apollo.io | REST API (`api.apollo.io/api/v1`), API key in `x-api-key` header, server-side only | **People API Search** (`mixed_people/api_search`) and **Organization Search** cost 0 credits but return no emails or phones. **People Enrichment** (`people/match`, bulk up to 10 per call) costs 1 credit when an email or demographics are found, plus 8 if a mobile number is revealed; 0 when nothing is found. Organization enrichment and job postings feed firmographics and triggers. Rate limits are per team and per endpoint. **The OS runs on the free plan**, which needs an Apollo account registered with a work email. Its limits are 50 requests per minute, 200 per hour and 600 per day for search, and the same for single enrichment (bulk: 20 per minute, 100 per hour). Enrichment is limited to the free plan's monthly credits. The OS never tries to exceed or work around these limits: no multiple accounts and no scraping of Apollo. Beyond them, prospect data comes from public sources (company websites, filings, news, public lists) through the research job. The OS enforces a monthly credit budget, never reveals mobile numbers by default, and stores each Apollo ID for dedupe. Apollo's own sequences, CRM records and mailboxes are not used |
 | Web research | Anthropic API web search tool + page fetch | Dossiers and trigger scan |
 | Anthropic API | Server-side only | Research, scoring, drafting, triage, reports; prompts versioned in the database |
 | regenera.bio site | Signed webhook from the site + authenticated reconcile endpoint | Inquiries (`/api/inquiries`) and Partner Network referrals flow into the OS (section 24) |
 | Claude chat | Regenera OS MCP server on a Worker | Query and update the CRM conversationally from Claude when away from the app; same scoped data layer, writes need confirmation |
+
+### 12a. Free data sources (decided Sep 23, 2026: free and public only)
+
+Regenera OS uses no paid data subscriptions. Every source below is free and public. It is used within its published terms and rate limits, and identified with a `User-Agent: RegeneraOS/1.0 (+https://regenera.bio; alanprado@regenera.bio)` where the source asks for one. Each source is a module in `lib/sources/` with its own rate limiter, zod parser, cache and `provider_calls` ledger entry. Each field it writes records which source it came from (`field_sources`), so a dossier can always show where a fact came from.
+
+**Limits to confirm at build.** Limits marked "as published" are taken from each provider's documentation on Sep 23, 2026. The build re-checks them and stores them in `lib/sources/<name>/limits.ts`.
+
+#### People and companies
+
+| Source | What it gives | Access | Phase |
+|---|---|---|---|
+| **Apollo.io free plan** | Net-new people and company search by title, seniority, location, domain and keywords (0 credits). Person and company enrichment including verified email, within free monthly credits | API key from a free work-email account. As published: 50 requests per minute, 200 per hour, 600 per day | 1 |
+| **Company website** (via Claude web search and web fetch) | About, team, portfolio or projects, news, sustainability report, careers | Anthropic API | 1 |
+| **GLEIF LEI API** | Legal entity name, jurisdiction, registration and parent/child ownership for funds, banks, DFIs and corporates | Free, no key | 1 |
+| **Wikidata** (SPARQL and entity API) | Canonical org identity, HQ, industry, official website, parent org, notable people and roles | Free, no key; User-Agent required | 1 |
+| **SEC EDGAR** (company search, submissions, full-text search) | US filers, fund managers, 10-K/ESG disclosures, officers | Free, no key; User-Agent required; as published at most 10 requests per second | 1 |
+| **UK Companies House API** | UK companies, officers, filings | Free API key | 3 |
+| **Email pattern inference + DNS** | When enrichment is unavailable: infer the address pattern from known emails at the same domain, then check the domain's MX records over DNS-over-HTTPS (Cloudflare 1.1.1.1). Marked `inferred`, never `verified`: manual targeted sends only, never the mass tier | Free | 1 |
+| **Public job boards** (Greenhouse and Lever public JSON boards) | Open roles at companies that use them, a hiring signal and a people-trigger source | Free, no key | 3 |
+
+#### Triggers and signals (phase 3 trigger engine)
+
+| Source | Trigger types | Access |
+|---|---|---|
+| **GDELT DOC 2.0 API** | Global news in many languages, used for crisis, project, commitment and people ("appointed") triggers per region and theme | Free, no key |
+| **Google News RSS** per saved query | News triggers, as a second source for GDELT | Free |
+| **SEC EDGAR Form D** filings | New private fund raises and first closes: capital triggers for fund managers and family offices | Free |
+| **TED (EU Tenders Electronic Daily) API** | EU procurement: consulting, environmental, energy and water tenders | Free search API |
+| **World Bank procurement notices and projects APIs** | Multilateral tenders, EOIs, new projects by country and sector | Free |
+| **SAM.gov opportunities API** | US federal opportunities | Free API key |
+| **UNGM, IDB, AfDB, ADB notices** | Multilateral procurement | Public pages and feeds |
+| **Public lists, diffed monthly** | TNFD adopters, SBTi target dashboard (downloadable file), PRI signatory directory, GIIN members, B Corp directory, ImpactAssets 50 | Public pages and downloads |
+| **GDACS and USGS hazards, plus country indicators** (already on regenera.bio) | Crisis triggers (flood, drought, earthquake) linked to organizations in the affected region, with country context | Free (reused from the site's intelligence API) |
+| **Global Energy Monitor trackers** | Power plants, pipelines and mines by owner and status: project and closure triggers | Free download, CC BY |
+| **Company RSS and press pages** | Announcements from tracked organizations | Free |
+
+#### What the OS never does
+
+- It never scrapes LinkedIn or Apollo.
+- It never uses multiple free accounts to raise limits.
+- It never reveals mobile numbers.
+- It never stores copies of third-party pages: only facts and source URLs (section 13).
+
+### 12b. Leading-edge capabilities (added Sep 23, 2026)
+
+These are built from the free sources above and Claude. None need a paid subscription.
+
+| Capability | What it does | Phase |
+|---|---|---|
+| **Multi-source enrichment ("waterfall")** | Each field is filled from the best free source in order (Apollo, then Wikidata, GLEIF, EDGAR and website research). Conflicts are flagged, not overwritten, and every field shows its source and date | 1 |
+| **Entity resolution** | One organization across Apollo IDs, domains, LEIs, Wikidata QIDs and CIKs, so a fund and its GP, or a subsidiary and its parent, link correctly (the GLEIF ownership tree) | 1 |
+| **Relationship intelligence** | Reads Gmail and Calendar metadata only (who, when, thread count; never bodies unless a thread is linked) to find warm paths: who at Regenera has emailed or met someone at the target organization. Feeds the "access" axis of scoring | 2 |
+| **Lookalike search** | "Find more like this deal": Claude turns won deals into Apollo filters and public-list queries, and each result explains why it matches | 3 |
+| **Signal-based intent score** | Combines triggers, hiring, news momentum, site inquiries and email engagement into a time-decayed intent score per organization | 3 |
+| **Website visitor signal** | The regenera.bio Worker reads Cloudflare's `request.cf.asOrganization` (the network owner, organization-level only, no personal data) on key pages such as the diagnostic and mandate pages. Matching organizations get an intent signal. The privacy notice is updated before this is switched on | 3 |
+| **Deliverability monitor** | Daily DNS-over-HTTPS checks of SPF, DKIM, DMARC and MX for both sending domains, plus bounce and complaint rates. It alerts before sending degrades | 2 |
+| **Ask the OS + MCP server** | Natural-language questions over the CRM, in the app (Cmd+K) and from Claude | 4 |
+| **Decision-read triggers** | Every trigger arrives with Claude's reading of the decision it creates and the engagement it fits (section 4) | 3 |
 
 ### Email setup before first send
 
@@ -859,7 +917,7 @@ Prado sets up the accounts, and Claude Code wires the variables. Secrets live in
 - MFA turned on for the ChatGPT account(s) that sign in to the OS
 - Scheduler host (section 23): a free Cloudflare account with one cron Worker, or GitHub Actions
 - Anthropic API account with a monthly spend limit
-- Apollo.io paid plan with API access (plan decides rate limits and credits)
+- Apollo.io free account registered with a work email (e.g. alanprado@regenera.bio), with an API key
 - Google Postmaster Tools for both domains
 
 ## 21. Enumerations and schema rules
@@ -1138,7 +1196,7 @@ Claude Code must not assume answers to these. The scheduler host and the tracker
 | Tracker cut-over | `/tracker` is the live pipeline today | Import and retire, or keep both in sync for a period | Import in phase 1, read-only after sign-off |
 | Post-industrial land segment (was Mining) | Mining removed from all client-facing content | Keep renamed, or drop | Seed as disabled until confirmed |
 | Email platform for outreach | `alanprado@regenera.bio` receives notifications; booking uses a Google appointment schedule, which points to Google Workspace; system mail goes via Resend | Gmail API (Workspace), or another provider | Workspace, after Prado confirms |
-| Apollo plan and credit budget | Apollo chosen as the data layer (Sep 23, 2026) | Basic, Professional or Organization; monthly credits to spend through the OS | Ask Prado; enrichment disabled until a key and budget are set |
+| Apollo plan | Decided Sep 23, 2026: free plan, no paid subscription | Upgrade later only if free limits block real work | Free-plan limits enforced in code; enrichment spends at most `APOLLO_MONTHLY_CREDIT_BUDGET` |
 | Outreach languages at launch | Site locales: English, Spanish, French, Chinese (Field Notes English only) | Any subset; Portuguese would be new | English and Spanish |
 | LinkedIn automation in phase 4 | none | Stay assisted, or adopt an API with account restriction risk | Stay assisted |
 | Entry offers and pricing | Site states no prices | Prado to finalize per segment (section 3) | Drafts, pricing hidden |

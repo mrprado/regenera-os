@@ -12,8 +12,9 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | `TOKEN_ENCRYPTION_KEY` | 0 | Generate 32 random bytes (same command as above) |
 | `APP_BASE_URL` | 0 | `https://os.regenera.bio` |
 | `ANTHROPIC_API_KEY` | 1 | Anthropic Console; set a monthly spend limit |
-| `APOLLO_API_KEY` | 1 | Apollo.io → Settings → Integrations → API. Needs a paid plan with API access; the plan sets rate limits |
-| `APOLLO_MONTHLY_CREDIT_BUDGET` | 1 | Credits per month the OS may spend on enrichment (e.g. 500) |
+| `APOLLO_API_KEY` | 1 | Free Apollo.io account registered with a work email (e.g. alanprado@regenera.bio) → Settings → Integrations → API |
+| `APOLLO_MONTHLY_CREDIT_BUDGET` | 1 | Credits per month the OS may spend on enrichment. Default 50; keep it within the free plan's allowance |
+| `APOLLO_PLAN` | 1 | `free` (default). Sets the rate limits the OS enforces |
 | `SITE_WEBHOOK_SECRET`, `SITE_EXPORT_TOKEN` | 1 | Generate; the same values are set on the regenera.bio Sites project |
 | `RESEND_API_KEY`, `RESEND_FROM` | 2 | Existing Resend account the site uses; `RESEND_FROM` e.g. `Regenera OS <os@mail.regenera.bio>` |
 | `NOTIFY_EMAIL` | 2 | `alanprado@regenera.bio` |
@@ -38,5 +39,5 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 - [ ] Google Cloud project with internal OAuth app (above)
 - [ ] Scheduler host: free Cloudflare account (one cron Worker) or GitHub repository for Actions
 - [ ] Anthropic API account with spend limit
-- [ ] Apollo.io plan with API access; API key created
+- [ ] Free Apollo.io account (work email) and API key created
 - [ ] Google Postmaster Tools for both domains

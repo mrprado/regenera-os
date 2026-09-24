@@ -1,6 +1,6 @@
 # Phase 1 plan: CRM core
 
-**Status: draft for review (Sep 23, 2026). Not started.** Building begins only after (a) Prado approves this plan and (b) phase 0 is signed off (SPEC rule: no phase starts before the previous one passes). Planning ahead lets the account setup for phase 0 and the review of this plan run in parallel.
+**Status: approved by Prado ("finish"), Sep 23, 2026, and in build.** Phase 0 acceptance items that need Prado's accounts (Sites project, Google OAuth, scheduler, sending domain) run in parallel; they gate go-live, not the build. Open decisions use the defaults below.
 
 **Updated Sep 23, 2026:** Apollo.io's layout in Regenera's brand, with the Apollo API as the prospect data layer (SPEC sections 11 and 12). This adds the Apollo integration (section 2d), lists and saved searches, and Apollo-style People and Companies screens.
 
@@ -10,7 +10,7 @@
 
 | # | Decision | Why it matters | Default if unanswered |
 |---|---|---|---|
-| 1 | **Apollo plan and monthly credit budget.** Apollo is decided; which plan (Basic, Professional or Organization) and how many credits per month the OS may spend | The plan sets API rate limits. Enrichment spends credits (1 per email found, never mobile numbers by default) | Search works on any plan with API access. Enrichment stays off until `APOLLO_API_KEY` and `APOLLO_MONTHLY_CREDIT_BUDGET` are set |
+| 1 | ~~Apollo plan~~ **Decided: Apollo free plan** (work-email account, no subscription) | Free limits: 50/min, 200/h, 600/day for search and enrichment; limited monthly credits | Limits enforced in a local rate limiter; `APOLLO_MONTHLY_CREDIT_BUDGET` defaults to 50; public sources fill the rest |
 | 2 | **Changes to the live regenera.bio site.** The site must post inquiries and referrals to the OS and expose a token-protected export | This touches production. It is small (two webhook calls, one export route) and goes in its own commit in `regenera-development-office` for you to publish | Written, tested locally and committed on a branch there, **not published** until you say so |
 | 3 | **Anthropic API monthly budget** | Research stops enqueueing when month-to-date `ai_runs` cost reaches the cap | US$50/month (enough for about 150 full dossiers at the estimates below) |
 | 4 | **Test inbox for acceptance** | "A manual email sends to a test inbox and threads correctly" needs a real inbox you control | An address you name. Staging sends are restricted to it |

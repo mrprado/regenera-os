@@ -105,3 +105,5 @@ export const systemState = sqliteTable("system_state", {
   value: text("value").notNull(),
   updatedAt: timestamps.updatedAt,
 });
+
+export * from "./crm";

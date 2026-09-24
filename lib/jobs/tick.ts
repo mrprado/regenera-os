@@ -1,5 +1,8 @@
 import type { Db } from "@/db";
-import { setState } from "@/lib/state";
+import { ensurePrompts } from "@/lib/ai/run";
+import { ensureSegments } from "@/lib/segments";
+import { getState, setState } from "@/lib/state";
+import { ensureTriggerQueries } from "@/lib/triggers/queries";
 import { DEFAULT_SCHEDULES, handlers as defaultHandlers, type JobHandler } from "./handlers";
 import { claim, complete, fail, reclaimStale } from "./queue";
 import { ensureSchedules, materializeDue } from "./schedules";
@@ -17,6 +20,7 @@ export async function tick(db: Db, opts: {
   lockMs?: number;
   handlers?: Record<string, JobHandler>;
   schedules?: Record<string, string>;
+  skipReferenceData?: boolean;
 } = {}): Promise<TickResult> {
   const now = opts.now ?? (() => new Date());
   const handlers = opts.handlers ?? defaultHandlers;
@@ -28,6 +32,7 @@ export async function tick(db: Db, opts: {
   await setState(db, "last_tick_at", now().toISOString());
   await reclaimStale(db, now());
   await ensureSchedules(db, opts.schedules ?? DEFAULT_SCHEDULES, now());
+  if (!opts.skipReferenceData) await ensureReferenceData(db);
   result.scheduled = await materializeDue(db, now());
 
   while (true) {
@@ -48,4 +53,15 @@ export async function tick(db: Db, opts: {
     }
   }
   return result;
+}
+
+const REFERENCE_VERSION = "2026-09-23.1";
+
+/** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
+export async function ensureReferenceData(db: Db): Promise<void> {
+  if ((await getState(db, "reference_version")) === REFERENCE_VERSION) return;
+  await ensureSegments(db);
+  await ensurePrompts(db);
+  await ensureTriggerQueries(db);
+  await setState(db, "reference_version", REFERENCE_VERSION);
 }
