@@ -108,3 +108,4 @@ export const systemState = sqliteTable("system_state", {
 
 export * from "./crm";
 export * from "./automation";
+export * from "./radar";

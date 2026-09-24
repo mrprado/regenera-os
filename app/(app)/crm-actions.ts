@@ -12,10 +12,9 @@ import { googleConfig } from "@/lib/google/config";
 import { claimMessage, composeManualEmail, sendClaimedMessage } from "@/lib/crm/send";
 import { upsertContact, upsertOrganization } from "@/lib/crm/entities";
 import { requestResearch } from "@/lib/crm/research";
+import { enrichContactWithApollo } from "@/lib/crm/contact-email";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { enqueue } from "@/lib/jobs/queue";
-import { apolloEmailStatus, enrichPerson } from "@/lib/sources/apollo";
-import { SourceError } from "@/lib/sources/http";
 
 const safeBack = (v: FormDataEntryValue | null, fallback: string) => {
   const s = typeof v === "string" ? v : "";
@@ -75,27 +74,7 @@ export async function saveApolloPeople(formData: FormData) {
   redirect(withNotice(back, notice));
 }
 
-async function enrichApollo(db: ReturnType<typeof appDb>, mandateId: string, contactId: string): Promise<{ ok: true; email: boolean; credits: number } | { ok: false; error: string; stop: boolean }> {
-  const cfg = apolloConfig();
-  if (!cfg) return { ok: false, error: "Apollo is not connected (APOLLO_API_KEY).", stop: true };
-  const [c] = await db.select().from(contacts).where(eq(contacts.id, contactId));
-  if (!c) return { ok: false, error: "Contact not found", stop: false };
-  const [org] = c.orgId ? await db.select().from(organizations).where(eq(organizations.id, c.orgId)) : [];
-  try {
-    const r = await enrichPerson(db, cfg, c.apolloPersonId ? { id: c.apolloPersonId } : {
-      first_name: c.firstName, last_name: c.lastName, domain: org?.domain ?? undefined, organization_name: org?.name, linkedin_url: c.linkedinUrl ?? undefined,
-    });
-    const p = r.person;
-    if (!p || r.match_confidence === "none") return { ok: true, email: false, credits: 0 };
-    await upsertContact(db, mandateId, {
-      fullName: c.fullName, apolloPersonId: p.id, email: p.email, emailStatus: apolloEmailStatus(p.email_status), title: p.title, linkedinUrl: p.linkedin_url,
-    }, "apollo", { source: "apollo", confidence: r.match_confidence === "high" ? "high" : "medium" });
-    return { ok: true, email: !!p.email, credits: p.email || p.title ? 1 : 0 };
-  } catch (error) {
-    if (error instanceof SourceError) return { ok: false, error: error.message.replace(/^apollo: /, "Apollo: "), stop: error.status === 402 || error.status === 429 };
-    throw error;
-  }
-}
+const enrichApollo = (db: ReturnType<typeof appDb>, _mandateId: string, contactId: string) => enrichContactWithApollo(db, apolloConfig(), contactId);
 
 // ---------- Bulk actions on saved records ----------
 export async function bulkEnrichPeople(formData: FormData) {

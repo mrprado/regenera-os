@@ -2,7 +2,14 @@ import { env } from "cloudflare:workers";
 import type { Db } from "@/db";
 import { processImportChunk, r2Store } from "@/lib/import/process";
 import { AiBudgetError } from "@/lib/ai/run";
-import { aiConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
+import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
+import { listSources } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { runListSource } from "@/lib/radar/lists";
+import { dueSavedSearches, runSavedSearch } from "@/lib/radar/saved-searches";
+import { buildWeeklyReport, renderWeekly, type WeeklyBody } from "@/lib/reports/weekly";
+import type { Metrics } from "@/lib/reports/metrics";
+import { reports } from "@/db/schema";
 import { oauthAccounts } from "@/db/schema";
 import { getAccessToken } from "@/lib/google/accounts";
 import { googleConfig } from "@/lib/google/config";
@@ -160,6 +167,27 @@ export const handlers: Record<string, JobHandler> = {
     if (cfg.sendingDomain) domains.push({ domain: cfg.sendingDomain, role: "sending" });
     await runDeliverability(db, { domains, now });
   },
+  // ---------- phase 3: radar and reach ----------
+  "searches.run": async ({ db, now }) => {
+    const cfg = apolloConfig();
+    if (!cfg) return;
+    // A few per run keeps well inside Apollo's free per-minute and per-hour search limits.
+    for (const s of (await dueSavedSearches(db, now)).slice(0, 3)) await runSavedSearch(db, cfg, s.id, now);
+  },
+  "lists.diff": async ({ db, now }) => {
+    const sources = await db.select({ key: listSources.key }).from(listSources).where(eq(listSources.enabled, true));
+    for (const src of sources) await enqueue(db, "lists.diff.source", { key: src.key }, { dedupeKey: `listdiff:${src.key}:${now.toISOString().slice(0, 10)}`, now });
+  },
+  "lists.diff.source": async ({ db, job, now }) => {
+    await runListSource(db, String(job.payload.key), REGENERA_MANDATE_ID, now);
+  },
+  "reports.weekly": async ({ db, now }) => {
+    const r = await buildWeeklyReport(db, aiConfig(), REGENERA_MANDATE_ID, now);
+    const cfg = outreachConfig();
+    if (!r?.body || !cfg.resend || r.emailedAt) return;
+    await sendViaResend(cfg.resend, renderWeekly({ periodStart: r.periodStart, periodEnd: r.periodEnd, body: r.body as WeeklyBody, metrics: r.metrics as unknown as Metrics }, cfg.appBaseUrl));
+    await db.update(reports).set({ emailedAt: now.toISOString() }).where(eq(reports.id, r.id));
+  },
   "digest.daily": async ({ db, now }) => {
     const cfg = outreachConfig();
     const digest = await buildDigest(db, now);
@@ -180,4 +208,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "relationships.sync": "every:1h",
   "deliverability.check": "daily:06:00",
   "digest.daily": "daily:07:00",
+  "searches.run": "every:1h",
+  "lists.diff": "monthly:2:05:00",
+  "reports.weekly": "weekly:mon:07:30",
 };

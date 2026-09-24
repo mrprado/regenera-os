@@ -8,6 +8,8 @@ import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { enqueue } from "@/lib/jobs/queue";
+import { apolloConfig } from "@/lib/config";
+import { pursueTrigger } from "@/lib/triggers/pursue";
 
 const zStatus = z.enum(["pursued", "watched", "dismissed", "new"]);
 
@@ -47,4 +49,38 @@ export async function scanNow() {
     await audit(db, { actor: user.email, action: "trigger_scan_requested", entity: "jobs" });
   }, { owner: true });
   redirect("/triggers?tab=sources&scan=queued");
+}
+
+const zPick = z.object({
+  id: z.string(), first_name: z.string().nullish(), last_name: z.string().nullish(), name: z.string().nullish(), title: z.string().nullish(),
+  seniority: z.string().nullish(), linkedin_url: z.string().nullish(), city: z.string().nullish(), country: z.string().nullish(),
+});
+
+/** Pursue (docs/plans/phase-3.md item 1): save the picked people, find addresses, enroll unless a conflict blocks it. */
+export async function pursueAction(formData: FormData) {
+  const triggerId = z.string().uuid().parse(formData.get("triggerId"));
+  const people = formData.getAll("pick").map(v => zPick.parse(JSON.parse(String(v))));
+  const sequenceId = z.string().uuid().optional().catch(undefined).parse(formData.get("sequenceId") || undefined) ?? null;
+  const back = `/triggers/${triggerId}`;
+  if (!people.length) redirect(`${back}?notice=${encodeURIComponent("Select at least one person.")}`);
+  let notice = "";
+  await withOsUser(async user => {
+    const db = appDb();
+    const [t] = await db.select({ id: triggers.id }).from(triggers).where(and(eq(triggers.id, triggerId), mandateCondition(user.scope, triggers.mandateId)));
+    if (!t) throw new Error("Trigger not found");
+    const r = await pursueTrigger(db, apolloConfig(), {
+      triggerId, people, sequenceId, apolloEnrich: formData.get("enrich") === "1", overrideConflicts: formData.get("override") === "1", actor: user.email,
+    });
+    await audit(db, { actor: user.email, action: "trigger_pursue", entity: "triggers", entityId: triggerId, after: { saved: r.saved, emails: r.emails, credits: r.credits, blocked: r.blocked, enrolled: r.enrolled?.enrolled ?? 0 } });
+    const parts = [`Saved ${r.saved}, ${r.emails} with an address${r.credits ? ` (${r.credits} Apollo credits)` : ""}.`];
+    if (r.blocked) parts.push("Not enrolled: resolve the conflicts below, or tick override.");
+    else if (r.enrolled) {
+      parts.push(`Enrolled ${r.enrolled.enrolled}.`);
+      const skipped = Object.entries(r.enrolled.skipped).map(([k, n]) => `${n} ${k.replace(/_/g, " ")}`).join(", ");
+      if (skipped) parts.push(`Skipped: ${skipped}.`);
+    }
+    if (r.errors.length) parts.push(r.errors[0]);
+    notice = parts.join(" ");
+  });
+  redirect(`${back}?notice=${encodeURIComponent(notice)}`);
 }

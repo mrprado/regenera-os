@@ -1,11 +1,12 @@
 // regenera.bio intake (SPEC section 24): inquiries and Partner Network referrals via a signed webhook
 // and an hourly reconcile, plus the one-time Pipeline Tracker import. Shapes mirror the site's D1 schema.
-import { and, eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
 import { activities, deals, partners, siteEvents } from "@/db/schema";
 import { hmac, safeEqual } from "@/lib/crypto";
 import { REGENERA_MANDATE_ID } from "@/lib/membership";
+import { advanceDeal } from "./deals";
 import { upsertContact, upsertOrganization } from "./entities";
 
 // ---------- signatures ----------
@@ -78,16 +79,25 @@ export async function applySiteEvent(db: Db, e: SiteEvent, mandateId = REGENERA_
     return { dealId, created: true };
   }
 
-  // Referrals: create on first sight, then track status and tier changes.
+  // Referrals: create on first sight, then act only on real status or tier changes (the hourly
+  // reconcile replays every referral, so an unchanged row must be a no-op).
   const r = e.data;
-  const partner = (await db.insert(partners).values({ mandateId, name: r.partnerName, email: r.partnerEmail.toLowerCase(), tier: r.tier, referralStatus: r.status })
-    .onConflictDoUpdate({ target: [partners.mandateId, partners.email], set: { tier: r.tier, referralStatus: r.status, updatedAt: new Date().toISOString() } }).returning())[0];
+  const nowIso = new Date().toISOString();
+  const partner = (await db.insert(partners).values({ mandateId, name: r.partnerName, email: r.partnerEmail.toLowerCase(), organization: r.partnerOrg || null, tier: r.tier, referralStatus: r.status, lastReferralAt: r.date, status: "active" })
+    .onConflictDoUpdate({ target: [partners.mandateId, partners.email], set: { tier: r.tier, referralStatus: r.status, lastReferralAt: r.date, updatedAt: nowIso } }).returning())[0];
   if (existing) {
+    const before = existing.payload as { status?: string; tier?: string } | null;
+    if (before?.status === r.status && before?.tier === r.tier) return { dealId: existing.dealId, created: false };
     if (existing.dealId) {
-      const stage = r.status === "mandate_signed" || r.status === "paid" ? "signed" : r.status === "declined" ? "lost" : r.status === "scoped" ? "proposal" : undefined;
-      if (stage) await db.update(deals).set({ stage, stageChangedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(deals.id, existing.dealId));
+      await db.update(deals).set({ partnerId: partner.id }).where(eq(deals.id, existing.dealId));
+      const to = REFERRAL_STAGE[r.status];
+      if (to === "lost") {
+        await db.update(deals).set({ stage: "lost", lostReason: "Declined (Partner Network referral)", stageChangedAt: nowIso, updatedAt: nowIso }).where(and(eq(deals.id, existing.dealId), notInArray(deals.stage, ["lost", "churned", "completed"])));
+      } else if (to) {
+        await advanceDealById(db, existing.dealId, to, `Partner Network referral ${r.status}`);
+      }
     }
-    await db.update(siteEvents).set({ payload: r, updatedAt: new Date().toISOString() }).where(eq(siteEvents.id, existing.id));
+    await db.update(siteEvents).set({ payload: r, updatedAt: nowIso }).where(eq(siteEvents.id, existing.id));
     await db.insert(activities).values({ mandateId, dealId: existing.dealId, contactId: existing.contactId, type: "referral", detail: `Referral status ${r.status} (tier ${r.tier}) from ${r.partnerName}`, source: "site" });
     return { dealId: existing.dealId, created: false };
   }
@@ -96,7 +106,7 @@ export async function applySiteEvent(db: Db, e: SiteEvent, mandateId = REGENERA_
   const [deal] = await db.insert(deals).values({
     mandateId, orgId: org?.id ?? null, contactId: contact.id, name: `${r.refOrg || r.refName}: referral from ${r.partnerName}`,
     path: r.type === "capital" ? "capital_mandate" : "project_diagnostic", stage: "lead", engagement: r.type === "capital" ? "capital_screening" : "diagnostic",
-    source: "referral", sector: SITE_SECTOR[r.sector] ?? null, notes: `${r.context}\nPartner: ${r.partnerName} (${r.partnerOrg}), tier ${r.tier}. Conflict check before contact.`,
+    source: "referral", partnerId: partner.id, sector: SITE_SECTOR[r.sector] ?? null, notes: `${r.context}\nPartner: ${r.partnerName} (${r.partnerOrg}), tier ${r.tier}. Conflict check before contact.`,
     nextAction: "Run conflict check, then contact via the partner", nextActionDate: r.date,
   }).returning();
   await db.insert(activities).values({ mandateId, contactId: contact.id, orgId: org?.id ?? null, dealId: deal.id, type: "referral", detail: `Partner Network referral from ${r.partnerName} (${partner.tier})`, source: "site" });
@@ -161,11 +171,33 @@ export async function importTracker(db: Db, entries: TrackerEntry[], mandateId =
   return { created, updated, byStage: counts };
 }
 
+// ---------- Partner Network accounts ----------
+export const zPartnerAccount = z.object({ id: z.number().int(), name: z.string(), organization: z.string().default(""), email: z.string(), createdAt: z.string() }).strict();
+
+/** Upserts site partner accounts as OS partners. The site export never includes password fields (strict schema). */
+export async function syncPartnerAccounts(db: Db, rows: z.infer<typeof zPartnerAccount>[], mandateId = REGENERA_MANDATE_ID) {
+  for (const a of rows) {
+    const org = a.organization ? (await upsertOrganization(db, mandateId, { name: a.organization, domain: a.email.split("@")[1], domainInferred: true }, "referral", { source: "site_partner" })).row : null;
+    await db.insert(partners).values({ mandateId, name: a.name, email: a.email.toLowerCase(), organization: a.organization || null, orgId: org?.id ?? null, siteAccountId: a.id, status: "active" })
+      .onConflictDoUpdate({ target: [partners.mandateId, partners.email], set: { siteAccountId: a.id, organization: a.organization || null, orgId: org?.id ?? null, status: "active", updatedAt: new Date().toISOString() } });
+  }
+  return rows.length;
+}
+
+// Referral status to deal stage. Forward-only, except declined which closes the deal.
+const REFERRAL_STAGE: Record<string, "engaged" | "signed" | "lost" | undefined> = { submitted: undefined, scoped: "engaged", mandate_signed: "signed", paid: "signed", declined: "lost" };
+
+async function advanceDealById(db: Db, dealId: string, to: "engaged" | "signed", reason: string) {
+  const [d] = await db.select({ mandateId: deals.mandateId, orgId: deals.orgId, contactId: deals.contactId }).from(deals).where(eq(deals.id, dealId));
+  if (d) await advanceDeal(db, { ...d, to, actor: "system", source: "job", reason, dealId });
+}
+
 // ---------- pull from the site's export endpoint ----------
 const zExport = <T extends z.ZodTypeAny>(row: T) => z.object({ rows: z.array(row) });
 
-async function siteExport<T extends z.ZodTypeAny>(cfg: { baseUrl: string; token: string }, kind: string, row: T, since?: string, fetchImpl: typeof fetch = fetch): Promise<z.infer<T>[]> {
-  const url = `${cfg.baseUrl.replace(/\/$/, "")}/api/export/${kind}${since ? `?since=${encodeURIComponent(since)}` : ""}`;
+async function siteExport<T extends z.ZodTypeAny>(cfg: { baseUrl: string; token: string }, kind: string, row: T, since?: string, fetchImpl: typeof fetch = fetch, extra: Record<string, string> = {}): Promise<z.infer<T>[]> {
+  const q = new URLSearchParams({ ...(since ? { since } : {}), ...extra }).toString();
+  const url = `${cfg.baseUrl.replace(/\/$/, "")}/api/export/${kind}${q ? `?${q}` : ""}`;
   const res = await fetchImpl(url, { headers: { authorization: `Bearer ${cfg.token}` }, signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`regenera.bio export ${kind} returned ${res.status}`);
   return zExport(row).parse(await res.json()).rows;
@@ -174,11 +206,20 @@ async function siteExport<T extends z.ZodTypeAny>(cfg: { baseUrl: string; token:
 /** Hourly: applies any inquiries and referrals the webhook missed (idempotent on site ids). */
 export async function reconcileSite(db: Db, cfg: { baseUrl: string; token: string }, sinceIso: string, fetchImpl?: typeof fetch) {
   const inq = await siteExport(cfg, "inquiries", zInquiry, sinceIso, fetchImpl);
-  const refs = await siteExport(cfg, "referrals", zReferral, sinceIso, fetchImpl);
+  // Every referral (small table), so status changes a missed webhook would lose are caught too.
+  const refs = await siteExport(cfg, "referrals", zReferral, undefined, fetchImpl, { all: "1" });
   let applied = 0;
   for (const i of inq) if ((await applySiteEvent(db, { event: "inquiry.created", data: i })).created) applied++;
   for (const r of refs) if ((await applySiteEvent(db, { event: "referral.updated", data: r })).created) applied++;
-  return { inquiries: inq.length, referrals: refs.length, applied };
+  let partnersSynced = 0;
+  try {
+    const accounts = await siteExport(cfg, "partners", zPartnerAccount, undefined, fetchImpl);
+    partnersSynced = await syncPartnerAccounts(db, accounts);
+  } catch (error) {
+    // Older site deployments have no partners export yet; inquiries and referrals still reconcile.
+    if (!/returned 404/.test((error as Error).message)) throw error;
+  }
+  return { inquiries: inq.length, referrals: refs.length, applied, partners: partnersSynced };
 }
 
 export async function importTrackerFromSite(db: Db, cfg: { baseUrl: string; token: string }, fetchImpl?: typeof fetch) {

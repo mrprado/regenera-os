@@ -37,6 +37,10 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   recipient windows, caps, warm-up, threading and unsubscribe, reply watcher + routing, calendar sync +
   briefs, relationships (metadata only), deliverability, digest). Pages: /queue /sequences /tasks /inbox
   /settings/sending. Server actions: app/(app)/outreach-actions.ts
+- Radar (phase 3): lib/triggers/pursue.ts + lib/crm/conflicts.ts (trigger -> people -> conflict check -> enroll),
+  lib/radar/* (saved searches, public list diffs: SBTi xlsx streamed with fflate, TNFD table), lib/extension.ts +
+  extension/ (MV3, load unpacked; per-user hashed tokens), lib/reports/* (metrics + weekly report). D1 allows 100
+  bound parameters per statement: chunk IN (...) lists with lib/db/chunk.ts
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:

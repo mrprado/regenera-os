@@ -3,7 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { activities, contacts, enrollments, listMembers, lists, messages, replies, sequences, tasks } from "@/db/schema";
+import { enrollments, listMembers, lists, messages, replies, sequences, tasks } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { sendPolicy } from "@/lib/config";
@@ -13,6 +13,7 @@ import { getAccessToken } from "@/lib/google/accounts";
 import { googleConfig } from "@/lib/google/config";
 import { enqueue } from "@/lib/jobs/queue";
 import { pauseMailbox } from "@/lib/outreach/sender";
+import { completeTask } from "@/lib/outreach/tasks";
 import { approveMessage, enrollContacts, skipMessage, unapproveMessage } from "@/lib/outreach/sequences";
 
 const safeBack = (v: FormDataEntryValue | null, fallback: string) => {
@@ -169,20 +170,9 @@ export async function completeTaskAction(formData: FormData) {
   const outcome = z.enum(["done", "skipped"]).parse(formData.get("outcome"));
   const back = safeBack(formData.get("back"), "/tasks");
   await withOsUser(async user => {
-    const db = appDb();
-    const [t] = await db.select().from(tasks).where(and(eq(tasks.id, id), mandateCondition(user.scope, tasks.mandateId)));
+    const [t] = await appDb().select({ id: tasks.id }).from(tasks).where(and(eq(tasks.id, id), mandateCondition(user.scope, tasks.mandateId)));
     if (!t) throw new Error("Task not found");
-    const now = new Date().toISOString();
-    await db.update(tasks).set({ status: outcome, completedAt: now, updatedAt: now }).where(eq(tasks.id, id));
-    if (t.messageId) {
-      // An assisted LinkedIn step: Prado sent it by hand. Record it so the sequence moves on.
-      await db.update(messages).set(outcome === "done" ? { status: "sent", sentAt: now, approvedBy: user.email, approvedAt: now, updatedAt: now } : { status: "cancelled", updatedAt: now })
-        .where(and(eq(messages.id, t.messageId), inArray(messages.status, ["pending_approval", "style_failed", "approved"])));
-    }
-    if (outcome === "done" && t.contactId) {
-      await db.insert(activities).values({ mandateId: t.mandateId, contactId: t.contactId, orgId: t.orgId, type: t.type.startsWith("linkedin") ? "linkedin" : "note", method: "manual", detail: t.title, source: "manual", actor: user.email });
-      if (t.type.startsWith("linkedin")) await db.update(contacts).set({ leadState: "contacted", updatedAt: now }).where(and(eq(contacts.id, t.contactId), inArray(contacts.leadState, ["sourced", "researched", "qualified", "queued"])));
-    }
+    await completeTask(appDb(), id, outcome, user.email);
   });
   redirect(back);
 }

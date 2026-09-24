@@ -22,6 +22,13 @@
       "when": 1790215434698,
       "tag": "0002_bizarre_gressill",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790218780529,
+      "tag": "0003_bright_butterfly",
+      "breakpoints": true
     }
   ]
 }

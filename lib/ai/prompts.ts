@@ -142,6 +142,14 @@ Task: draft Prado's reply to an inbound email. Answer what they asked, in their 
 
 Task: write a one-page pre-meeting brief from the dossier, triggers, touch history and deal. Sections: context (who they are and what changed this year), their priorities, the decision they hold, Regenera's angle and the entry engagement, five questions to ask, and risks or sensitivities. Use only sourced facts.`,
   },
+  "weekly.report": {
+    model: "claude-sonnet-5",
+    maxTokens: 3000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: write Prado's one-page Monday report from last week's CRM numbers (given as JSON) plus the stalled deals and new triggers listed. Sections: a one-sentence headline, pipeline movement, wins, stalled deals, best and worst performing angles (only where at least 10 emails were sent, otherwise say the sample is too small), triggers worth attention, and exactly three recommended actions for this week. Use only the numbers given. Plain sentences, no dashes, no semicolons, no exclamation marks.`,
+  },
 } satisfies Record<string, PromptDef>;
 
 export type PromptKey = keyof typeof PROMPTS;

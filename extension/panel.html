@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Regenera OS</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<header><b>REGENERA</b> OS</header>
+<main>
+  <section id="setup" hidden>
+    <h1>Connect</h1>
+    <p class="muted">In Regenera OS open Settings, Extension, issue a token and paste it here.</p>
+    <label>OS address<input id="base" value="https://os.regenera.bio"></label>
+    <label>Token<input id="token" placeholder="rox_..." autocomplete="off"></label>
+    <button id="save" class="primary">Save</button>
+  </section>
+
+  <section id="notProfile" hidden>
+    <p class="muted">Open a LinkedIn profile (linkedin.com/in/...) to see it here.</p>
+  </section>
+
+  <section id="profile" hidden>
+    <div id="known" hidden>
+      <h1 id="name"></h1>
+      <p id="sub" class="muted"></p>
+      <a id="open" target="_blank" rel="noreferrer">Open in Regenera OS</a>
+      <div id="tasks"></div>
+      <p id="noTasks" class="muted" hidden>No LinkedIn step queued for this person.</p>
+    </div>
+    <div id="unknown" hidden>
+      <p class="muted">This person is not in Regenera OS yet.</p>
+    </div>
+    <details id="captureBox">
+      <summary>Capture this profile</summary>
+      <button id="read">Read this profile</button>
+      <label>Name<input id="f-name"></label>
+      <label>Title<input id="f-title"></label>
+      <label>Organization<input id="f-company"></label>
+      <label>Location<input id="f-location"></label>
+      <input id="f-headline" type="hidden">
+      <button id="capture" class="primary">Save to Regenera OS</button>
+    </details>
+  </section>
+  <p id="status" role="status" class="muted"></p>
+  <p class="foot"><a href="#" id="settings">Settings</a></p>
+</main>
+<script src="panel.js"></script>
+</body>
+</html>

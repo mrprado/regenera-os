@@ -107,10 +107,11 @@ async function TriggersTab({ scope, sp, back }: { scope: Parameters<typeof listT
                       <td>{r.eventDate}</td>
                       <td>
                         <div className={ui.rowActions}>
-                          {(["pursued", "watched", "dismissed"] as const).filter(st => st !== r.status).map(st => (
+                          <Link className={`${ui.miniBtn} ${ui.miniPrimary}`} style={{ display: "inline-flex", alignItems: "center" }} href={`/triggers/${r.id}`}>{r.status === "pursued" ? "People" : "Pursue"}</Link>
+                          {(["watched", "dismissed"] as const).filter(st => st !== r.status).map(st => (
                             <form key={st} action={setTriggerStatus}>
                               <input type="hidden" name="id" value={r.id} /><input type="hidden" name="status" value={st} /><input type="hidden" name="back" value={back} />
-                              <button className={`${ui.miniBtn} ${st === "pursued" ? ui.miniPrimary : ""}`} type="submit">{st === "pursued" ? "Pursue" : st === "watched" ? "Watch" : "Dismiss"}</button>
+                              <button className={ui.miniBtn} type="submit">{st === "watched" ? "Watch" : "Dismiss"}</button>
                             </form>
                           ))}
                         </div>

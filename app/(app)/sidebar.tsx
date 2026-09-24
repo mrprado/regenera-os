@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2, ChartColumn, ClipboardCheck, Earth, Handshake, House, Inbox, ListChecks,
-  Radar, Send, Settings, SquareCheckBig, SquareKanban, Users, type LucideIcon,
+  Radar, Telescope, Send, Settings, SquareCheckBig, SquareKanban, Users, type LucideIcon,
 } from "lucide-react";
 import styles from "./shell.module.css";
 
@@ -20,6 +20,7 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/companies", label: "Companies", icon: Building2 },
       { href: "/lists", label: "Lists", icon: ListChecks },
       { href: "/triggers", label: "Triggers", icon: Radar },
+      { href: "/searches", label: "Searches", icon: Telescope },
     ],
   },
   {

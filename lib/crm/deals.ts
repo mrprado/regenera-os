@@ -10,13 +10,14 @@ const ORDER: DealStage[] = ["lead", "contacted", "engaged", "call_booked", "prop
 const CLOSED: DealStage[] = ["completed", "churned", "lost"];
 
 export async function advanceDeal(db: Db, input: {
-  mandateId: string; orgId: string | null; contactId: string | null; to: DealStage; path?: (typeof ENGAGEMENT_PATHS)[number]; actor: string; source: "job" | "calendar"; reason: string; now?: Date;
+  mandateId: string; orgId: string | null; contactId: string | null; to: DealStage; path?: (typeof ENGAGEMENT_PATHS)[number]; actor: string; source: "job" | "calendar"; reason: string; now?: Date; dealId?: string;
 }): Promise<{ dealId: string; moved: boolean; created: boolean } | null> {
-  if (!input.orgId && !input.contactId) return null;
+  if (!input.dealId && !input.orgId && !input.contactId) return null;
   const now = (input.now ?? new Date()).toISOString();
-  const where = input.orgId ? eq(deals.orgId, input.orgId) : eq(deals.contactId, input.contactId!);
+  const where = input.dealId ? eq(deals.id, input.dealId) : input.orgId ? eq(deals.orgId, input.orgId) : eq(deals.contactId, input.contactId!);
   const [d] = await db.select().from(deals).where(and(eq(deals.mandateId, input.mandateId), where, notInArray(deals.stage, CLOSED))).orderBy(desc(deals.updatedAt)).limit(1);
   if (!d) {
+    if (input.dealId) return null;
     if (input.to === "nurture" || ORDER.indexOf(input.to) < ORDER.indexOf("engaged")) return null;
     const [org] = input.orgId ? await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, input.orgId)) : [];
     const [row] = await db.insert(deals).values({

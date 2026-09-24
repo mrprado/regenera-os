@@ -96,6 +96,7 @@ export const contacts = sqliteTable("contacts", {
   apolloPersonId: text("apollo_person_id"),
   source: text("source", { enum: keys(LEAD_SOURCES) }).notNull(),
   segmentId: text("segment_id"),
+  sourceTriggerId: text("source_trigger_id"), // the trigger this person was found for ("Pursue")
   leadState: text("lead_state", { enum: LEAD_STATES }).notNull().default("sourced"),
   tier: text("tier", { enum: TIERS }),
   score: integer("score"),
@@ -193,6 +194,8 @@ export const deals = sqliteTable("deals", {
   lostReason: text("lost_reason"),
   notes: text("notes").notNull().default(""),
   legacyPipelineEntryId: integer("legacy_pipeline_entry_id"),
+  partnerId: text("partner_id"),
+  triggerId: text("trigger_id"),
   stageChangedAt: text("stage_changed_at").notNull().default(now),
   archivedAt: text("archived_at"),
   ...timestamps,
@@ -285,6 +288,12 @@ export const partners = sqliteTable("partners", {
   type: text("type", { enum: PARTNER_TYPES }),
   tier: text("tier", { enum: PARTNER_TIERS }).notNull().default("standard"),
   referralStatus: text("referral_status", { enum: REFERRAL_STATUSES }),
+  siteAccountId: integer("site_account_id"),
+  organization: text("organization"),
+  geographies: text("geographies", { mode: "json" }).$type<string[]>(),
+  capabilities: text("capabilities", { mode: "json" }).$type<string[]>(),
+  status: text("status", { enum: ["prospect", "invited", "active", "inactive"] }).notNull().default("active"),
+  lastReferralAt: text("last_referral_at"),
   ...timestamps,
 }, t => [uniqueIndex("partners_mandate_email").on(t.mandateId, t.email)]);
 
