@@ -1,0 +1,75 @@
+// Manual email from a record (phase 1). Creating the message is Prado's approval; the send is claimed
+// with one conditional UPDATE that also checks suppression, so a message can never go out twice.
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import type { Db } from "@/db";
+import { activities, contacts, mandates, messages, oauthAccounts } from "@/db/schema";
+import { buildRawMessage, gmailSend } from "@/lib/google/gmail";
+import { validateMessage, type StyleIssue } from "@/lib/style/validate";
+
+export type SendPolicy = {
+  production: boolean;
+  allowedDomains: string[];       // non-production: recipients must be in these domains
+  postalAddress: string | null;   // CAN-SPAM footer
+};
+
+export type ComposeResult =
+  | { ok: true; messageId: string }
+  | { ok: false; reason: "not_found" | "no_email" | "suppressed" | "investment_mandate" | "recipient_not_allowed" | "needs_confirmation" | "style" | "no_mailbox"; issues?: StyleIssue[] };
+
+export async function composeManualEmail(db: Db, input: {
+  contactId: string; subject: string; body: string; approvedBy: string; confirmUnverified: boolean; policy: SendPolicy;
+}): Promise<ComposeResult> {
+  const [c] = await db.select().from(contacts).where(eq(contacts.id, input.contactId));
+  if (!c) return { ok: false, reason: "not_found" };
+  if (!c.emailLower) return { ok: false, reason: "no_email" };
+  if (c.suppressed) return { ok: false, reason: "suppressed" };
+  const [m] = await db.select().from(mandates).where(eq(mandates.id, c.mandateId));
+  if (m?.type === "investment") return { ok: false, reason: "investment_mandate" };
+  const domain = c.emailLower.split("@")[1];
+  if (!input.policy.production && !input.policy.allowedDomains.includes(domain)) return { ok: false, reason: "recipient_not_allowed" };
+  if (c.emailStatus !== "verified_provider" && c.emailStatus !== "verified_manual" && !input.confirmUnverified) return { ok: false, reason: "needs_confirmation" };
+  const [{ prior }] = await db.select({ prior: sql<number>`count(*)` }).from(messages).where(and(eq(messages.contactId, c.id), eq(messages.status, "sent")));
+  // Investment mandates were refused above, so everything reaching here is advisory or development.
+  const issues = validateMessage({ subject: input.subject, body: input.body }, { firstTouch: prior === 0, advisory: true });
+  if (issues.length) return { ok: false, reason: "style", issues };
+  const [acct] = await db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.mailboxRole, "primary"));
+  if (!acct) return { ok: false, reason: "no_mailbox" };
+  const [row] = await db.insert(messages).values({
+    mandateId: c.mandateId, contactId: c.id, channel: "email", mailboxRole: "primary", toEmail: c.emailLower,
+    subject: input.subject.trim(), body: input.body.trim(), status: "approved", approvedBy: input.approvedBy,
+  }).returning({ id: messages.id });
+  return { ok: true, messageId: row.id };
+}
+
+/** Atomic claim: approved -> sending, only if the recipient is not suppressed. Returns null if not claimable. */
+export async function claimMessage(db: Db, messageId: string) {
+  const rows = await db.all<{ id: string }>(sql`UPDATE messages SET status = 'sending', updated_at = ${new Date().toISOString()}
+    WHERE id = ${messageId} AND status = 'approved'
+      AND NOT EXISTS (SELECT 1 FROM suppression s WHERE s.email = lower(messages.to_email) OR s.domain = substr(lower(messages.to_email), instr(messages.to_email, '@') + 1))
+    RETURNING id`);
+  return rows[0] ?? null;
+}
+
+export async function sendClaimedMessage(db: Db, messageId: string, getToken: () => Promise<{ accessToken: string; email: string }>, policy: SendPolicy, fetchImpl?: typeof fetch) {
+  const [msg] = await db.select().from(messages).where(eq(messages.id, messageId));
+  if (!msg || msg.status !== "sending") return { sent: false as const, reason: "not_claimed" };
+  const [thread] = await db.select({ threadId: messages.gmailThreadId }).from(messages)
+    .where(and(eq(messages.contactId, msg.contactId), eq(messages.status, "sent"), isNotNull(messages.gmailThreadId))).orderBy(desc(messages.sentAt)).limit(1);
+  try {
+    const { accessToken, email } = await getToken();
+    const footer = policy.postalAddress ? `\n\n--\nRegenera · ${policy.postalAddress}` : "";
+    const raw = buildRawMessage({ from: email, to: msg.toEmail, subject: msg.subject, text: `${msg.body}${footer}` });
+    const res = await gmailSend(accessToken, raw, thread?.threadId ?? undefined, fetchImpl);
+    const now = new Date().toISOString();
+    await db.update(messages).set({ status: "sent", gmailMessageId: res.id, gmailThreadId: res.threadId, sentAt: now, updatedAt: now }).where(eq(messages.id, msg.id));
+    const [c] = await db.select({ orgId: contacts.orgId, leadState: contacts.leadState }).from(contacts).where(eq(contacts.id, msg.contactId));
+    await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${msg.subject}`, source: "manual", actor: msg.approvedBy });
+    if (c && ["sourced", "researched", "qualified", "queued"].includes(c.leadState)) await db.update(contacts).set({ leadState: "contacted" }).where(eq(contacts.id, msg.contactId));
+    return { sent: true as const, gmailId: res.id };
+  } catch (error) {
+    await db.update(messages).set({ status: "failed", error: (error as Error).message.slice(0, 500), updatedAt: new Date().toISOString() }).where(eq(messages.id, msg.id));
+    return { sent: false as const, reason: (error as Error).message };
+  }
+}
+
+

@@ -46,3 +46,6 @@ next-env.d.ts
 /outputs/
 /work/
 /public/maplibre-gl-worker.js
+
+# TypeScript incremental build cache
+*.tsbuildinfo

@@ -58,7 +58,7 @@ export async function applySiteEvent(db: Db, e: SiteEvent, mandateId = REGENERA_
   if (e.event === "inquiry.created") {
     if (existing) return { dealId: existing.dealId, created: false };
     const i = e.data;
-    const org = i.organization ? (await upsertOrganization(db, mandateId, { name: i.organization, domain: i.email.split("@")[1], location: i.geography || null, sector: SITE_SECTOR[i.sector] ?? null }, "website", { source: "site" })).row : null;
+    const org = i.organization ? (await upsertOrganization(db, mandateId, { name: i.organization, domain: i.email.split("@")[1], domainInferred: true, location: i.geography || null, sector: SITE_SECTOR[i.sector] ?? null }, "website", { source: "site" })).row : null;
     const contact = (await upsertContact(db, mandateId, { fullName: i.name, email: i.email, title: i.role || null, orgId: org?.id ?? null, emailStatus: "unverified" }, "website", { source: "site" })).row;
     let dealId: string | null = null;
     if (i.kind !== "partnership") {
@@ -138,7 +138,7 @@ export async function importTracker(db: Db, entries: TrackerEntry[], mandateId =
   for (const e of entries) {
     const m = mapTrackerEntry(e);
     counts[m.stage] = (counts[m.stage] ?? 0) + 1;
-    const org = e.organization ? (await upsertOrganization(db, mandateId, { name: e.organization, domain: e.email.split("@")[1], sector: SITE_SECTOR[e.sector] ?? null }, m.source, { source: "tracker" })).row : null;
+    const org = e.organization ? (await upsertOrganization(db, mandateId, { name: e.organization, domain: e.email.split("@")[1], domainInferred: true, sector: SITE_SECTOR[e.sector] ?? null }, m.source, { source: "tracker" })).row : null;
     const contact = (await upsertContact(db, mandateId, { fullName: e.name, email: e.email || null, orgId: org?.id ?? null, emailStatus: e.email ? "unverified" : undefined }, m.source, { source: "tracker" })).row;
     const values = {
       mandateId, orgId: org?.id ?? null, contactId: contact.id, name: e.organization ? `${e.organization}: ${e.name}` : e.name,

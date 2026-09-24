@@ -29,7 +29,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   ]);
   return (
     <>
-      <PageHeader title="People" count={saved.total} actions={<Link className="btn" href="/people/new">Add person</Link>} />
+      <PageHeader title="People" count={saved.total} actions={<><Link className="btn" href="/people/import">Import CSV</Link><Link className="btn" href="/people/new">Add person</Link></>} />
       <Notice text={sp.notice} />
       <nav className={ui.tabs} aria-label="People views">
         <Link className={`${ui.tab} ${tab === "saved" ? ui.tabActive : ""}`} href="/people">Saved<span className={ui.tabCount}>{saved.total}</span></Link>

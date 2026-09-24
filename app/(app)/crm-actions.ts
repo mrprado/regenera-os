@@ -6,7 +6,10 @@ import { z } from "zod";
 import { activities, contacts, listMembers, lists, organizations } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
-import { apolloConfig } from "@/lib/config";
+import { apolloConfig, sendPolicy } from "@/lib/config";
+import { getAccessToken } from "@/lib/google/accounts";
+import { googleConfig } from "@/lib/google/config";
+import { claimMessage, composeManualEmail, sendClaimedMessage } from "@/lib/crm/send";
 import { upsertContact, upsertOrganization } from "@/lib/crm/entities";
 import { requestResearch } from "@/lib/crm/research";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
@@ -225,7 +228,7 @@ export async function addPerson(formData: FormData) {
     const db = appDb();
     const mandateId = user.scope.ownerOf[0] ?? user.scope.mandateIds[0];
     let orgId: string | null = null;
-    if (orgName) orgId = (await upsertOrganization(db, mandateId, { name: orgName, domain: email?.split("@")[1] }, "other", { source: "manual" })).row.id;
+    if (orgName) orgId = (await upsertOrganization(db, mandateId, { name: orgName, domain: email?.split("@")[1], domainInferred: true }, "other", { source: "manual" })).row.id;
     const c = await upsertContact(db, mandateId, { fullName, email, title, orgId, emailStatus: email ? "unverified" : undefined }, "other", { source: "manual" });
     id = c.row.id;
     await audit(db, { actor: user.email, action: "person_add", entity: "contacts", entityId: id });
@@ -309,4 +312,40 @@ export async function publicEnrichOne(formData: FormData) {
     await enqueue(db, "identity.enrich", { orgId }, { dedupeKey: `identity:${orgId}:${new Date().toISOString().slice(0, 13)}` });
   });
   redirect(withNotice(`/companies/${orgId}`, "Public-source enrichment queued (Wikidata, GLEIF, SEC, map location)."));
+}
+
+const COMPOSE_REASON: Record<string, string> = {
+  not_found: "Contact not found.",
+  no_email: "This person has no email address yet. Enrich with Apollo or add one.",
+  suppressed: "This address is suppressed (unsubscribed, bounced or blocked).",
+  investment_mandate: "Investment-mandate contacts are manual, relationship-only: no email from the OS.",
+  recipient_not_allowed: "Outside production, email can only go to SEND_ALLOWED_DOMAINS (your test inbox).",
+  needs_confirmation: "The address is not verified. Tick the confirmation box to send anyway.",
+  no_mailbox: "Connect the primary Gmail mailbox in Settings → Connections first.",
+};
+
+export async function sendEmail(formData: FormData) {
+  const contactId = z.string().uuid().parse(formData.get("contactId"));
+  const subject = z.string().trim().min(1).max(200).parse(formData.get("subject"));
+  const body = z.string().trim().min(1).max(10000).parse(formData.get("body"));
+  const confirmUnverified = formData.get("confirmUnverified") === "on";
+  let notice = "";
+  await withOsUser(async user => {
+    const db = appDb();
+    const [c] = await db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), mandateCondition(user.scope, contacts.mandateId)));
+    if (!c) throw new Error("Contact not found");
+    const policy = sendPolicy();
+    const r = await composeManualEmail(db, { contactId, subject, body, approvedBy: user.email, confirmUnverified, policy });
+    if (!r.ok) {
+      notice = r.reason === "style" ? `Not sent. House style: ${(r.issues ?? []).map(i => i.detail).join(" ")}` : `Not sent. ${COMPOSE_REASON[r.reason]}`;
+      return;
+    }
+    const cfg = googleConfig();
+    if (!cfg) { notice = "Not sent. Google is not configured."; return; }
+    if (!(await claimMessage(db, r.messageId))) { notice = "Not sent. The message was already claimed or the address was suppressed."; return; }
+    const sent = await sendClaimedMessage(db, r.messageId, () => getAccessToken(db, cfg, "primary"), policy);
+    await audit(db, { actor: user.email, action: sent.sent ? "email_sent" : "email_failed", entity: "messages", entityId: r.messageId });
+    notice = sent.sent ? "Email sent from the primary mailbox." : `Send failed: ${sent.reason}`;
+  });
+  redirect(`/people/${contactId}?notice=${encodeURIComponent(notice)}`);
 }

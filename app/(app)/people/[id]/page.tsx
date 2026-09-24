@@ -8,7 +8,7 @@ import { requireOsUser } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { getContact } from "@/lib/crm/queries";
 import { DEAL_STAGES, ENGAGEMENTS, PRACTICES } from "@/lib/vocab";
-import { addNote, pasteLinkedin, researchOne } from "../../crm-actions";
+import { addNote, pasteLinkedin, researchOne, sendEmail } from "../../crm-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Person" };
@@ -81,6 +81,20 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
               )}
             </section>
           )}
+
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Email</span><span>{c.email ?? "no address"}</span></p>
+            <form action={sendEmail} className={r.form}>
+              <input type="hidden" name="contactId" value={c.id} />
+              <input name="subject" placeholder="Subject" aria-label="Subject" required maxLength={200} />
+              <textarea name="body" placeholder="Open with their situation and the decision they hold. One concrete idea. One small ask. 120 words or fewer on first touch." aria-label="Message" required style={{ marginTop: 8, minHeight: 140 }} />
+              {c.emailStatus !== "verified_provider" && c.emailStatus !== "verified_manual" && (
+                <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontWeight: 500 }}><input type="checkbox" name="confirmUnverified" style={{ width: "auto" }} /> Send to an unverified address</label>
+              )}
+              <button className="btn btn--primary" type="submit" disabled={!c.email}>Send from primary mailbox</button>
+              <p className={r.why}>Checked before sending: house style, suppression, mandate rules, and (outside production) the test-domain allowlist.</p>
+            </form>
+          </section>
 
           <section className={r.panel}>
             <p className={r.panelTitle}>Organization dossier</p>

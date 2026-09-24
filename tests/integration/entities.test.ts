@@ -36,6 +36,15 @@ describe("upsertOrganization", () => {
     expect(r.created).toBe(true);
   });
 
+  it("does not merge different companies that share an email-derived domain", async () => {
+    await upsertOrganization(t.db, M, { name: "Andes Agua", domain: "group.com", domainInferred: true }, "other", { source: "csv" });
+    const r = await upsertOrganization(t.db, M, { name: "Cerrado Capital", domain: "group.com", domainInferred: true }, "other", { source: "csv" });
+    expect(r.created).toBe(true);
+    expect(r.row.domain).toBeNull();
+    const same = await upsertOrganization(t.db, M, { name: "Andes Agua S.A.", domain: "group.com", domainInferred: true }, "other", { source: "csv" });
+    expect(same.created).toBe(false);
+  });
+
   it("keeps mandates separate", async () => {
     await upsertOrganization(t.db, M, { name: "Shared Co", domain: "shared.co" }, "apollo", { source: "apollo" });
     const r = await upsertOrganization(t.db, "mandate_other", { name: "Shared Co", domain: "shared.co" }, "apollo", { source: "apollo" });

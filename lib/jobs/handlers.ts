@@ -1,4 +1,6 @@
+import { env } from "cloudflare:workers";
 import type { Db } from "@/db";
+import { processImportChunk, r2Store } from "@/lib/import/process";
 import { AiBudgetError } from "@/lib/ai/run";
 import { aiConfig, siteConfig } from "@/lib/config";
 import { reconcileSite } from "@/lib/crm/site-intake";
@@ -74,6 +76,10 @@ export const handlers: Record<string, JobHandler> = {
     const r = await reconcileSite(db, cfg, since.slice(0, 19).replace("T", " "));
     await setState(db, "site_reconcile_since", new Date(now.getTime() - 3_600_000).toISOString());
     await setState(db, "site_reconcile_last", JSON.stringify({ at: now.toISOString(), ...r }));
+  },
+  "import.process": async ({ db, job }) => {
+    if (!env.BUCKET) throw new Error("R2 binding BUCKET is not available");
+    await processImportChunk(db, r2Store(env.BUCKET), String(job.payload.importId), Number(job.payload.offset ?? 0));
   },
   "geo.org": async ({ db, job, now }) => {
     const r = await geocodeOrganization(db, String(job.payload.orgId));

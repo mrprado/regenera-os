@@ -17,7 +17,7 @@ export function normalizeOrgName(name: string): string {
 }
 
 export function normalizePersonName(name: string): string {
-  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 const FREE_MAIL = new Set([

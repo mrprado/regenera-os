@@ -21,3 +21,12 @@ export function siteConfig(): { baseUrl: string; token: string } | null {
   if (!env.SITE_EXPORT_TOKEN) return null;
   return { baseUrl: env.SITE_BASE_URL ?? "https://regenera.bio", token: env.SITE_EXPORT_TOKEN };
 }
+
+/** Outbound email policy: outside production only allow-listed test domains can receive mail. */
+export function sendPolicy() {
+  return {
+    production: env.APP_ENV === "production",
+    allowedDomains: (env.SEND_ALLOWED_DOMAINS ?? "").split(",").map(d => d.trim().toLowerCase()).filter(Boolean),
+    postalAddress: env.COMPANY_POSTAL_ADDRESS ?? null,
+  };
+}

@@ -29,7 +29,11 @@ export type OrgInput = {
   lat?: number | null;
   lng?: number | null;
   geoSource?: string | null;
+  /** True when `domain` was guessed from a person's email rather than stated as the company website. */
+  domainInferred?: boolean;
 };
+
+const namesCompatible = (a: string, b: string) => a === b || a.includes(b) || b.includes(a);
 
 const ORG_FIELDS = ["domain", "website", "country", "location", "sector", "industry", "headcount", "foundedYear", "description", "linkedinUrl", "apolloOrgId", "lei", "wikidataId", "secCik", "segmentId", "lat", "lng", "geoSource"] as const;
 
@@ -58,10 +62,16 @@ export async function upsertOrganization(db: Db, mandateId: string, input: OrgIn
   const domain = registrableDomain(input.domain ?? input.website ?? null);
   const normalized = normalizeOrgName(input.name);
   const clean: OrgInput = { ...input, domain };
+  delete clean.domainInferred;
 
   let existing: typeof organizations.$inferSelect | undefined;
   if (input.apolloOrgId) [existing] = await db.select().from(organizations).where(and(eq(organizations.mandateId, mandateId), eq(organizations.apolloOrgId, input.apolloOrgId)));
-  if (!existing && domain) [existing] = await db.select().from(organizations).where(and(eq(organizations.mandateId, mandateId), eq(organizations.domain, domain)));
+  if (!existing && domain) {
+    const [byDomain] = await db.select().from(organizations).where(and(eq(organizations.mandateId, mandateId), eq(organizations.domain, domain)));
+    // An email-derived domain (shared or group mailboxes) only merges when the names also agree.
+    if (byDomain && input.domainInferred && !namesCompatible(byDomain.nameNormalized, normalized)) clean.domain = null;
+    else existing = byDomain;
+  }
   if (!existing && input.lei) [existing] = await db.select().from(organizations).where(and(eq(organizations.mandateId, mandateId), eq(organizations.lei, input.lei)));
   if (!existing && normalized) {
     // Name-only matches merge only when neither side has a conflicting domain.
@@ -122,7 +132,9 @@ export async function upsertContact(db: Db, mandateId: string, input: ContactInp
   if (!existing && email) [existing] = await db.select().from(contacts).where(and(eq(contacts.mandateId, mandateId), eq(contacts.emailLower, email)));
   if (!existing && linkedin) [existing] = await db.select().from(contacts).where(and(eq(contacts.mandateId, mandateId), eq(contacts.linkedinUrl, linkedin)));
   if (!existing && input.orgId && normalized) {
-    [existing] = await db.select().from(contacts).where(and(eq(contacts.mandateId, mandateId), eq(contacts.orgId, input.orgId), eq(contacts.nameNormalized, normalized)));
+    // Same name at the same organization merges only when the emails do not conflict.
+    const candidates = await db.select().from(contacts).where(and(eq(contacts.mandateId, mandateId), eq(contacts.orgId, input.orgId), eq(contacts.nameNormalized, normalized)));
+    existing = candidates.find(c => !c.emailLower || !email || c.emailLower === email);
   }
 
   if (!existing) {
