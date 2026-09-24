@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { activities, imports } from "@/db/schema";
 import { upsertContact, upsertOrganization } from "@/lib/crm/entities";
+import { normalizeOrgName } from "@/lib/dedupe/normalize";
 import { enqueue } from "@/lib/jobs/queue";
 import { applyMapping, type ImportField, type ImportRow } from "./csv";
 
@@ -26,16 +27,22 @@ export const importKey = (id: string) => `imports/${id}.json`;
 /** Imports one chunk of mapped rows. Returns created/updated counts for the chunk. */
 export async function importRows(db: Db, mandateId: string, rows: ImportRow[], importId: string) {
   let created = 0, updated = 0, flagged = 0;
+  // Rows in a CSV repeat the same companies: resolve each distinct organization once per chunk.
+  // (upsertOrganization already queues identity enrichment for new organizations.)
+  const orgCache = new Map<string, string>();
   for (const r of rows) {
     if (!r.fullName && !r.email && !r.company) { flagged++; continue; }
     let orgId: string | null = null;
     if (r.company) {
-      const o = await upsertOrganization(db, mandateId, {
-        name: r.company, website: r.website ?? null, domain: r.website ?? r.email?.split("@")[1] ?? null, domainInferred: !r.website,
-        location: [r.location, r.country].filter(Boolean).join(", ") || null,
-      }, "other", { source: "csv" });
-      orgId = o.row.id;
-      if (o.created) await enqueue(db, "identity.enrich", { orgId }, { dedupeKey: `identity:${orgId}` });
+      const domain = r.website ?? r.email?.split("@")[1] ?? null;
+      const location = [r.location, r.country].filter(Boolean).join(", ") || null;
+      const key = [normalizeOrgName(r.company), (domain ?? "").toLowerCase(), r.website ? "w" : "e", location ?? ""].join("|");
+      orgId = orgCache.get(key) ?? null;
+      if (!orgId) {
+        const o = await upsertOrganization(db, mandateId, { name: r.company, website: r.website ?? null, domain, domainInferred: !r.website, location }, "other", { source: "csv" });
+        orgId = o.row.id;
+        orgCache.set(key, orgId);
+      }
     }
     if (r.fullName || r.email) {
       const c = await upsertContact(db, mandateId, {

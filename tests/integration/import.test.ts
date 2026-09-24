@@ -37,5 +37,6 @@ describe("CSV import", () => {
     expect(done).toMatchObject({ status: "done", processedRows: 250, created: 240, updated: 10 });
     expect(await t.db.select().from(contacts)).toHaveLength(240);
     expect(await t.db.select().from(organizations)).toHaveLength(20);
-  });
+    // 250 rows through the local D1 proxy is the heaviest test; the repo sits in OneDrive, which slows file I/O.
+  }, 60_000);
 });
