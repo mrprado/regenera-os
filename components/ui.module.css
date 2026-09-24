@@ -1,0 +1,66 @@
+/* Shared Apollo-style work surfaces in Regenera tokens: tabs, filter bar, dense tables, chips. */
+.tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin: 0 0 16px; overflow-x: auto; }
+.tab { padding: 10px 0 11px; font-size: 13px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab:hover { color: var(--heading); }
+.tabActive { color: var(--heading); border-bottom-color: var(--pollen); }
+.tabCount { margin-left: 6px; font-weight: 500; color: var(--text-muted); font-size: 12px; }
+
+.workspace { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+.filters { position: sticky; top: 76px; border: 1px solid var(--line); border-radius: var(--radius-card); padding: 14px; background: var(--paper); }
+.filtersTitle { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--eyebrow); }
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+.field input, .field select { height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--text); font-size: 13px; }
+.field input:focus, .field select:focus { outline: 2px solid color-mix(in srgb, var(--pollen) 60%, transparent); outline-offset: 0; }
+.filterActions { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+.clear { font-size: 12px; color: var(--link); }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; min-height: 32px; flex-wrap: wrap; }
+.resultCount { font-size: 13px; color: var(--text-muted); }
+
+.tableWrap { border: 1px solid var(--line); border-radius: var(--radius-card); overflow-x: auto; background: var(--paper); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { position: sticky; top: 0; background: #faf8f2; text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--eyebrow); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table td { padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); vertical-align: top; height: 36px; }
+.table tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: #fbfaf6; }
+.primary { font-weight: 600; color: var(--heading); }
+.sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.wrap { max-width: 560px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); white-space: nowrap; color: var(--heading); }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.chipPollen { background: color-mix(in srgb, var(--pollen) 18%, transparent); border-color: color-mix(in srgb, var(--pollen) 55%, transparent); }
+.chipReed { background: color-mix(in srgb, var(--reed) 25%, transparent); border-color: color-mix(in srgb, var(--reed) 70%, transparent); }
+.chipWater { background: color-mix(in srgb, var(--water) 12%, transparent); border-color: color-mix(in srgb, var(--water) 45%, transparent); }
+.chipEmber { background: #fbe7e2; border-color: #e8b3a6; }
+.chipMuted { color: var(--text-muted); }
+
+.meter { display: inline-grid; grid-template-columns: 44px auto; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.meterBar { height: 5px; border-radius: 3px; background: #ece8dc; overflow: hidden; }
+.meterFill { height: 100%; background: var(--pollen); }
+
+.read { font-size: 13px; line-height: 1.5; color: var(--text); border-left: 2px solid var(--pollen); padding-left: 10px; margin: 6px 0 0; }
+.rowActions { display: flex; gap: 6px; flex-wrap: wrap; }
+.miniBtn { height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; color: var(--heading); }
+.miniBtn:hover { border-color: var(--heading); }
+.miniPrimary { background: var(--pollen); border-color: var(--pollen); color: var(--fern); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat { border: 1px solid var(--line); border-radius: var(--radius-card); padding: 12px 14px; }
+.stat b { display: block; font-size: 22px; color: var(--heading); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--text-muted); }
+
+.notice { border-left: 3px solid var(--pollen); padding: 10px 14px; background: color-mix(in srgb, var(--pollen) 10%, transparent); margin: 0 0 16px; font-size: 13.5px; border-radius: 0 8px 8px 0; }
+
+@media (max-width: 980px) {
+  .workspace { grid-template-columns: 1fr; }
+  .filters { position: static; }
+}
+@media (max-width: 720px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .table td { border: 0; padding: 3px 0; height: auto; }
+}
