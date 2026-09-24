@@ -52,6 +52,10 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   cross-source dedupe; Claude read; applicant matching; Bid = deal + back-planned tasks), lib/funding/bids.ts
   (proposal drafts; past performance only with disclosure-authorized case records). Page /funding, actions in
   app/(app)/funding-actions.ts. Shared page constants live in lib/funding/labels.ts (pages export only default)
+- Contracts (phase 5 part E): db/contracts.ts, lib/contracts/{templates,engine,queries,labels}.ts, pages /contracts,
+  actions app/(app)/contract-actions.ts. Templates are counsel starting points; markSent blocks on [TO CONFIRM],
+  the template note, and counsel review for success fee / equity / capital work / investment mandates.
+  components/markdown-lite.tsx renders contract text as React (never HTML)
 - React drops name/value on a button whose formAction is a function: use one server action per button
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)

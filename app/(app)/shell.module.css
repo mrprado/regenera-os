@@ -82,3 +82,9 @@
 }
 .switcher select { height: 30px; border-radius: 999px; border: 1px solid color-mix(in srgb, #fff 30%, transparent); background: transparent; color: #fff; font-size: 12.5px; padding: 0 10px; }
 .switcher select option { color: #131b13; }
+
+/* Printing a contract (or any page): only the content. */
+@media print {
+  .header, .sidebar, .banner, .mobileMenu, .mobilePanel { display: none !important; }
+  .shell, .main, .content { display: block; padding: 0; margin: 0; }
+}

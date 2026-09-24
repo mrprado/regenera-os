@@ -10,7 +10,7 @@ const ORDER: DealStage[] = ["lead", "contacted", "engaged", "call_booked", "prop
 const CLOSED: DealStage[] = ["completed", "churned", "lost"];
 
 export async function advanceDeal(db: Db, input: {
-  mandateId: string; orgId: string | null; contactId: string | null; to: DealStage; path?: (typeof ENGAGEMENT_PATHS)[number]; actor: string; source: "job" | "calendar"; reason: string; now?: Date; dealId?: string;
+  mandateId: string; orgId: string | null; contactId: string | null; to: DealStage; path?: (typeof ENGAGEMENT_PATHS)[number]; actor: string; source: "job" | "calendar" | "manual"; reason: string; now?: Date; dealId?: string;
 }): Promise<{ dealId: string; moved: boolean; created: boolean } | null> {
   if (!input.dealId && !input.orgId && !input.contactId) return null;
   const now = (input.now ?? new Date()).toISOString();

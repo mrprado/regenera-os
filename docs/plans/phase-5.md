@@ -188,3 +188,32 @@ Streams already on the site are grounded in its six engagements and five fee typ
 - **Needs ANTHROPIC_API_KEY:** Claude's fit and route read, and proposal drafts. Until then, fit is a keyword estimate.
 - **Tests:** tests/integration/funding.test.ts (12): source parsers keep open calls only, cleaning, cross-source dedupe,
   rotation with a failing source, off-topic skip, Claude read, applicant matching, Bid, proposal disclosure rule, digest.
+
+## E. Contracts per engagement (approved 2026-09-24, built)
+
+Every engagement gets its contract in the OS, tied to the deal, so renewals, milestones and signatures are tracked
+alongside the pipeline.
+
+- **Kinds:** engagement letter, statement of work, mutual NDA and amendment are drafted from a deal. A partner
+  referral agreement is drafted from a partner, at its tier's fee (10, 15 or 20%).
+- **Templates** (lib/contracts/templates.ts): scope and deliverables for each of the six engagements, fees from
+  the deal's fee type and terms, and the site's "what Regenera is not" notice in every contract. Anything the OS
+  cannot fill shows as [TO CONFIRM]. Every template opens with a note saying counsel must review it first.
+- **Guardrails:**
+  - A contract cannot be marked sent while any [TO CONFIRM] gap or the template note remains.
+  - Success fees, fee plus equity, capital advisory, capital screening and investment mandates need an owner to
+    record counsel review before the contract can be sent or signed.
+  - Success-fee clauses say fees are never taken from investor funds.
+  - Referral agreements pay nothing on capital raised.
+- **Lifecycle:** draft, sent (the deal moves to Proposal), signed (effective and end dates set, the deal moves to
+  Signed), then completed or terminated. Sent and signed text is frozen; changes go through an amendment. Every
+  text or terms change is a new version, with history.
+- **Money:** milestones per contract (pending, invoiced, paid, waived), and monthly retainers scheduled in one
+  click. Tracking only: nothing is charged or collected.
+- **Alerts** (Contracts page and daily digest): contracts unsigned after 7 days, renewal notice dates within 45
+  days, and milestones due within 7 days or overdue.
+- **Where it shows:** the Contracts page, a Contract column on the Deals table, Home (awaiting signature) and
+  Reports (contracted value by engagement, paid and outstanding).
+- **Not included:** e-signature (DocuSign and similar are paid, so ask first), and file uploads until R2 is
+  enabled. The signed copy is a link.
+- **Tests:** tests/integration/contracts.test.ts (8).

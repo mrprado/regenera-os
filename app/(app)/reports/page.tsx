@@ -13,6 +13,7 @@ import { DEAL_STAGES, ENGAGEMENTS, FEE_TYPES, LEAD_SOURCES, PRACTICES } from "@/
 import { weeklyReportNowAction } from "../radar-actions";
 import { CasesTab, ForecastTab, LearningTab } from "./tabs";
 import { bidDeals } from "@/lib/funding/queries";
+import { contractTotals } from "@/lib/contracts/queries";
 import { ROUTE_LABEL } from "@/lib/funding/labels";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +80,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const weekly = await appDb().select().from(reports).where(and(inArray(reports.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["__none__"]), eq(reports.kind, "weekly"))).orderBy(desc(reports.periodStart)).limit(6);
   const o = m.outreach;
   const bids = await bidDeals(user.scope);
+  const contractStats = await contractTotals(user.scope);
   const WON = ["signed", "active", "expansion", "completed"];
   const byFunder = [...bids.reduce((acc, b) => {
     const k = `${b.funder ?? "Unknown funder"}|${b.route ?? "unread"}`;
@@ -158,6 +160,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             {m.triggerToFirstTouchHours.length === 0 ? <p className={r.empty}>No pursued triggers were emailed in this period.</p> : (
               <table className={ui.table}><tbody>{m.triggerToFirstTouchHours.map(x => <tr key={x.type}><td>{x.type}</td><td className={ui.num}>{x.triggers} triggers</td><td className={ui.num}>median {x.medianHours < 48 ? `${x.medianHours} h` : `${Math.round(x.medianHours / 24)} days`}</td></tr>)}</tbody></table>
             )}
+          </section>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Contracted value by engagement</span><Link href="/contracts">Contracts</Link></p>
+            {contractStats.byEngagement.length === 0 ? <p className={r.empty}>No signed contracts yet.</p> : (
+              <table className={ui.table}><tbody>{contractStats.byEngagement.map(x => (
+                <tr key={x.engagement ?? "other"}><td>{x.engagement ? ENGAGEMENTS[x.engagement as keyof typeof ENGAGEMENTS] ?? x.engagement : "NDAs and referral agreements"}</td><td className={ui.num}>{x.signed} signed</td><td className={ui.num}>{x.value ? money(x.value) : ""}</td></tr>
+              ))}</tbody></table>
+            )}
+            <p className={ui.sub}>Milestones paid {money(contractStats.paid)} · outstanding {money(contractStats.outstanding)}</p>
           </section>
           <section className={r.panel}>
             <p className={r.panelTitle}><span>Funding bids by funder</span><Link href="/funding?tab=bids">Bids</Link></p>

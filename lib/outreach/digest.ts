@@ -3,6 +3,7 @@ import { and, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { deals, deliverabilityChecks, fundingOpportunities, mailboxState, meetingBriefs, messages, replies, tasks, triggers } from "@/db/schema";
 import { deliverabilityIssues } from "./deliverability";
+import { contractAlerts, type ContractAlerts } from "@/lib/contracts/engine";
 
 export type Digest = {
   date: string;
@@ -14,6 +15,7 @@ export type Digest = {
   tasksDue: number;
   alerts: string[];
   fundingDeadlines: { title: string; deadline: string; decision: string; daysLeft: number }[];
+  contracts: ContractAlerts;
 };
 
 export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
@@ -44,8 +46,10 @@ export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
     .map(f => ({ title: f.title, deadline: f.deadline!, decision: f.decision, daysLeft: Math.round((Date.parse(`${f.deadline}T12:00:00Z`) - Date.parse(`${day}T12:00:00Z`)) / 86_400_000) }))
     .filter(f => f.decision === "bidding" || f.daysLeft === 14 || f.daysLeft <= 3)
     .slice(0, 10);
+  const contracts = await contractAlerts(db, null, now);
   return {
     fundingDeadlines,
+    contracts,
     date: day, newTriggers,
     queue: { pending: q.find(x => x.status === "pending_approval")?.n ?? 0, styleFailed: q.find(x => x.status === "style_failed")?.n ?? 0 },
     replies: rep, meetings, overdue, tasksDue, alerts,
@@ -63,6 +67,11 @@ export function renderDigest(d: Digest, appBaseUrl: string): { subject: string; 
 ${d.alerts.length ? section("Alerts", d.alerts.map(esc), "") : ""}
 ${section("Approval queue", [`${d.queue.pending} drafts waiting, ${d.queue.styleFailed} need a style fix · ${link("/queue", "Open queue")}`], "")}
 ${section("Replies to handle", d.replies.map(r => `${esc(r.classification ?? "unclassified")} · ${esc(r.fromEmail)} · ${esc(r.subject)}`), "No replies waiting.")}
+${section("Contracts", [
+  ...d.contracts.awaitingSignature.map(a => `Unsigned for ${a.days} days · ${esc(a.title)}`),
+  ...d.contracts.renewals.map(a => `${a.autoRenew ? "Renews" : "Ends"} ${esc(a.endDate)} (notice by ${esc(a.noticeBy)}) · ${esc(a.title)}`),
+  ...d.contracts.milestonesDue.map(m => `${m.overdue ? "Overdue" : "Due"} ${esc(m.dueDate)} · ${esc(m.title)} · ${esc(m.contractTitle)}`),
+].map(x => `${x} · ${link("/contracts", "Open Contracts")}`), "No contract signatures, renewals or payments need attention.")}
 ${section("Funding deadlines", d.fundingDeadlines.map(f => `${esc(f.deadline)} (${f.daysLeft} days) · ${esc(f.decision)} · ${esc(f.title)} · ${link("/funding", "Open Funding")}`), "No funding deadlines in the next two weeks.")}
 ${section("Meetings in the next 24 hours", d.meetings.map(m => `${esc(m.startsAt.slice(11, 16))} UTC · ${esc(m.title)}`), "No meetings.")}
 ${section("New triggers", d.newTriggers.map(t => `[${esc(t.type)} · ${t.urgency}] ${esc(t.summary)}`), "No new triggers.")}

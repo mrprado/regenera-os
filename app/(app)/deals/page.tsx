@@ -10,6 +10,9 @@ import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { DEAL_STAGES, ENGAGEMENT_PATHS } from "@/lib/vocab";
 import { importTrackerAction, moveDeal, setForecastAction } from "./actions";
 import Kanban, { type KanbanDeal } from "./kanban";
+import { createContractAction } from "../contract-actions";
+import { CONTRACT_STATUS_LABEL } from "@/lib/contracts/labels";
+import { contractsByDeal } from "@/lib/contracts/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Deals" };
@@ -31,6 +34,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const kanban: KanbanDeal[] = rows.map(r => ({ ...r, overdue: !!r.nextActionDate && r.nextActionDate < today }));
   const open = rows.filter(r => !(CLOSED as readonly string[]).includes(r.stage));
   const back = withParams("/deals", sp, { notice: undefined });
+  const dealContracts = view === "table" ? await contractsByDeal(user.scope, rows.map(r => r.id)) : new Map<string, { id: string; status: string }>();
 
   return (
     <>
@@ -54,7 +58,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       ) : (
         <div className={ui.tableWrap}>
           <table className={ui.table}>
-            <thead><tr><th>Deal</th><th>Organization</th><th>Stage</th><th>Engagement</th><th>Fee</th><th>Next action</th><th>Forecast (value, monthly, %, close)</th></tr></thead>
+            <thead><tr><th>Deal</th><th>Organization</th><th>Stage</th><th>Engagement</th><th>Fee</th><th>Contract</th><th>Next action</th><th>Forecast (value, monthly, %, close)</th></tr></thead>
             <tbody>
               {rows.map(d => (
                 <tr key={d.id}>
@@ -63,6 +67,9 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                   <td><span className={ui.chip}>{DEAL_STAGES[d.stage as keyof typeof DEAL_STAGES]}</span></td>
                   <td>{d.engagement.replace(/_/g, " ")}</td>
                   <td>{d.feeType.replace(/_/g, " ")}</td>
+                  <td>{dealContracts.get(d.id)
+                    ? <Link href={`/contracts/${dealContracts.get(d.id)!.id}`}>{CONTRACT_STATUS_LABEL[dealContracts.get(d.id)!.status as keyof typeof CONTRACT_STATUS_LABEL]}</Link>
+                    : <form action={createContractAction}><input type="hidden" name="kind" value="engagement_letter" /><input type="hidden" name="source" value={`deal:${d.id}`} /><button className={ui.miniBtn} type="submit">Draft</button></form>}</td>
                   <td>{d.nextAction ? <>{d.nextAction}<span className={ui.sub}>{d.nextActionDate}</span></> : <span className={ui.chipMuted}>None</span>}</td>
                   <td>
                     <form action={setForecastAction} style={{ display: "flex", gap: 4, alignItems: "center" }}>
