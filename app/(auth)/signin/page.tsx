@@ -8,7 +8,6 @@ export const metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   invalid: "Email or password is incorrect.",
-  locked: "Too many attempts. Try again in 15 minutes.",
   unavailable: "Sign-in could not reach the password check. Try again shortly.",
 };
 

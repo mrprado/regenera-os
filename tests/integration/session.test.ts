@@ -36,12 +36,9 @@ describe("email + password sign-in", () => {
     expect(calls).toBe(0);
   });
 
-  it("locks an email after 5 failures for 15 minutes, and an IP after 20", async () => {
-    for (let i = 0; i < 5; i++) await attempt("alan@regenera.bio", "wrong", later(i * 1000));
-    expect(await attempt("alan@regenera.bio", "right-password", later(6000))).toEqual({ ok: false, reason: "locked" });
-    expect(await attempt("alan@regenera.bio", "right-password", later(16 * 60_000))).toMatchObject({ ok: true });
-    for (let i = 0; i < 20; i++) await attempt(`x${i}@y.com`, "wrong", later(17 * 60_000), "9.9.9.9");
-    expect(await attempt("alan@regenera.bio", "right-password", later(17 * 60_000), "9.9.9.9")).toEqual({ ok: false, reason: "locked" });
+  it("does not lock out after repeated failures (lockout is off for now)", async () => {
+    for (let i = 0; i < 8; i++) await attempt("alan@regenera.bio", "wrong", later(i * 1000));
+    expect(await attempt("alan@regenera.bio", "right-password", later(9000))).toMatchObject({ ok: true });
   });
 
   it("the tracker check passes only on HTTP 200", async () => {

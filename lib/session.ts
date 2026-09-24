@@ -1,15 +1,13 @@
-// Email + password sign-in. The password is the tracker's (regenera.bio/tracker): the OS asks the site's own
-// login endpoint and never stores it. The email must be able to open the OS (a mandate member, or an
-// allowlisted first owner). Sessions live in D1, so sign-out revokes them. Failures lock out per email and IP.
-import { and, eq, gt, gte, lt, or, sql } from "drizzle-orm";
+// Email + password sign-in. The password is the OS_PASSWORD secret when set; otherwise the tracker's
+// (regenera.bio/tracker), checked by the site's own login endpoint and never stored. The email must be able to open the OS (a mandate member, or an
+// allowlisted first owner). Sessions live in D1, so sign-out revokes them.
+// Lockout after failed attempts is off for now (auth_failures stays in the schema, unused).
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { authFailures, authSessions, mandateMembers } from "@/db/schema";
+import { authSessions, mandateMembers } from "@/db/schema";
 
 export const SESSION_COOKIE = "os_session";
 export const SESSION_DAYS = 30;
-const LOCK_MINUTES = 15;
-const MAX_FAILS_PER_EMAIL = 5;
-const MAX_FAILS_PER_IP = 20;
 
 const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 export const newToken = () => b64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -51,7 +49,7 @@ export function trackerPasswordCheck(url: string, fetchImpl: typeof fetch = fetc
   };
 }
 
-/** Constant-time comparison for a locally configured password (OS_PASSWORD, local development). */
+/** Constant-time comparison against the OS_PASSWORD secret. */
 export function fixedPasswordCheck(expected: string): PasswordCheck {
   return async password => {
     const [a, b] = await Promise.all([hashToken(`pw:${password}`), hashToken(`pw:${expected}`)]);
@@ -61,24 +59,15 @@ export function fixedPasswordCheck(expected: string): PasswordCheck {
   };
 }
 
-export type SignInResult = { ok: true; session: string } | { ok: false; reason: "locked" | "invalid" };
+export type SignInResult = { ok: true; session: string } | { ok: false; reason: "invalid" };
 
 /** Verifies email and password and opens a session. Wrong email and wrong password look the same. */
 export async function verifyPassword(db: Db, input: { email: string; password: string; ip: string }, allowlist: Set<string>, check: PasswordCheck, now = new Date()): Promise<SignInResult> {
   const iso = now.toISOString();
-  const since = new Date(now.getTime() - LOCK_MINUTES * 60_000).toISOString();
-  const [{ byEmail }] = await db.select({ byEmail: sql<number>`count(*)` }).from(authFailures).where(and(eq(authFailures.email, input.email), gte(authFailures.at, since)));
-  const [{ byIp }] = await db.select({ byIp: sql<number>`count(*)` }).from(authFailures).where(and(eq(authFailures.ip, input.ip), gte(authFailures.at, since)));
-  if (byEmail >= MAX_FAILS_PER_EMAIL || byIp >= MAX_FAILS_PER_IP) return { ok: false, reason: "locked" };
 
   // The password is only checked for an email that may sign in, so the tracker is never an oracle for others.
   const ok = input.password.length > 0 && input.password.length <= 200 && (await mayHaveAccess(db, input.email, allowlist)) && (await check(input.password));
-  if (!ok) {
-    await db.insert(authFailures).values({ email: input.email, ip: input.ip, at: iso });
-    await db.delete(authFailures).where(lt(authFailures.at, new Date(now.getTime() - 86_400_000).toISOString()));
-    return { ok: false, reason: "invalid" };
-  }
-  await db.delete(authFailures).where(or(eq(authFailures.email, input.email), eq(authFailures.ip, input.ip)));
+  if (!ok) return { ok: false, reason: "invalid" };
   const session = newToken();
   await db.insert(authSessions).values({
     tokenHash: await hashToken(session), email: input.email, createdAt: iso,
