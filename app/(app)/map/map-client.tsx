@@ -25,7 +25,7 @@ const TRIGGER_COLORS: [string, string][] = [
 type LayerKey = "organizations" | "deals" | "triggers" | "procurement" | "hazards";
 const LAYER_META: Record<LayerKey, { label: string; swatch: string }> = {
   triggers: { label: "Triggers (this year)", swatch: C.ember },
-  procurement: { label: "Open tenders and EOIs", swatch: C.sky },
+  procurement: { label: "Funding, tenders and calls", swatch: C.sky },
   deals: { label: "Deals", swatch: C.pollen },
   organizations: { label: "Organizations", swatch: C.reed },
   hazards: { label: "Live hazards (GDACS)", swatch: "#e0672f" },
@@ -353,13 +353,14 @@ function Detail({ selected }: { selected: NonNullable<Selected> }) {
   );
   return (
     <>
-      <p className={styles.kicker}>{selected.layer === "procurement" ? "Tender / EOI" : `Trigger · ${p.type}`} · {p.eventDate}</p>
+      <p className={styles.kicker}>{selected.layer === "procurement" ? (p.source === "funding" ? `Funding · ${p.type} · closes` : "Tender / EOI") : `Trigger · ${p.type}`} · {p.eventDate}</p>
       <h3>{p.summary}</h3>
-      <p className={styles.meta}>{p.orgName}{p.relevance != null ? ` · fit ${p.relevance}/100` : ""} · urgency {p.urgency}/5</p>
+      <p className={styles.meta}>{p.orgName}{p.relevance != null ? ` · fit ${p.relevance}/100` : ""}{p.urgency != null ? ` · urgency ${p.urgency}/5` : ""}</p>
       {p.decisionRead && <p className={styles.read}>{p.decisionRead}</p>}
       <div className={styles.links}>
         {p.url && <a className={styles.open} href={String(p.url)} target="_blank" rel="noreferrer">Source</a>}
         {p.orgId && <Link className={styles.open} href={`/companies/${p.orgId}`}>Organization</Link>}
+        {p.href && <Link className={styles.open} href={String(p.href)}>Open in Funding</Link>}
       </div>
       <p className={styles.coords}>{coords}</p>
     </>

@@ -12,6 +12,7 @@ import { buildPlaybook, PLAYBOOK_STEPS, REGIONS } from "@/lib/radar/playbooks";
 import CopyButton from "../../copy-button";
 import { draftPlaybookAction, playbookSequenceAction, runSearchNowAction, savePlaybookTemplateAction } from "../../../radar-actions";
 import styles from "../../prospecting.module.css";
+import { fundingForKeywords } from "@/lib/funding/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Playbook" };
@@ -29,6 +30,7 @@ export default async function PlaybookPage({ params, searchParams }: { params: P
   const pb = buildPlaybook(seg, region);
   const drafts = await db.select().from(playbookDrafts).where(and(eq(playbookDrafts.segmentId, seg.id), mandateCondition(user.scope, playbookDrafts.mandateId))).orderBy(asc(playbookDrafts.step));
   const [search] = await db.select().from(savedSearches).where(and(eq(savedSearches.key, `seg:${key}`), mandateCondition(user.scope, savedSearches.mandateId)));
+  const funding = await fundingForKeywords(user.scope, pb.keywords.topics);
   const [seq] = await db.select({ id: sequences.id }).from(sequences).where(and(inArray(sequences.key, [`pb:${key}`]), mandateCondition(user.scope, sequences.mandateId)));
 
   return (
@@ -81,6 +83,14 @@ export default async function PlaybookPage({ params, searchParams }: { params: P
         </div>
 
         <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Open funding for this playbook</span><Link href={`/funding?q=${encodeURIComponent(pb.keywords.topics[0] ?? "")}`}>Funding</Link></p>
+            {funding.length === 0 ? <p className={r.empty}>No open grants, calls or tenders match these keywords yet.</p> : (
+              <ul className={r.timeline}>{funding.map(f => (
+                <li key={f.id}><span className={r.when}>{f.deadline ?? "rolling"}</span><span><Link href={`/funding/${f.id}`}>{f.title}</Link>{f.funder ? ` · ${f.funder}` : ""}</span></li>
+              ))}</ul>
+            )}
+          </section>
           <section className={r.panel}>
             <p className={r.panelTitle}>Who to reach</p>
             <dl className={r.kv}>

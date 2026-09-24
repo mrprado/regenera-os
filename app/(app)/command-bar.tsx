@@ -9,7 +9,7 @@ import styles from "./command-bar.module.css";
 type Turn = { role: "user" | "assistant"; text: string; proposals?: { id: string; title: string }[] };
 
 const PAGES = [
-  ["Home", "/today"], ["Map", "/map"], ["People", "/people"], ["Companies", "/companies"], ["Prospecting", "/prospecting"], ["Triggers", "/triggers"],
+  ["Home", "/today"], ["Map", "/map"], ["People", "/people"], ["Companies", "/companies"], ["Prospecting", "/prospecting"], ["Triggers", "/triggers"], ["Funding", "/funding"],
   ["Approval queue", "/queue"], ["Sequences", "/sequences"], ["Inbox", "/inbox"], ["Tasks", "/tasks"], ["Deals", "/deals"], ["Partners", "/partners"],
   ["Reports", "/reports"], ["Forecast", "/reports?tab=forecast"], ["Settings", "/settings"],
 ] as const;
@@ -19,10 +19,11 @@ const EXAMPLES = [
   "What is the weighted pipeline by stage?",
   "Which replies still need an answer?",
   "Energy developers we have not contacted yet",
+  "Which water grants close in the next 30 days?",
 ];
 const TOOL_LABEL: Record<string, string> = {
   search_people: "Searching people", search_companies: "Searching companies", search_deals: "Reading deals", search_triggers: "Reading triggers",
-  get_person: "Opening a record", pipeline_metrics: "Computing metrics", list_replies: "Reading replies",
+  get_person: "Opening a record", pipeline_metrics: "Computing metrics", list_replies: "Reading replies", search_funding: "Searching funding",
 };
 
 export default function CommandBar() {

@@ -1,7 +1,7 @@
 // Daily digest (docs/plans/phase-2.md item 12): 07:00 ET via Resend, system notification only.
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { deals, deliverabilityChecks, mailboxState, meetingBriefs, messages, replies, tasks, triggers } from "@/db/schema";
+import { deals, deliverabilityChecks, fundingOpportunities, mailboxState, meetingBriefs, messages, replies, tasks, triggers } from "@/db/schema";
 import { deliverabilityIssues } from "./deliverability";
 
 export type Digest = {
@@ -13,6 +13,7 @@ export type Digest = {
   overdue: { name: string; nextAction: string | null; nextActionDate: string | null }[];
   tasksDue: number;
   alerts: string[];
+  fundingDeadlines: { title: string; deadline: string; decision: string; daysLeft: number }[];
 };
 
 export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
@@ -33,7 +34,18 @@ export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
   const seen = new Set<string>();
   for (const c of latest) { if (seen.has(c.domain)) continue; seen.add(c.domain); alerts.push(...deliverabilityIssues(c)); }
   for (const m of await db.select().from(mailboxState)) if (m.pausedUntil && m.pausedUntil > now.toISOString()) alerts.push(`${m.role} mailbox paused until ${m.pausedUntil.slice(0, 16).replace("T", " ")} UTC: ${m.pauseReason ?? ""}`);
+  // Funding deadlines 14 and 3 days out: anything being bid on or watched, or a strong fit (60+).
+  const in14 = new Date(now.getTime() + 14 * 86_400_000).toISOString().slice(0, 10);
+  const funding = await db.select({ title: fundingOpportunities.title, deadline: fundingOpportunities.deadline, decision: fundingOpportunities.decision, fit: fundingOpportunities.fit }).from(fundingOpportunities)
+    .where(and(ne(fundingOpportunities.status, "closed"), gte(fundingOpportunities.deadline, day), lte(fundingOpportunities.deadline, in14), ne(fundingOpportunities.decision, "dismissed")))
+    .orderBy(fundingOpportunities.deadline).limit(30);
+  const fundingDeadlines = funding
+    .filter(f => f.decision === "bidding" || f.decision === "watching" || f.decision === "matched" || (f.fit ?? 0) >= 60)
+    .map(f => ({ title: f.title, deadline: f.deadline!, decision: f.decision, daysLeft: Math.round((Date.parse(`${f.deadline}T12:00:00Z`) - Date.parse(`${day}T12:00:00Z`)) / 86_400_000) }))
+    .filter(f => f.decision === "bidding" || f.daysLeft === 14 || f.daysLeft <= 3)
+    .slice(0, 10);
   return {
+    fundingDeadlines,
     date: day, newTriggers,
     queue: { pending: q.find(x => x.status === "pending_approval")?.n ?? 0, styleFailed: q.find(x => x.status === "style_failed")?.n ?? 0 },
     replies: rep, meetings, overdue, tasksDue, alerts,
@@ -51,6 +63,7 @@ export function renderDigest(d: Digest, appBaseUrl: string): { subject: string; 
 ${d.alerts.length ? section("Alerts", d.alerts.map(esc), "") : ""}
 ${section("Approval queue", [`${d.queue.pending} drafts waiting, ${d.queue.styleFailed} need a style fix · ${link("/queue", "Open queue")}`], "")}
 ${section("Replies to handle", d.replies.map(r => `${esc(r.classification ?? "unclassified")} · ${esc(r.fromEmail)} · ${esc(r.subject)}`), "No replies waiting.")}
+${section("Funding deadlines", d.fundingDeadlines.map(f => `${esc(f.deadline)} (${f.daysLeft} days) · ${esc(f.decision)} · ${esc(f.title)} · ${link("/funding", "Open Funding")}`), "No funding deadlines in the next two weeks.")}
 ${section("Meetings in the next 24 hours", d.meetings.map(m => `${esc(m.startsAt.slice(11, 16))} UTC · ${esc(m.title)}`), "No meetings.")}
 ${section("New triggers", d.newTriggers.map(t => `[${esc(t.type)} · ${t.urgency}] ${esc(t.summary)}`), "No new triggers.")}
 ${section("Overdue next actions", d.overdue.map(o => `${esc(o.name)}: ${esc(o.nextAction ?? "no next action")} (${esc(o.nextActionDate ?? "")})`), "Nothing overdue.")}

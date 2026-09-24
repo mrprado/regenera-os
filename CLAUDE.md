@@ -41,6 +41,14 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
   lib/radar/* (saved searches, public list diffs: SBTi xlsx streamed with fflate, TNFD table), lib/extension.ts +
   extension/ (MV3, load unpacked; per-user hashed tokens), lib/reports/* (metrics + weekly report). D1 allows 100
   bound parameters per statement: chunk IN (...) lists with lib/db/chunk.ts
+- Funding (phase 5 part A): db/funding.ts (funding_opportunities, funding_matches, bid_library; deals.opportunityId),
+  lib/funding/sources.ts (Grants.gov, EU Funding & Tenders, UK Contracts Finder; TED and World Bank wrap the
+  signal sources, whose trigger queries are disabled), lib/funding/engine.ts (FUNDING_QUERIES x sources rotated by
+  the funding_scan_cursor state, 8 pairs every 2h; cleanText + placeholder amounts/deadlines; off-topic skip;
+  cross-source dedupe; Claude read; applicant matching; Bid = deal + back-planned tasks), lib/funding/bids.ts
+  (proposal drafts; past performance only with disclosure-authorized case records). Page /funding, actions in
+  app/(app)/funding-actions.ts. Shared page constants live in lib/funding/labels.ts (pages export only default)
+- React drops name/value on a button whose formAction is a function: use one server action per button
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:

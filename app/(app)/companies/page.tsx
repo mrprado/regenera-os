@@ -75,7 +75,7 @@ function SavedTab({ sp, data, segs, orgLists }: { sp: SP; data: Awaited<ReturnTy
                 <input name="newList" placeholder="or new list name" aria-label="New list name" style={{ height: 28, borderRadius: 999, border: "1px solid var(--line)", fontSize: 12, padding: "0 10px" }} />
                 <button className={ui.miniBtn} formAction={addToList} type="submit">Add to list</button>
                 <button className={ui.miniBtn} formAction={bulkPublicEnrich} type="submit">Enrich from public sources (free)</button>
-                <button className={ui.miniBtn} formAction={bulkResearch} type="submit" name="depth" value="full">Research</button>
+                <button className={ui.miniBtn} formAction={bulkResearch} type="submit">Research</button>
               </div>
             </div>
             <div className={ui.tableWrap}>

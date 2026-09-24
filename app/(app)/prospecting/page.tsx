@@ -8,7 +8,7 @@ import { apolloConfig } from "@/lib/config";
 import { isOwner } from "@/lib/db/scoped";
 import { listOverview, savedSearchList, searchResultsFor } from "@/lib/radar/queries";
 import { linkFor } from "@/lib/radar/saved-searches";
-import { runListNowAction, runSearchNowAction, saveResultsAction, scanNowAction, toggleSearchAction } from "../radar-actions";
+import { runListNowAction, runSearchNowAction, dismissResultsAction, saveResultsAction, scanNowAction, toggleSearchAction } from "../radar-actions";
 import PlaybooksTab from "./playbooks-tab";
 import CopyButton from "./copy-button";
 
@@ -78,8 +78,8 @@ async function ApolloTab({ rows, sp, owner, scope }: { rows: Awaited<ReturnType<
               <div className={ui.toolbar}>
                 <span className={ui.resultCount}>{results.length} new</span>
                 <div className={ui.rowActions}>
-                  <button className={`${ui.miniBtn} ${ui.miniPrimary}`} formAction={saveResultsAction} name="do" value="save" type="submit">Save to People</button>
-                  <button className={ui.miniBtn} formAction={saveResultsAction} name="do" value="dismiss" type="submit">Dismiss</button>
+                  <button className={`${ui.miniBtn} ${ui.miniPrimary}`} formAction={saveResultsAction} type="submit">Save to People</button>
+                  <button className={ui.miniBtn} formAction={dismissResultsAction} type="submit">Dismiss</button>
                 </div>
               </div>
               <div className={ui.tableWrap}>

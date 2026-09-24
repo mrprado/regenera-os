@@ -12,6 +12,8 @@ import type { WeeklyBody } from "@/lib/reports/weekly";
 import { DEAL_STAGES, ENGAGEMENTS, FEE_TYPES, LEAD_SOURCES, PRACTICES } from "@/lib/vocab";
 import { weeklyReportNowAction } from "../radar-actions";
 import { CasesTab, ForecastTab, LearningTab } from "./tabs";
+import { bidDeals } from "@/lib/funding/queries";
+import { ROUTE_LABEL } from "@/lib/funding/labels";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reports" };
@@ -76,6 +78,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const m = await computeMetrics(appDb(), user.scope.mandateIds, { from: from.toISOString(), to: new Date(now.getTime() + 60_000).toISOString() });
   const weekly = await appDb().select().from(reports).where(and(inArray(reports.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["__none__"]), eq(reports.kind, "weekly"))).orderBy(desc(reports.periodStart)).limit(6);
   const o = m.outreach;
+  const bids = await bidDeals(user.scope);
+  const WON = ["signed", "active", "expansion", "completed"];
+  const byFunder = [...bids.reduce((acc, b) => {
+    const k = `${b.funder ?? "Unknown funder"}|${b.route ?? "unread"}`;
+    const cur = acc.get(k) ?? { funder: b.funder ?? "Unknown funder", route: b.route, bids: 0, won: 0, lost: 0, valueWon: 0 };
+    cur.bids++;
+    if (WON.includes(b.d.stage)) { cur.won++; cur.valueWon += b.d.valueEstimate ?? 0; }
+    if (b.d.stage === "lost") cur.lost++;
+    return acc.set(k, cur);
+  }, new Map<string, { funder: string; route: string | null; bids: number; won: number; lost: number; valueWon: number }>()).values()];
 
   return (
     <>
@@ -145,6 +157,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <p className={r.panelTitle}>Trigger to first touch</p>
             {m.triggerToFirstTouchHours.length === 0 ? <p className={r.empty}>No pursued triggers were emailed in this period.</p> : (
               <table className={ui.table}><tbody>{m.triggerToFirstTouchHours.map(x => <tr key={x.type}><td>{x.type}</td><td className={ui.num}>{x.triggers} triggers</td><td className={ui.num}>median {x.medianHours < 48 ? `${x.medianHours} h` : `${Math.round(x.medianHours / 24)} days`}</td></tr>)}</tbody></table>
+            )}
+          </section>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Funding bids by funder</span><Link href="/funding?tab=bids">Bids</Link></p>
+            {byFunder.length === 0 ? <p className={r.empty}>No bids yet.</p> : (
+              <table className={ui.table}><tbody>{byFunder.map(f => (
+                <tr key={`${f.funder}${f.route}`}><td>{f.funder}<span className={ui.sub}>{f.route ? ROUTE_LABEL[f.route] : "Route not read"}</span></td><td className={ui.num}>{f.bids} bids</td>
+                  <td className={ui.num}>{f.won + f.lost ? `${Math.round((f.won / (f.won + f.lost)) * 100)}% won` : "open"}</td><td className={ui.num}>{f.valueWon ? money(f.valueWon) : ""}</td></tr>
+              ))}</tbody></table>
             )}
           </section>
           <section className={r.panel}>

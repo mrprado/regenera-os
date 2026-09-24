@@ -4,7 +4,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
-import { activities, contacts, deals, lists, organizations, proposals, replies, segments, sequences, triggers } from "@/db/schema";
+import { activities, contacts, deals, fundingOpportunities, lists, organizations, proposals, replies, segments, sequences, triggers } from "@/db/schema";
 import { mandateCondition, type UserScope } from "@/lib/db/scoped";
 import { computeMetrics } from "@/lib/reports/metrics";
 import { DEAL_STAGES } from "@/lib/vocab";
@@ -157,6 +157,31 @@ export const TOOLS: ToolDef[] = [
         .from(replies).leftJoin(contacts, eq(contacts.id, replies.contactId))
         .where(and(mandateCondition(ctx.scope, replies.mandateId), a.unhandledOnly ? eq(replies.handled, false) : undefined)).orderBy(desc(replies.receivedAt)).limit(a.limit);
       return { shown: rows.length, replies: rows };
+    },
+  }),
+  tool({
+    name: "search_funding", kind: "read",
+    description: "Open and forthcoming grants, calls and tenders (global) with funder, amount, deadline, fit, route and whether Regenera is bidding.",
+    input: z.object({
+      query: z.string().optional().describe("Topic, title or funder text"), country: z.string().optional(),
+      route: z.enum(["regenera_bid", "client_support", "consortium", "signal"]).optional(), minFit: z.number().int().min(0).max(100).optional(),
+      closingWithinDays: z.number().int().min(1).max(365).optional(), limit,
+    }),
+    run: async (ctx, a) => {
+      const today = (ctx.now ?? new Date()).toISOString().slice(0, 10);
+      const conds: (SQL | undefined)[] = [
+        mandateCondition(ctx.scope, fundingOpportunities.mandateId), sql`${fundingOpportunities.status} <> 'closed'`, sql`${fundingOpportunities.decision} <> 'dismissed'`,
+        a.query ? or(like(sql`lower(${fundingOpportunities.title})`, like_(a.query)), like(sql`lower(coalesce(${fundingOpportunities.funder}, ''))`, like_(a.query)), like(sql`lower(${fundingOpportunities.description})`, like_(a.query))) : undefined,
+        a.country ? like(sql`lower(coalesce(${fundingOpportunities.countries}, ''))`, like_(a.country)) : undefined,
+        a.route ? eq(fundingOpportunities.route, a.route) : undefined,
+        a.minFit ? sql`coalesce(${fundingOpportunities.fit}, 0) >= ${a.minFit}` : undefined,
+        a.closingWithinDays ? sql`${fundingOpportunities.deadline} between ${today} and ${new Date((ctx.now ?? new Date()).getTime() + a.closingWithinDays * 86_400_000).toISOString().slice(0, 10)}` : undefined,
+      ];
+      const rows = await ctx.db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, type: fundingOpportunities.type,
+        amountMax: fundingOpportunities.amountMax, currency: fundingOpportunities.currency, deadline: fundingOpportunities.deadline, fit: fundingOpportunities.fit,
+        route: fundingOpportunities.route, decision: fundingOpportunities.decision, countries: fundingOpportunities.countries })
+        .from(fundingOpportunities).where(and(...conds)).orderBy(desc(sql`coalesce(${fundingOpportunities.fit}, 0)`), asc(fundingOpportunities.deadline)).limit(a.limit);
+      return { shown: rows.length, opportunities: rows };
     },
   }),
   // ---------- writes: proposals only ----------

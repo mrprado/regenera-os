@@ -79,7 +79,7 @@ function SavedTab({ sp, data, segs, peopleLists, sequencesForPicker }: { sp: SP;
                 </select>
                 <input name="newList" placeholder="or new list name" aria-label="New list name" style={{ height: 28, borderRadius: 999, border: "1px solid var(--line)", fontSize: 12, padding: "0 10px" }} />
                 <button className={ui.miniBtn} formAction={addToList} type="submit">Add to list</button>
-                <button className={ui.miniBtn} formAction={bulkResearch} type="submit" name="depth" value="full">Research</button>
+                <button className={ui.miniBtn} formAction={bulkResearch} type="submit">Research</button>
                 <button className={ui.miniBtn} formAction={bulkEnrichPeople} type="submit">Enrich email (Apollo, 1 credit each)</button>
                 <select name="sequenceId" aria-label="Sequence" defaultValue="" style={{ height: 28, borderRadius: 999, border: "1px solid var(--line)", fontSize: 12, padding: "0 10px" }}>
                   <option value="">Sequence…</option>{sequencesForPicker.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}

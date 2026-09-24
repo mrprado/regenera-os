@@ -113,3 +113,4 @@ export * from "./crm";
 export * from "./automation";
 export * from "./radar";
 export * from "./intel";
+export * from "./funding";

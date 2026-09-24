@@ -3,12 +3,14 @@ import type { Db } from "@/db";
 import { processImportChunk, r2Store } from "@/lib/import/process";
 import { AiBudgetError } from "@/lib/ai/run";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
-import { listSources } from "@/db/schema";
+import { listSources, organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { runListSource } from "@/lib/radar/lists";
 import { dueSavedSearches, runSavedSearch } from "@/lib/radar/saved-searches";
 import { draftPlaybookTemplates } from "@/lib/radar/playbooks";
 import { r2BackupStore, runBackup, verifyLatestBackup } from "@/lib/backup";
+import { placeFunding, readFunding, scanFunding } from "@/lib/funding/engine";
+import { draftProposal } from "@/lib/funding/bids";
 import { ensureCaseRecords, ladderSummary, proposeOutreachChanges, proposeWeights } from "@/lib/learning/loop";
 import { savedSearches } from "@/db/schema";
 import { and as andOp, asc as ascOp } from "drizzle-orm";
@@ -89,7 +91,10 @@ export const handlers: Record<string, JobHandler> = {
     await deferOnBudget(ctx, () => readSignal(ctx.db, requireAi(), String(ctx.job.payload.signalId), ctx.now));
   },
   "identity.enrich": async ({ db, job }) => {
-    await enrichOrganizationIdentity(db, String(job.payload.orgId));
+    // The organization may have been merged or deleted since the job was queued: nothing to do.
+    const [org] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.id, String(job.payload.orgId)));
+    if (!org) return;
+    await enrichOrganizationIdentity(db, org.id);
     await enqueue(db, "geo.org", { orgId: job.payload.orgId }, { dedupeKey: `geo:${job.payload.orgId}:identity` });
   },
   "research.gather": async ctx => {
@@ -220,6 +225,23 @@ export const handlers: Record<string, JobHandler> = {
     const r = await verifyLatestBackup(db, r2BackupStore(env.BUCKET), now);
     if (!r.ok) throw new Error(`Backup check failed: ${r.problems.slice(0, 3).join("; ")}`);
   },
+  // Funding (phase 5): rotating scans, then Claude's read (when a key exists) and map placement.
+  "funding.scan": async ({ db, now }) => {
+    await scanFunding(db, REGENERA_MANDATE_ID, now);
+    await enqueue(db, "funding.read", {}, { dedupeKey: `funding-read:${now.toISOString().slice(0, 13)}`, now });
+    await enqueue(db, "funding.place", {}, { dedupeKey: `funding-place:${now.toISOString().slice(0, 13)}`, now });
+  },
+  "funding.read": async ctx => {
+    if (!aiConfig()) return; // unread opportunities keep their keyword fit until a key exists
+    await deferOnBudget(ctx, () => readFunding(ctx.db, requireAi(), 12, ctx.now));
+  },
+  "funding.place": async ({ db, now }) => {
+    const { more } = await placeFunding(db, 15);
+    if (more) await enqueue(db, "funding.place", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `funding-place:${now.toISOString().slice(0, 16)}` });
+  },
+  "funding.draft": async ctx => {
+    await deferOnBudget(ctx, () => draftProposal(ctx.db, requireAi(), String(ctx.job.payload.opportunityId)));
+  },
   "lists.diff": async ({ db, now }) => {
     const sources = await db.select({ key: listSources.key }).from(listSources).where(eq(listSources.enabled, true));
     for (const src of sources) await enqueue(db, "lists.diff.source", { key: src.key }, { dedupeKey: `listdiff:${src.key}:${now.toISOString().slice(0, 10)}`, now });
@@ -261,4 +283,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "cases.ensure": "daily:05:30",
   "backup.nightly": "daily:02:30",
   "backup.verify": "monthly:3:04:00",
+  "funding.scan": "every:2h",
 };

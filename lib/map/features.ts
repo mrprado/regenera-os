@@ -1,7 +1,7 @@
 // GeoJSON for the Map screen (SPEC section 11): organizations, deals, triggers and open procurement,
 // all mandate-scoped. Hazards come from the regenera.bio intelligence API on the client.
 import { and, isNotNull, isNull, ne } from "drizzle-orm";
-import { deals, organizations, triggers } from "@/db/schema";
+import { deals, fundingOpportunities, organizations, triggers } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { freshnessSince } from "@/lib/freshness";
 
@@ -44,13 +44,22 @@ export async function mapFeatures(scope: Scope, now = new Date()) {
     })] : [];
   });
 
+  // Funding opportunities placed by eligible country (0,0 marks "not placeable": EU-wide or global calls).
+  const fundingRows = await db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline,
+    fit: fundingOpportunities.fit, type: fundingOpportunities.type, url: fundingOpportunities.url, lat: fundingOpportunities.lat, lng: fundingOpportunities.lng, summary: fundingOpportunities.read })
+    .from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed"), isNotNull(fundingOpportunities.lat)));
+  const fundingPoints = fundingRows.filter(f => f.lat !== 0 || f.lng !== 0).map(f => point(f.lng!, f.lat!, {
+    id: f.id, kind: "procurement", type: f.type, summary: f.title, eventDate: f.deadline, urgency: null, relevance: f.fit, source: "funding", url: f.url,
+    orgId: null, orgName: f.funder, status: null, decisionRead: f.summary?.summary ?? null, href: `/funding/${f.id}`,
+  }));
+
   return {
     generatedAt: now.toISOString(),
     since,
     organizations: fc(orgRows.map(o => point(o.lng!, o.lat!, { id: o.id, name: o.name, sector: o.sector, country: o.country, location: o.location, source: o.source, domain: o.domain }))),
     deals: fc(dealPoints),
     triggers: fc(triggerPoints.filter(p => p.properties.kind === "trigger")),
-    procurement: fc(triggerPoints.filter(p => p.properties.kind === "procurement")),
+    procurement: fc([...triggerPoints.filter(p => p.properties.kind === "procurement"), ...fundingPoints]),
     counts: {
       organizations: orgRows.length,
       unmapped: (await db.select({ id: organizations.id }).from(organizations).where(and(mandateCondition(scope, organizations.mandateId), isNull(organizations.lat)))).length,

@@ -53,17 +53,11 @@ export async function toggleSearchAction(formData: FormData) {
 /** Saves reviewed results as people (and their organizations). No credits: enrichment stays a separate choice. */
 export async function saveResultsAction(formData: FormData) {
   const ids = z.array(zId).max(200).parse(formData.getAll("ids"));
-  const dismiss = formData.get("do") === "dismiss";
   const back = z.string().startsWith("/prospecting").catch("/prospecting").parse(formData.get("back"));
   let text = "";
   await withOsUser(async user => {
     const db = appDb();
     const rows = await db.select().from(searchResults).where(and(inArray(searchResults.id, ids), mandateCondition(user.scope, searchResults.mandateId), eq(searchResults.status, "new")));
-    if (dismiss) {
-      if (rows.length) await db.update(searchResults).set({ status: "dismissed" }).where(inArray(searchResults.id, rows.map(r => r.id)));
-      text = `Dismissed ${rows.length}.`;
-      return;
-    }
     let saved = 0;
     for (const r of rows) {
       const [s] = await db.select({ segmentId: savedSearches.segmentId }).from(savedSearches).where(eq(savedSearches.id, r.savedSearchId));
@@ -86,6 +80,20 @@ export async function saveResultsAction(formData: FormData) {
     }
     await audit(db, { actor: user.email, action: "search_results_saved", entity: "search_results", after: { saved } });
     text = `Saved ${saved} to People. Enrich emails from People when you are ready to contact them.`;
+  });
+  redirect(note(back, text));
+}
+
+// A separate action: React drops name/value on buttons whose formAction is a function, so one action cannot tell them apart.
+export async function dismissResultsAction(formData: FormData) {
+  const ids = z.array(zId).max(200).parse(formData.getAll("ids"));
+  const back = z.string().startsWith("/prospecting").catch("/prospecting").parse(formData.get("back"));
+  let text = "";
+  await withOsUser(async user => {
+    const db = appDb();
+    const rows = await db.select({ id: searchResults.id }).from(searchResults).where(and(inArray(searchResults.id, ids), mandateCondition(user.scope, searchResults.mandateId), eq(searchResults.status, "new")));
+    if (rows.length) await db.update(searchResults).set({ status: "dismissed" }).where(inArray(searchResults.id, rows.map(r => r.id)));
+    text = `Dismissed ${rows.length}.`;
   });
   redirect(note(back, text));
 }

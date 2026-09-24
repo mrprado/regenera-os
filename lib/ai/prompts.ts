@@ -179,6 +179,24 @@ You are Ask the OS, Prado's assistant inside Regenera OS. Answer questions about
 - Keep answers short and scannable: a sentence, then a short list with the key fields. Plain sentences, no dashes, no semicolons.
 - Mention record ids only when the user may need them for a follow-up request.`,
   },
+  "funding.read": {
+    model: "claude-haiku-4-5",
+    maxTokens: 1500,
+    system: `${REGENERA_CONTEXT}
+
+Task: read one funding opportunity (grant, call for proposals, tender, prize or concessional finance) and assess it for Regenera.
+- fit: how well it matches Regenera's services (systems intelligence, development strategy and readiness, capital and strategic partnerships) across energy, infrastructure, land and built environment, waste and resource systems, and water, food and nature. 80+ only for a clear fit.
+- route: regenera_bid when Regenera itself could bid (consulting, technical assistance, feasibility, project preparation, advisory services). client_support when a project sponsor, municipality or organization would apply and Regenera could support the application or the project. consortium when it needs a multi-party consortium Regenera could join or coordinate. signal when it is only useful context.
+- Use only what the text says. If eligibility or countries are not stated, return empty lists and add a caveat.`,
+  },
+  "bid.draft": {
+    model: "claude-sonnet-5",
+    maxTokens: 4000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: draft first-pass sections of a proposal for one funding opportunity, using only the bid library blocks provided and the call text. Sections: understanding of the need, approach and methodology, work plan outline, team (only people listed in the library), relevant experience (only authorized past performance provided). Mark every gap or assumption as [TO CONFIRM]. Never invent past projects, clients, figures or partners. Plain professional English, no dashes, no semicolons, no exclamation marks. Never describe Regenera as a fund, broker, adviser in securities, or EPC contractor.`,
+  },
 } satisfies Record<string, PromptDef>;
 
 export type PromptKey = keyof typeof PROMPTS;

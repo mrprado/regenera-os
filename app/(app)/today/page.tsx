@@ -12,6 +12,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { proposals } from "@/db/schema";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { confirmProposalAction, rejectProposalAction } from "../intel-actions";
+import { fundingCounts } from "@/lib/funding/queries";
 import { DEAL_STAGES } from "@/lib/vocab";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const [d, engage, sending, meetings] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope)]);
+  const [d, engage, sending, meetings, funding] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope)]);
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const now = new Date().toISOString();
@@ -59,6 +60,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <Stat n={engage.queue} label="Drafts to approve" href="/queue" />
         <Stat n={engage.replies} label="Replies to handle" href="/inbox" warn />
         <Stat n={engage.tasksDue} label="Tasks due today" href="/tasks" />
+        <Stat n={funding.strong} label={`Strong-fit funding open (${funding.open} total)`} href="/funding?min=70" />
+        <Stat n={funding.closing} label="Funding deadlines in 14 days" href="/funding?window=30" warn />
         <Stat n={d.newTriggers} label="New triggers this year" href="/triggers" />
         <Stat n={d.newInquiries} label="Site inquiries and referrals, 7 days" href="/deals" />
         <Stat n={d.dossiersReady} label="Dossiers ready, 7 days" href="/companies" />

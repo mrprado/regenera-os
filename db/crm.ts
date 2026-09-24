@@ -197,6 +197,7 @@ export const deals = sqliteTable("deals", {
   partnerId: text("partner_id"),
   triggerId: text("trigger_id"),
   expectedClose: text("expected_close"),     // YYYY-MM-DD, for the forecast
+  opportunityId: text("opportunity_id"),     // a bid on a funding opportunity (phase 5)
   monthlyValue: real("monthly_value"),       // retainers
   stageChangedAt: text("stage_changed_at").notNull().default(now),
   archivedAt: text("archived_at"),
