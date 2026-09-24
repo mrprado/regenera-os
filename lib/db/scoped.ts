@@ -12,6 +12,9 @@ export type UserScope = {
   email: string;
   mandateIds: string[];
   ownerOf: string[];
+  /** Every mandate the user belongs to, before the header switcher narrows `mandateIds`. */
+  memberOf?: string[];
+  ownerOfAll?: string[];
 };
 export type SystemScope = { kind: "system"; reason: string };
 export type Scope = UserScope | SystemScope;

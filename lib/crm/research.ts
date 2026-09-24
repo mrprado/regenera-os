@@ -1,6 +1,7 @@
 // Research and scoring pipeline (docs/plans/phase-1.md sections 3 and 4).
 // research.gather (web search + fetch) -> research.dossier (structured, sources checked) -> score.match.
 import type Anthropic from "@anthropic-ai/sdk";
+import { getState } from "@/lib/state";
 import { warmPaths } from "@/lib/outreach/relationships";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import * as z from "zod/v4";
@@ -102,6 +103,17 @@ export async function synthesizeStep(db: Db, cfg: AiConfig, dossierId: string, c
 // ---------- scoring ----------
 export const WEIGHTS = { fit: 0.4, trigger: 0.35, access: 0.25 };
 
+/** Weights approved through the learning loop live in system_state; the defaults apply until then. */
+export async function scoringWeights(db: Db): Promise<typeof WEIGHTS> {
+  const raw = await getState(db, "scoring_weights");
+  try {
+    const w = raw ? (JSON.parse(raw) as typeof WEIGHTS) : null;
+    return w && [w.fit, w.trigger, w.access].every(x => typeof x === "number") ? w : WEIGHTS;
+  } catch {
+    return WEIGHTS;
+  }
+}
+
 export function totalScore(s: { fit: number; trigger: number; access: number }, w = WEIGHTS): number {
   return Math.round(s.fit * w.fit + s.trigger * w.trigger + s.access * w.access);
 }
@@ -158,7 +170,7 @@ export async function scoreContact(db: Db, cfg: AiConfig, contactId: string, cli
   const m = await runStructured(db, cfg, "match.offer", context, zMatch, meta, client);
   let screening: z.infer<typeof zScreen> | null = null;
   if (d) screening = await runStructured(db, cfg, "screen.deal", context, zScreen, meta, client);
-  const total = totalScore(s);
+  const total = totalScore(s, await scoringWeights(db));
   const tier = tierFor(total);
   const quadrant = screening ? screeningQuadrant(Object.fromEntries(Object.entries(screening.readiness).map(([k, v]) => [k, v.level])), screening.alignment) : null;
   await db.insert(scores).values({

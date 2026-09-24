@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { chatGPTSignOutPath } from "@/lib/chatgpt-auth";
 import { requireOsUser } from "@/lib/auth";
+import { inArray } from "drizzle-orm";
+import { mandates } from "@/db/schema";
+import { appDb } from "@/lib/db/scoped";
 import { schedulerStatus } from "@/lib/settings";
+import CommandBar from "./command-bar";
+import MandateSwitcher from "./mandate-switcher";
 import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
 
@@ -18,6 +23,9 @@ function initials(name: string): string {
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireOsUser("/today");
   const { lastTick, stale: schedulerStale } = await schedulerStatus();
+  const memberOf = user.scope.memberOf ?? user.scope.mandateIds;
+  const mandateOptions = memberOf.length > 1 ? await appDb().select({ id: mandates.id, name: mandates.name }).from(mandates).where(inArray(mandates.id, memberOf)) : [];
+  const focus = user.scope.mandateIds.length === 1 && memberOf.length > 1 ? user.scope.mandateIds[0] : "all";
 
   return (
     <div className={styles.shell}>
@@ -28,7 +36,10 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <div className={styles.mobilePanel}><SidebarNav /></div>
         </details>
         <Link href="/today" className={styles.brand}>REGENERA <b>OS</b></Link>
-        <div className={styles.headerSlot} />
+        <div className={styles.headerSlot}>
+          {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
+          <CommandBar />
+        </div>
         <div className={styles.account}>
           <span className={styles.accountName} title={user.email}>{user.displayName}</span>
           <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>

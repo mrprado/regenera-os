@@ -7,6 +7,10 @@ import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { getContact } from "@/lib/crm/queries";
+import { eq } from "drizzle-orm";
+import { mandates } from "@/db/schema";
+import { appDb, isOwner } from "@/lib/db/scoped";
+import { erasePersonAction } from "../../intel-actions";
 import { DEAL_STAGES, ENGAGEMENTS, PRACTICES } from "@/lib/vocab";
 import { addNote, pasteLinkedin, researchOne, sendEmail } from "../../crm-actions";
 
@@ -26,6 +30,8 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
   const match = (score?.match ?? null) as Match | null;
   const screening = (score?.screening ?? null) as Screening | null;
   const hasAi = aiConfig() !== null;
+  const [mandate] = await appDb().select({ name: mandates.name, type: mandates.type, counsel: mandates.counselConfirmedAt }).from(mandates).where(eq(mandates.id, c.mandateId));
+  const investment = mandate?.type === "investment";
 
   return (
     <>
@@ -91,10 +97,32 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
               {c.emailStatus !== "verified_provider" && c.emailStatus !== "verified_manual" && (
                 <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontWeight: 500 }}><input type="checkbox" name="confirmUnverified" style={{ width: "auto" }} /> Send to an unverified address</label>
               )}
-              <button className="btn btn--primary" type="submit" disabled={!c.email}>Send from primary mailbox</button>
+              {investment && (
+                <fieldset style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", marginTop: 10 }}>
+                  <legend style={{ fontSize: 12, fontWeight: 600 }}>{mandate.name}: prior relationship (required, logged with the send)</legend>
+                  {!mandate.counsel && <p className={r.why} style={{ color: "#b0432f", marginTop: 0 }}>Sending is off for this mandate until an owner records counsel&apos;s confirmation.</p>}
+                  <input name="prHow" placeholder="How you know them (e.g. co-investor on a 2025 deal)" aria-label="How you know them" maxLength={200} />
+                  <input name="prSince" placeholder="Since when (e.g. 2023)" aria-label="Since when" maxLength={40} style={{ marginTop: 6 }} />
+                  <textarea name="prEvidence" placeholder="Evidence: meeting, email thread or introduction, with dates" aria-label="Evidence" maxLength={1000} style={{ marginTop: 6, minHeight: 60 }} />
+                </fieldset>
+              )}
+              <button className="btn btn--primary" type="submit" disabled={!c.email || (investment && !mandate.counsel)}>Send from primary mailbox</button>
               <p className={r.why}>Checked before sending: house style, suppression, mandate rules, and (outside production) the test-domain allowlist.</p>
             </form>
           </section>
+
+          {isOwner(user.scope) && (
+            <section className={r.panel}>
+              <p className={r.panelTitle}>Privacy request</p>
+              <p className={r.why} style={{ marginTop: 0 }}>For an access or erasure request from this person (GDPR, LGPD and similar). Both are logged without the address.</p>
+              <a className="btn" href={`/api/privacy/export/${c.id}`}>Export their data (JSON)</a>
+              <form action={erasePersonAction} className={r.form} style={{ marginTop: 10 }}>
+                <input type="hidden" name="id" value={c.id} />
+                <input name="confirm" placeholder="Type ERASE to confirm" aria-label="Type ERASE to confirm" autoComplete="off" />
+                <button className="btn" type="submit" style={{ marginTop: 6 }}>Erase this person</button>
+              </form>
+            </section>
+          )}
 
           <section className={r.panel}>
             <p className={r.panelTitle}>Organization dossier</p>

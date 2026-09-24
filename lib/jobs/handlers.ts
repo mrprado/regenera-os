@@ -7,6 +7,11 @@ import { listSources } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { runListSource } from "@/lib/radar/lists";
 import { dueSavedSearches, runSavedSearch } from "@/lib/radar/saved-searches";
+import { draftPlaybookTemplates } from "@/lib/radar/playbooks";
+import { r2BackupStore, runBackup, verifyLatestBackup } from "@/lib/backup";
+import { ensureCaseRecords, ladderSummary, proposeOutreachChanges, proposeWeights } from "@/lib/learning/loop";
+import { savedSearches } from "@/db/schema";
+import { and as andOp, asc as ascOp } from "drizzle-orm";
 import { buildWeeklyReport, renderWeekly, type WeeklyBody } from "@/lib/reports/weekly";
 import type { Metrics } from "@/lib/reports/metrics";
 import { reports } from "@/db/schema";
@@ -174,6 +179,47 @@ export const handlers: Record<string, JobHandler> = {
     // A few per run keeps well inside Apollo's free per-minute and per-hour search limits.
     for (const s of (await dueSavedSearches(db, now)).slice(0, 3)) await runSavedSearch(db, cfg, s.id, now);
   },
+  // Prospecting "Scan now": every enabled Apollo people search (0 credits), 10 per run, the rest a minute later
+  // so Apollo's free per-minute limit is never hit; plus the trigger scan and the public-list diffs.
+  "prospecting.scan": async ({ db, job, now }) => {
+    const cfg = apolloConfig();
+    const offset = Number(job.payload.offset ?? 0);
+    if (offset === 0) {
+      await enqueue(db, "triggers.scan", { manual: true }, { dedupeKey: `scan-now-triggers:${now.toISOString().slice(0, 15)}`, now });
+      await enqueue(db, "lists.diff", {}, { dedupeKey: `scan-now-lists:${now.toISOString().slice(0, 10)}`, now });
+    }
+    if (!cfg) return;
+    const all = await db.select({ id: savedSearches.id }).from(savedSearches)
+      .where(andOp(eq(savedSearches.kind, "apollo_people"), eq(savedSearches.enabled, true))).orderBy(ascOp(savedSearches.name));
+    for (const s of all.slice(offset, offset + 10)) await runSavedSearch(db, cfg, s.id, now);
+    if (offset + 10 < all.length) {
+      await enqueue(db, "prospecting.scan", { offset: offset + 10, batch: job.payload.batch }, { runAfter: new Date(now.getTime() + 70_000), dedupeKey: `scan-now:${job.payload.batch}:${offset + 10}`, now });
+    }
+  },
+  "playbook.draft": async ctx => {
+    await deferOnBudget(ctx, () => draftPlaybookTemplates(ctx.db, requireAi(), String(ctx.job.payload.mandateId), String(ctx.job.payload.segmentId)));
+  },
+  // Learning loop (monthly): outreach proposals need Claude; weights, ladder and case records do not.
+  "learning.monthly": async ctx => {
+    const { db, now } = ctx;
+    await proposeWeights(db, REGENERA_MANDATE_ID);
+    await ladderSummary(db, REGENERA_MANDATE_ID);
+    await ensureCaseRecords(db, REGENERA_MANDATE_ID);
+    if (aiConfig()) await deferOnBudget(ctx, () => proposeOutreachChanges(db, requireAi(), REGENERA_MANDATE_ID, now));
+  },
+  "cases.ensure": async ({ db }) => {
+    await ensureCaseRecords(db, REGENERA_MANDATE_ID);
+  },
+  // Nightly backup to R2, and a monthly read-back check (docs/plans/phase-4.md item 6).
+  "backup.nightly": async ({ db, now }) => {
+    if (!env.BUCKET) throw new Error("R2 binding BUCKET is not available");
+    await runBackup(db, r2BackupStore(env.BUCKET), now);
+  },
+  "backup.verify": async ({ db, now }) => {
+    if (!env.BUCKET) throw new Error("R2 binding BUCKET is not available");
+    const r = await verifyLatestBackup(db, r2BackupStore(env.BUCKET), now);
+    if (!r.ok) throw new Error(`Backup check failed: ${r.problems.slice(0, 3).join("; ")}`);
+  },
   "lists.diff": async ({ db, now }) => {
     const sources = await db.select({ key: listSources.key }).from(listSources).where(eq(listSources.enabled, true));
     for (const src of sources) await enqueue(db, "lists.diff.source", { key: src.key }, { dedupeKey: `listdiff:${src.key}:${now.toISOString().slice(0, 10)}`, now });
@@ -211,4 +257,8 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "searches.run": "every:1h",
   "lists.diff": "monthly:2:05:00",
   "reports.weekly": "weekly:mon:07:30",
+  "learning.monthly": "monthly:1:06:30",
+  "cases.ensure": "daily:05:30",
+  "backup.nightly": "daily:02:30",
+  "backup.verify": "monthly:3:04:00",
 };

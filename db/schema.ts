@@ -24,6 +24,9 @@ export const mandates = sqliteTable("mandates", {
   rules: text("rules", { mode: "json" }).$type<{ massAllowed: boolean; approvalRequired: boolean }>().notNull(),
   sendingIdentity: text("sending_identity").notNull().default(""),
   feeTerms: text("fee_terms").notNull().default(""),
+  // Investment mandates cannot send until an owner records that counsel confirmed the outreach rules (SPEC section 13).
+  counselConfirmedAt: text("counsel_confirmed_at"),
+  counselConfirmedBy: text("counsel_confirmed_by"),
   ...timestamps,
 }, () => [check("mandates_type_check", inList("type", MANDATE_TYPES))]);
 
@@ -109,3 +112,4 @@ export const systemState = sqliteTable("system_state", {
 export * from "./crm";
 export * from "./automation";
 export * from "./radar";
+export * from "./intel";

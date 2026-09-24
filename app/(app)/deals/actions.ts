@@ -53,3 +53,28 @@ export async function importTrackerAction() {
   }, { owner: true });
   redirect(`/deals?notice=${encodeURIComponent(notice)}`);
 }
+
+const optNum = (v: FormDataEntryValue | null, max: number) => {
+  const s = typeof v === "string" ? v.replace(/[, ]/g, "") : "";
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+};
+
+/** Forecast inputs (docs/plans/phase-4.md item 4): value, monthly retainer, probability override, expected close. */
+export async function setForecastAction(formData: FormData) {
+  const id = z.string().uuid().parse(formData.get("id"));
+  const expectedClose = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().catch(undefined).parse(formData.get("expectedClose") || undefined) ?? null;
+  const valueEstimate = optNum(formData.get("value"), 1e10);
+  const monthlyValue = optNum(formData.get("monthly"), 1e9);
+  const probability = optNum(formData.get("probability"), 100);
+  const back = String(formData.get("back") ?? "/deals?view=table");
+  await withOsUser(async user => {
+    const db = appDb();
+    const [d] = await db.update(deals).set({ expectedClose, valueEstimate, monthlyValue, probability: probability === null ? null : Math.round(probability), updatedAt: new Date().toISOString() })
+      .where(and(eq(deals.id, id), mandateCondition(user.scope, deals.mandateId))).returning({ id: deals.id });
+    if (!d) throw new Error("Deal not found");
+    await audit(db, { actor: user.email, action: "deal_forecast", entity: "deals", entityId: id, after: { expectedClose, valueEstimate, monthlyValue, probability } });
+  });
+  redirect(back.startsWith("/deals") ? back : "/deals?view=table");
+}

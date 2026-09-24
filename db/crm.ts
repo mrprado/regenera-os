@@ -196,6 +196,8 @@ export const deals = sqliteTable("deals", {
   legacyPipelineEntryId: integer("legacy_pipeline_entry_id"),
   partnerId: text("partner_id"),
   triggerId: text("trigger_id"),
+  expectedClose: text("expected_close"),     // YYYY-MM-DD, for the forecast
+  monthlyValue: real("monthly_value"),       // retainers
   stageChangedAt: text("stage_changed_at").notNull().default(now),
   archivedAt: text("archived_at"),
   ...timestamps,
@@ -246,6 +248,8 @@ export const messages = sqliteTable("messages", {
   variantId: text("variant_id"),
   rfcMessageId: text("rfc_message_id"),
   styleIssues: text("style_issues", { mode: "json" }).$type<{ rule: string; detail: string }[]>(),
+  // Investment mandates: how Prado knows the recipient, logged with every touch (SPEC section 13, Reg D 506(b)).
+  priorRelationship: text("prior_relationship", { mode: "json" }).$type<{ how: string; since: string; evidence: string }>(),
   gmailMessageId: text("gmail_message_id"),
   gmailThreadId: text("gmail_thread_id"),
   error: text("error"),

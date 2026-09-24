@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Send } from "lucide-react";
+import { Notice } from "@/components/crm-bits";
 import { EmptyState, PageHeader } from "@/components/page";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
@@ -13,8 +14,9 @@ export const metadata = { title: "Sequences" };
 const CHANNEL: Record<string, string> = { email: "Email", linkedin_connect: "LinkedIn note (assisted)", linkedin_message: "LinkedIn message (assisted)" };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/sequences");
+  const sp = await searchParams;
   const seqs = await sequenceOverview(user.scope);
   const owner = isOwner(user.scope);
   if (!seqs.length) {
@@ -23,6 +25,7 @@ export default async function Page() {
   return (
     <>
       <PageHeader title="Sequences" count={seqs.length} actions={<Link className="btn" href="/people">Enroll from People</Link>} />
+      <Notice text={sp.notice} />
       <p className={ui.notice}>Sends go out only after approval, inside the recipient&apos;s local window (Tue to Thu 08:30 to 11:30 and 14:00 to 16:30, Mon and Fri 09:30 to 11:30), within daily caps. Any reply or a booked meeting stops every sequence at that organization.</p>
       {seqs.map(s => {
         const e = s.enrollments;

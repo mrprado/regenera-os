@@ -1,7 +1,7 @@
 // Sequence sender (docs/plans/phase-2.md item 6). Runs every tick. For each due, approved sequence email:
 // recipient window -> earlier steps sent -> mailbox not paused and under its cap (reserved atomically) ->
 // atomic claim with suppression check -> send in the same thread. A message can only ever be sent once.
-import { and, asc, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { contacts, enrollments, mailboxState, messages, sequences } from "@/db/schema";
 import { claimMessage, sendClaimedMessage, type SendPolicy } from "@/lib/crm/send";
@@ -64,11 +64,13 @@ export async function runSender(db: Db, deps: SenderDeps): Promise<SenderResult>
     country: contacts.country, timezone: contacts.timezone,
     enrollmentStatus: enrollments.status, sequenceSteps: sequences.steps,
   }).from(messages)
-    .innerJoin(enrollments, eq(enrollments.id, messages.enrollmentId))
-    .innerJoin(sequences, eq(sequences.id, enrollments.sequenceId))
+    .leftJoin(enrollments, eq(enrollments.id, messages.enrollmentId))
+    .leftJoin(sequences, eq(sequences.id, enrollments.sequenceId))
     .innerJoin(contacts, eq(contacts.id, messages.contactId))
     .where(and(
-      eq(messages.channel, "email"), eq(messages.status, "approved"), isNotNull(messages.enrollmentId),
+      // Sequence steps, plus one-off drafts queued for approval (Ask the OS): those carry a scheduled time.
+      // Manual sends from a record (no schedule) are sent by their own action and never picked up here.
+      eq(messages.channel, "email"), eq(messages.status, "approved"), or(isNotNull(messages.enrollmentId), isNotNull(messages.scheduledAt)),
       lte(messages.scheduledAt, now.toISOString()),
       lte(messages.approvedAt, new Date(now.getTime() - UNDO_WINDOW_MS).toISOString()),
     ))
@@ -77,7 +79,8 @@ export async function runSender(db: Db, deps: SenderDeps): Promise<SenderResult>
   const fullRoles = new Set<MailboxRoleName>();
   for (const row of due) {
     const m = row.m;
-    if (row.enrollmentStatus !== "active") {
+    const oneOff = !m.enrollmentId;
+    if (!oneOff && row.enrollmentStatus !== "active") {
       if (row.enrollmentStatus === "stopped" || row.enrollmentStatus === "completed") {
         await db.update(messages).set({ status: "cancelled", updatedAt: now.toISOString() }).where(and(eq(messages.id, m.id), eq(messages.status, "approved")));
       }
@@ -86,14 +89,14 @@ export async function runSender(db: Db, deps: SenderDeps): Promise<SenderResult>
     const tz = timeZoneFor({ timezone: row.timezone, country: row.country });
     if (!inWindow(now, tz)) { defer("outside_window"); continue; }
     // Follow-ups wait for every earlier email step to be sent (or skipped).
-    const [earlier] = await db.select({ n: sql<number>`count(*)` }).from(messages).where(and(
+    const [earlier] = oneOff ? [{ n: 0 }] : await db.select({ n: sql<number>`count(*)` }).from(messages).where(and(
       eq(messages.enrollmentId, m.enrollmentId!), eq(messages.channel, "email"), sql`${messages.step} < ${m.step}`,
       inArray(messages.status, ["draft", "style_failed", "pending_approval", "approved", "sending"]),
     ));
     if (earlier.n > 0) { defer("waiting_for_earlier_step"); continue; }
     // Keep the sequence's spacing from the previous actual send (a late first send delays the follow-ups).
     // 12 hours of slack so a follow-up can land in the same day's window as the day-N mark.
-    const [prev] = await db.select({ step: messages.step, sentAt: messages.sentAt }).from(messages)
+    const [prev] = oneOff ? [] : await db.select({ step: messages.step, sentAt: messages.sentAt }).from(messages)
       .where(and(eq(messages.enrollmentId, m.enrollmentId!), eq(messages.channel, "email"), eq(messages.status, "sent"))).orderBy(desc(messages.step)).limit(1);
     if (prev?.sentAt && prev.step !== null && m.step !== null) {
       const gapDays = (row.sequenceSteps?.[m.step]?.day ?? 0) - (row.sequenceSteps?.[prev.step]?.day ?? 0);
@@ -112,7 +115,7 @@ export async function runSender(db: Db, deps: SenderDeps): Promise<SenderResult>
     if (!(await claimMessage(db, m.id))) { await releaseMailboxSlot(db, role); defer("not_claimable"); continue; }
 
     // Threading: follow-ups reply in the first sent email's thread.
-    const [first] = await db.select({ subject: messages.subject, threadId: messages.gmailThreadId, rfc: messages.rfcMessageId }).from(messages)
+    const [first] = oneOff ? [] : await db.select({ subject: messages.subject, threadId: messages.gmailThreadId, rfc: messages.rfcMessageId }).from(messages)
       .where(and(eq(messages.enrollmentId, m.enrollmentId!), eq(messages.status, "sent"), eq(messages.channel, "email"))).orderBy(asc(messages.step)).limit(1);
     const refs = first ? (await db.select({ rfc: messages.rfcMessageId }).from(messages)
       .where(and(eq(messages.enrollmentId, m.enrollmentId!), eq(messages.status, "sent"), isNotNull(messages.rfcMessageId))).orderBy(asc(messages.step))).map(r => r.rfc!) : [];
@@ -136,6 +139,7 @@ export async function runSender(db: Db, deps: SenderDeps): Promise<SenderResult>
       continue;
     }
     out.sent++;
+    if (oneOff) continue;
     const lastStep = (row.sequenceSteps ?? []).reduce((acc, st, i) => (st.channel === "email" ? i : acc), 0);
     await db.update(enrollments).set({ currentStep: m.step ?? 0, status: (m.step ?? 0) >= lastStep ? "completed" : "active", updatedAt: now.toISOString() })
       .where(eq(enrollments.id, m.enrollmentId!));

@@ -297,7 +297,9 @@ const COMPOSE_REASON: Record<string, string> = {
   not_found: "Contact not found.",
   no_email: "This person has no email address yet. Enrich with Apollo or add one.",
   suppressed: "This address is suppressed (unsubscribed, bounced or blocked).",
-  investment_mandate: "Investment-mandate contacts are manual, relationship-only: no email from the OS.",
+  investment_mandate: "Investment-mandate contacts are manual, relationship-only.",
+  counsel_not_confirmed: "This investment mandate cannot send yet: an owner must record counsel's confirmation in Settings, Mandates.",
+  needs_prior_relationship: "Investment mandate: record how you know this person, since when, and the evidence (at least a sentence).",
   recipient_not_allowed: "Outside production, email can only go to SEND_ALLOWED_DOMAINS (your test inbox).",
   needs_confirmation: "The address is not verified. Tick the confirmation box to send anyway.",
   no_mailbox: "Connect the primary Gmail mailbox in Settings → Connections first.",
@@ -314,7 +316,9 @@ export async function sendEmail(formData: FormData) {
     const [c] = await db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), mandateCondition(user.scope, contacts.mandateId)));
     if (!c) throw new Error("Contact not found");
     const policy = sendPolicy();
-    const r = await composeManualEmail(db, { contactId, subject, body, approvedBy: user.email, confirmUnverified, policy });
+    const how = String(formData.get("prHow") ?? ""), since = String(formData.get("prSince") ?? ""), evidence = String(formData.get("prEvidence") ?? "");
+    const priorRelationship = how || since || evidence ? { how: how.slice(0, 200), since: since.slice(0, 40), evidence: evidence.slice(0, 1000) } : undefined;
+    const r = await composeManualEmail(db, { contactId, subject, body, approvedBy: user.email, confirmUnverified, policy, priorRelationship });
     if (!r.ok) {
       notice = r.reason === "style" ? `Not sent. House style: ${(r.issues ?? []).map(i => i.detail).join(" ")}` : `Not sent. ${COMPOSE_REASON[r.reason]}`;
       return;

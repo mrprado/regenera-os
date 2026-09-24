@@ -168,3 +168,59 @@ export async function runWebResearch(db: Db, cfg: AiConfig, key: PromptKey, inpu
   });
   throw new AiOutputError(`${key} research did not finish.`);
 }
+
+export type AgentTool = { name: string; description: string; input_schema: Record<string, unknown> };
+export type AgentEvent =
+  | { type: "tool"; name: string; input: unknown }
+  | { type: "tool_result"; name: string; ok: boolean }
+  | { type: "text"; text: string };
+
+/**
+ * Tool-use loop for Ask the OS and similar agents (client tools only, run by `handle`).
+ * Same budget guard and cost logging as every other call. Stops after `maxTurns` model calls.
+ */
+export async function runAgent(db: Db, cfg: AiConfig, key: PromptKey, input: { system?: string; messages: Anthropic.Messages.MessageParam[] }, tools: AgentTool[],
+  handle: (name: string, input: unknown) => Promise<unknown>, opts: { maxTurns?: number; onEvent?: (e: AgentEvent) => void; meta?: RunMeta } = {}, client?: Anthropic): Promise<string> {
+  const prompt = await activePrompt(db, key);
+  const def: PromptDef = PROMPTS[key];
+  const anthropic = client ?? new Anthropic({ apiKey: cfg.apiKey, maxRetries: 2 });
+  const messages = [...input.messages];
+  const system = input.system ? `${prompt.system}\n\n${input.system}` : prompt.system;
+  let answer = "";
+  for (let turn = 0; turn < (opts.maxTurns ?? 6); turn++) {
+    await guardBudget(db, cfg, key, prompt.version, prompt.model, opts.meta ?? {});
+    const started = Date.now();
+    const res = await anthropic.messages.create({
+      model: prompt.model, max_tokens: def.maxTokens,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      tools: tools.map(t => ({ name: t.name, description: t.description, input_schema: t.input_schema as Anthropic.Messages.Tool.InputSchema })),
+      messages,
+      ...(def.effort ? { output_config: { effort: def.effort } } : {}),
+    });
+    const u = usageOf(res.usage);
+    await log(db, { promptKey: key, promptVersion: prompt.version, model: prompt.model, ...(opts.meta ?? {}), inputTokens: u.input, outputTokens: u.output,
+      cacheReadTokens: u.cacheRead, cacheWriteTokens: u.cacheWrite, webSearches: u.searches, costUsd: costUsd(prompt.model, u), latencyMs: Date.now() - started,
+      status: res.stop_reason === "refusal" ? "refusal" : "ok" });
+    if (res.stop_reason === "refusal") return "I can't help with that request.";
+    const text = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === "text").map(b => b.text).join("\n").trim();
+    if (text) answer = text;
+    const calls = res.content.filter((b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use");
+    if (res.stop_reason !== "tool_use" || calls.length === 0) {
+      if (text) opts.onEvent?.({ type: "text", text });
+      return answer || "I could not find an answer.";
+    }
+    messages.push({ role: "assistant", content: res.content });
+    const results: Anthropic.Messages.ToolResultBlockParam[] = [];
+    for (const c of calls) {
+      opts.onEvent?.({ type: "tool", name: c.name, input: c.input });
+      let out: unknown;
+      let ok = true;
+      try { out = await handle(c.name, c.input); } catch (e) { ok = false; out = { error: (e as Error).message }; }
+      if (out && typeof out === "object" && "error" in (out as Record<string, unknown>)) ok = false;
+      opts.onEvent?.({ type: "tool_result", name: c.name, ok });
+      results.push({ type: "tool_result", tool_use_id: c.id, content: JSON.stringify(out).slice(0, 20_000), is_error: !ok });
+    }
+    messages.push({ role: "user", content: results });
+  }
+  return answer || "I stopped before finishing. Try a narrower question.";
+}

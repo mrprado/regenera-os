@@ -14,29 +14,38 @@ export type SendPolicy = {
 
 export type ComposeResult =
   | { ok: true; messageId: string }
-  | { ok: false; reason: "not_found" | "no_email" | "suppressed" | "investment_mandate" | "recipient_not_allowed" | "needs_confirmation" | "style" | "no_mailbox"; issues?: StyleIssue[] };
+  | { ok: false; reason: "not_found" | "no_email" | "suppressed" | "investment_mandate" | "counsel_not_confirmed" | "needs_prior_relationship" | "recipient_not_allowed" | "needs_confirmation" | "style" | "no_mailbox"; issues?: StyleIssue[] };
+
+export type PriorRelationship = { how: string; since: string; evidence: string };
 
 export async function composeManualEmail(db: Db, input: {
   contactId: string; subject: string; body: string; approvedBy: string; confirmUnverified: boolean; policy: SendPolicy;
+  priorRelationship?: PriorRelationship;
 }): Promise<ComposeResult> {
   const [c] = await db.select().from(contacts).where(eq(contacts.id, input.contactId));
   if (!c) return { ok: false, reason: "not_found" };
   if (!c.emailLower) return { ok: false, reason: "no_email" };
   if (c.suppressed) return { ok: false, reason: "suppressed" };
   const [m] = await db.select().from(mandates).where(eq(mandates.id, c.mandateId));
-  if (m?.type === "investment") return { ok: false, reason: "investment_mandate" };
+  // Investment mandates (SPEC section 13): manual, relationship-only. Sending needs counsel's confirmation for the
+  // mandate and, for every touch, the prior relationship with evidence (no general solicitation, Reg D 506(b)).
+  const investment = m?.type === "investment";
+  if (investment && !m.counselConfirmedAt) return { ok: false, reason: "counsel_not_confirmed" };
+  const pr = input.priorRelationship;
+  if (investment && !(pr && pr.how.trim().length >= 3 && pr.since.trim() && pr.evidence.trim().length >= 10)) return { ok: false, reason: "needs_prior_relationship" };
   const domain = c.emailLower.split("@")[1];
   if (!input.policy.production && !input.policy.allowedDomains.includes(domain)) return { ok: false, reason: "recipient_not_allowed" };
   if (c.emailStatus !== "verified_provider" && c.emailStatus !== "verified_manual" && !input.confirmUnverified) return { ok: false, reason: "needs_confirmation" };
   const [{ prior }] = await db.select({ prior: sql<number>`count(*)` }).from(messages).where(and(eq(messages.contactId, c.id), eq(messages.status, "sent")));
-  // Investment mandates were refused above, so everything reaching here is advisory or development.
-  const issues = validateMessage({ subject: input.subject, body: input.body }, { firstTouch: prior === 0, advisory: true });
+  // Securities terms are blocked in advisory outreach. Investment-mandate messages go to known relationships only.
+  const issues = validateMessage({ subject: input.subject, body: input.body }, { firstTouch: prior === 0, advisory: !investment });
   if (issues.length) return { ok: false, reason: "style", issues };
   const [acct] = await db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.mailboxRole, "primary"));
   if (!acct) return { ok: false, reason: "no_mailbox" };
   const [row] = await db.insert(messages).values({
     mandateId: c.mandateId, contactId: c.id, channel: "email", mailboxRole: "primary", toEmail: c.emailLower,
     subject: input.subject.trim(), body: input.body.trim(), status: "approved", approvedBy: input.approvedBy,
+    priorRelationship: investment ? { how: pr!.how.trim(), since: pr!.since.trim(), evidence: pr!.evidence.trim() } : null,
   }).returning({ id: messages.id });
   return { ok: true, messageId: row.id };
 }
@@ -78,7 +87,8 @@ export async function sendClaimedMessage(db: Db, messageId: string, getToken: ()
     const now = (opts.now ?? new Date()).toISOString();
     await db.update(messages).set({ status: "sent", gmailMessageId: res.id, gmailThreadId: res.threadId, rfcMessageId, sentAt: now, updatedAt: now }).where(eq(messages.id, msg.id));
     const [c] = await db.select({ orgId: contacts.orgId, leadState: contacts.leadState }).from(contacts).where(eq(contacts.id, msg.contactId));
-    await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${opts.subject ?? msg.subject}`, source: opts.activitySource ?? "manual", actor: msg.approvedBy });
+    const evidence = msg.priorRelationship ? ` | Prior relationship: ${msg.priorRelationship.how}, since ${msg.priorRelationship.since}. Evidence: ${msg.priorRelationship.evidence}` : "";
+    await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${opts.subject ?? msg.subject}${evidence}`, source: opts.activitySource ?? "manual", actor: msg.approvedBy });
     if (c && ["sourced", "researched", "qualified", "queued"].includes(c.leadState)) await db.update(contacts).set({ leadState: "contacted" }).where(eq(contacts.id, msg.contactId));
     return { sent: true as const, gmailId: res.id };
   } catch (error) {

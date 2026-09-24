@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
@@ -7,6 +8,10 @@ import { aiConfig, apolloConfig } from "@/lib/config";
 import { homeData } from "@/lib/crm/home";
 import { deliverabilityIssues } from "@/lib/outreach/deliverability";
 import { engageCounts, sendingOverview, upcomingMeetings } from "@/lib/outreach/queries";
+import { and, desc, eq } from "drizzle-orm";
+import { proposals } from "@/db/schema";
+import { appDb, mandateCondition } from "@/lib/db/scoped";
+import { confirmProposalAction, rejectProposalAction } from "../intel-actions";
 import { DEAL_STAGES } from "@/lib/vocab";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +22,12 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
   return href ? <Link className={ui.stat} href={href}>{body}</Link> : <div className={ui.stat}>{body}</div>;
 }
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
+  const sp = await searchParams;
   const [d, engage, sending, meetings] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope)]);
+  const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
+    .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const now = new Date().toISOString();
   const alerts = [
     ...sending.checks.flatMap(c => deliverabilityIssues(c)),
@@ -31,7 +39,22 @@ export default async function HomePage() {
   return (
     <>
       <PageHeader title={`Good to see you, ${first}`} />
+      <Notice text={sp.notice} />
       {alerts.length > 0 && <p className={ui.notice}><Link href="/settings/sending">Sending</Link>: {alerts.join(" · ")}</p>}
+      {pending.length > 0 && (
+        <section className={r.panel}>
+          <p className={r.panelTitle}>Waiting for your confirmation</p>
+          <table className={ui.table}><tbody>{pending.map(p => (
+            <tr key={p.id}>
+              <td className={ui.wrap}>{p.title}<span className={ui.sub}>Proposed {p.source === "mcp" ? "from Claude" : "by Ask the OS"} · {p.createdAt.slice(0, 16).replace("T", " ")}</span></td>
+              <td><div className={ui.rowActions}>
+                <form action={confirmProposalAction}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="back" value="/today" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Confirm</button></form>
+                <form action={rejectProposalAction}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="back" value="/today" /><button className={ui.miniBtn} type="submit">Discard</button></form>
+              </div></td>
+            </tr>
+          ))}</tbody></table>
+        </section>
+      )}
       <div className={ui.stats}>
         <Stat n={engage.queue} label="Drafts to approve" href="/queue" />
         <Stat n={engage.replies} label="Replies to handle" href="/inbox" warn />

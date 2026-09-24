@@ -1,16 +1,24 @@
 import { env } from "cloudflare:workers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getChatGPTUser, requireChatGPTUser, type ChatGPTUser } from "./chatgpt-auth";
 import { appDb, isOwner, type UserScope } from "./db/scoped";
+import { narrowScope } from "./mandates";
 import { parseAllowlist, resolveMembership } from "./membership";
+
+export const MANDATE_COOKIE = "os_mandate";
 
 export type OsUser = { userId: string; email: string; displayName: string; scope: UserScope };
 
 // Deduplicated per request. mandate_members decides access; OS_ALLOWLIST only bootstraps the first owner.
 const toOsUser = cache(async (userId: string, email: string, displayName: string): Promise<OsUser | null> => {
   const scope = await resolveMembership(appDb(), { userId, email }, parseAllowlist(env.OS_ALLOWLIST));
-  return scope ? { userId, email: scope.email, displayName, scope } : null;
+  if (!scope) return null;
+  // The header switcher narrows every query to one mandate; only mandates the user belongs to are honoured.
+  let focus: string | undefined;
+  try { focus = (await cookies()).get(MANDATE_COOKIE)?.value; } catch { focus = undefined; }
+  return { userId, email: scope.email, displayName, scope: narrowScope(scope, focus) };
 });
 
 const fromChatGPT = (u: ChatGPTUser) => toOsUser(u.userId, u.email, u.displayName);

@@ -2,6 +2,8 @@ import { Fragment } from "react";
 import { requireOsUser } from "@/lib/auth";
 import { isOwner } from "@/lib/db/scoped";
 import { jobsOverview } from "@/lib/settings";
+import { appDb } from "@/lib/db/scoped";
+import { getState } from "@/lib/state";
 import { retryJob, runJobsNow } from "../actions";
 import styles from "../settings.module.css";
 
@@ -20,11 +22,19 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const user = await requireOsUser("/settings/jobs");
   const params = await searchParams;
   const { counts, recent, schedules, lastTick, lastHeartbeat, stale } = await jobsOverview();
+  const parse = (v: string | null) => { try { return v ? JSON.parse(v) as Record<string, unknown> : null; } catch { return null; } };
+  const backup = parse(await getState(appDb(), "last_backup"));
+  const check = parse(await getState(appDb(), "last_backup_check"));
 
   return (
     <>
       <h2>Jobs</h2>
       {params.ran && <p className={`${styles.notice} ${styles.noticeOk}`}>Ran one tick.</p>}
+      <p className={`${styles.notice} ${backup ? styles.noticeOk : ""}`}>
+        Backups: {backup ? `last nightly export ${String(backup.day)} (${String(backup.tables)} tables, ${String(backup.rows)} rows, kept 30 days in R2)` : "no backup yet (runs nightly at 02:30 ET)"}.
+        {" "}Read-back check: {check ? `${check.ok ? "passed" : "FAILED"} on ${String(check.at).slice(0, 10)}${check.ok ? "" : `: ${(check.problems as string[]).slice(0, 2).join("; ")}`}` : "not run yet (monthly)"}.
+        {" "}Full restore test: <code>node scripts/restore-backup.mjs &lt;folder&gt;</code>.
+      </p>
       {stale && <p className={styles.notice}>The scheduler has not called /api/jobs/tick in the last 30 minutes. Last tick: {ago(lastTick)}.</p>}
 
       <div className={styles.grid}>

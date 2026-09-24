@@ -11,6 +11,7 @@ import { computeMetrics, type RateRow } from "@/lib/reports/metrics";
 import type { WeeklyBody } from "@/lib/reports/weekly";
 import { DEAL_STAGES, ENGAGEMENTS, FEE_TYPES, LEAD_SOURCES, PRACTICES } from "@/lib/vocab";
 import { weeklyReportNowAction } from "../radar-actions";
+import { CasesTab, ForecastTab, LearningTab } from "./tabs";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reports" };
@@ -49,6 +50,26 @@ function RateTable({ dim, rows }: { dim: string; rows: RateRow[] }) {
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/reports");
   const sp = await searchParams;
+  const tab = sp.tab === "forecast" || sp.tab === "learning" || sp.tab === "cases" ? sp.tab : "overview";
+  const tabs = (
+    <nav className={ui.tabs} aria-label="Report views">
+      {([["overview", "Overview"], ["forecast", "Forecast"], ["learning", "Learning loop"], ["cases", "Case evidence"]] as const).map(([k, v]) => (
+        <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={k === "overview" ? "/reports" : `/reports?tab=${k}`}>{v}</Link>
+      ))}
+    </nav>
+  );
+  if (tab !== "overview") {
+    return (
+      <>
+        <PageHeader title="Reports" />
+        <Notice text={sp.notice} />
+        {tabs}
+        {tab === "forecast" && <ForecastTab scope={user.scope} />}
+        {tab === "learning" && <LearningTab scope={user.scope} owner={isOwner(user.scope)} />}
+        {tab === "cases" && <CasesTab scope={user.scope} />}
+      </>
+    );
+  }
   const range = sp.range && RANGES[sp.range] ? sp.range : "30";
   const now = new Date();
   const from = RANGES[range].days ? new Date(now.getTime() - RANGES[range].days! * 86_400_000) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
@@ -60,6 +81,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader title="Reports" actions={isOwner(user.scope) ? <form action={weeklyReportNowAction}><button className="btn" type="submit">Write last week&apos;s report</button></form> : undefined} />
       <Notice text={sp.notice} />
+      {tabs}
       <nav className={ui.tabs} aria-label="Period">
         {Object.entries(RANGES).map(([k, v]) => <Link key={k} className={`${ui.tab} ${range === k ? ui.tabActive : ""}`} href={`/reports?range=${k}`}>{v.label}</Link>)}
       </nav>

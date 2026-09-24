@@ -1,6 +1,7 @@
 // Find-or-create for organizations and contacts with multi-source merge (SPEC section 12b):
 // match on strong IDs first, fill empty fields only, keep per-field provenance, flag conflicts.
 import { and, eq } from "drizzle-orm";
+import { isErasedAddress } from "@/lib/privacy";
 import type { Db } from "@/db";
 import { contacts, organizations, type FieldSources } from "@/db/schema";
 import { canonicalLinkedin, normalizeEmail, normalizeOrgName, normalizePersonName, registrableDomain, splitName } from "@/lib/dedupe/normalize";
@@ -149,6 +150,8 @@ export async function upsertContact(db: Db, mandateId: string, input: ContactInp
       email: clean.email, emailLower: clean.emailLower, emailStatus: clean.emailStatus ?? "unknown", linkedinUrl: clean.linkedinUrl,
       location: clean.location ?? null, country: clean.country ?? null, apolloPersonId: clean.apolloPersonId ?? null,
       segmentId: clean.segmentId ?? null, orgId: clean.orgId ?? null,
+      // Someone erased on request is never contacted again, even if an import brings them back.
+      suppressed: await isErasedAddress(db, clean.emailLower),
     }).returning();
     return { row, created: true, conflicts: [] };
   }

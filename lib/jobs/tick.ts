@@ -1,4 +1,5 @@
 import type { Db } from "@/db";
+import { ensureInvestmentMandates } from "@/lib/mandates";
 import { ensureListSources } from "@/lib/radar/lists";
 import { ensureSavedSearches } from "@/lib/radar/saved-searches";
 import { ensureRegeneraMandate, REGENERA_MANDATE_ID } from "@/lib/membership";
@@ -59,7 +60,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-24.3";
+const REFERENCE_VERSION = "2026-09-24.7";
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {
@@ -68,6 +69,7 @@ export async function ensureReferenceData(db: Db): Promise<void> {
   await ensurePrompts(db);
   await ensureTriggerQueries(db);
   await ensureRegeneraMandate(db);
+  await ensureInvestmentMandates(db);
   await ensureSequences(db, REGENERA_MANDATE_ID);
   await ensureSavedSearches(db, REGENERA_MANDATE_ID);
   await ensureListSources(db);

@@ -18,7 +18,7 @@
 }
 .brand { color: var(--pollen); font-weight: 700; letter-spacing: .08em; font-size: 14px; white-space: nowrap; }
 .brand b { color: var(--wax); }
-.headerSlot { min-width: 0; }
+.headerSlot { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-right: 12px; }
 .account { display: flex; align-items: center; gap: 12px; }
 .accountName { font-size: 13px; color: color-mix(in srgb, var(--wax) 75%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 .avatar { width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--pollen); color: var(--fern); font-size: 12px; font-weight: 700; }
@@ -80,3 +80,5 @@
   .main:has(> [data-fullbleed]) { padding: 0; }
   .banner { padding: 9px 16px; }
 }
+.switcher select { height: 30px; border-radius: 999px; border: 1px solid color-mix(in srgb, #fff 30%, transparent); background: transparent; color: #fff; font-size: 12.5px; padding: 0 10px; }
+.switcher select option { color: #131b13; }

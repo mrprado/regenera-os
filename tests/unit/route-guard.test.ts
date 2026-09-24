@@ -22,6 +22,10 @@ const ANONYMOUS_API: Record<string, RegExp> = {
   "api/webhooks/site/route.ts": /verifySiteSignature\(/,
   "api/webhooks/extension/route.ts": /verifyExtensionToken\(/,
   "api/unsubscribe/[token]/route.ts": /verifyUnsubscribeToken\(/,
+  // Phase 4: the MCP server and its OAuth endpoints (docs/plans/phase-4.md item 2).
+  "api/mcp/route.ts": /handleMcp\(/,
+  "api/oauth/mcp/register/route.ts": /registerClient\(/,
+  "api/oauth/mcp/token/route.ts": /exchangeToken\(/,
 };
 // Pages reachable without an OS membership. Each is listed with why.
 const ANONYMOUS_PAGES: Record<string, string> = {

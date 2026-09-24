@@ -196,7 +196,9 @@ export async function sendReplyAction(formData: FormData) {
     if (!r?.contactId) throw new Error("Reply not found");
     const subject = r.subject.match(/^re:/i) ? r.subject : `Re: ${r.subject}`;
     // A reply to someone who wrote to us: their address is confirmed by their own email.
-    const composed = await composeManualEmail(db, { contactId: r.contactId, subject, body, approvedBy: user.email, confirmUnverified: true, policy: sendPolicy() });
+    // For investment mandates the inbound email itself is the prior-relationship evidence.
+    const priorRelationship = { how: "They wrote to us (reply in the Inbox)", since: r.receivedAt.slice(0, 10), evidence: `Email from ${r.fromEmail} received ${r.receivedAt.slice(0, 16)} UTC, subject "${r.subject.slice(0, 120)}"` };
+    const composed = await composeManualEmail(db, { contactId: r.contactId, subject, body, approvedBy: user.email, confirmUnverified: true, policy: sendPolicy(), priorRelationship });
     if (!composed.ok) { notice = composed.reason === "style" ? `House style: ${composed.issues?.map(i => i.detail).join(" ")}` : `Not sent: ${composed.reason.replace(/_/g, " ")}`; return; }
     const cfg = googleConfig();
     if (!cfg) { notice = "Google is not configured."; return; }
