@@ -2,6 +2,8 @@ import type { Db } from "@/db";
 import { AiBudgetError } from "@/lib/ai/run";
 import { aiConfig } from "@/lib/config";
 import { geocodeOrganization } from "@/lib/crm/geo";
+import { enrichOrganizationIdentity } from "@/lib/crm/identity-enrich";
+import { gatherStep, scoreContact, synthesizeStep } from "@/lib/crm/research";
 import { freshnessSince } from "@/lib/freshness";
 import { setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
@@ -10,19 +12,26 @@ import { enqueue, type Job } from "./queue";
 export type JobContext = { db: Db; job: Job; now: Date };
 export type JobHandler = (ctx: JobContext) => Promise<void>;
 
+class AiUnavailableError extends Error {}
+
 function requireAi() {
   const cfg = aiConfig();
-  if (!cfg) throw new Error("ANTHROPIC_API_KEY is not set (docs/ENV.md)");
+  if (!cfg) throw new AiUnavailableError("ANTHROPIC_API_KEY is not set (docs/ENV.md)");
   return cfg;
 }
 
-/** Budget exhaustion is not a failure: the job waits until the next day instead of burning retries. */
+/**
+ * A missing key or an exhausted monthly budget is not a failure: the job waits (6 h without a key,
+ * 24 h over budget) instead of burning retries and landing in dead jobs.
+ */
 async function deferOnBudget(ctx: JobContext, fn: () => Promise<unknown>) {
   try {
     await fn();
   } catch (error) {
-    if (!(error instanceof AiBudgetError)) throw error;
-    await enqueue(ctx.db, ctx.job.type, ctx.job.payload, { runAfter: new Date(ctx.now.getTime() + 24 * 3_600_000), now: ctx.now });
+    const wait = error instanceof AiBudgetError ? 24 : error instanceof AiUnavailableError ? 6 : 0;
+    if (!wait) throw error;
+    const runAfter = new Date(ctx.now.getTime() + wait * 3_600_000);
+    await enqueue(ctx.db, ctx.job.type, ctx.job.payload, { runAfter, now: ctx.now, dedupeKey: `deferred:${ctx.job.type}:${JSON.stringify(ctx.job.payload)}:${runAfter.toISOString().slice(0, 13)}` });
   }
 }
 
@@ -37,10 +46,25 @@ export const handlers: Record<string, JobHandler> = {
     await setState(db, "last_trigger_scan", JSON.stringify({ at: now.toISOString(), ...r }));
   },
   "triggers.classify": async ctx => {
+    // Unread signals stay "new" and are picked up by the next classify run once a key exists.
+    if (!aiConfig()) return;
     await deferOnBudget(ctx, () => classifyNewSignals(ctx.db, requireAi(), 15, ctx.now));
   },
   "triggers.read": async ctx => {
     await deferOnBudget(ctx, () => readSignal(ctx.db, requireAi(), String(ctx.job.payload.signalId), ctx.now));
+  },
+  "identity.enrich": async ({ db, job }) => {
+    await enrichOrganizationIdentity(db, String(job.payload.orgId));
+    await enqueue(db, "geo.org", { orgId: job.payload.orgId }, { dedupeKey: `geo:${job.payload.orgId}:identity` });
+  },
+  "research.gather": async ctx => {
+    await deferOnBudget(ctx, () => gatherStep(ctx.db, requireAi(), String(ctx.job.payload.dossierId)));
+  },
+  "research.dossier": async ctx => {
+    await deferOnBudget(ctx, () => synthesizeStep(ctx.db, requireAi(), String(ctx.job.payload.dossierId)));
+  },
+  "score.match": async ctx => {
+    await deferOnBudget(ctx, () => scoreContact(ctx.db, requireAi(), String(ctx.job.payload.contactId)));
   },
   "geo.org": async ({ db, job, now }) => {
     const r = await geocodeOrganization(db, String(job.payload.orgId));

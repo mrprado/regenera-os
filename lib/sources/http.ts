@@ -64,7 +64,7 @@ export type FetchJsonOptions<T> = {
   provider: string;
   endpoint: string;               // stable label for the ledger, e.g. "people_search"
   url: string;
-  schema: z.ZodType<T>;
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   init?: RequestInit;
   cacheKey?: string;
   cacheTtlMs?: number;

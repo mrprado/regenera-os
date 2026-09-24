@@ -1,4 +1,4 @@
-// Map coordinates for organizations: Wikidata (when linked) first, then OpenStreetMap Nominatim.
+// Map coordinates for organizations: stated location, then Wikidata HQ, then country.
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db";
 import { organizations, type FieldSources } from "@/db/schema";
@@ -11,24 +11,26 @@ export async function geocodeOrganization(db: Db, orgId: string): Promise<"done"
   if (!org || (org.lat != null && org.lng != null)) return "done";
   let point: { lat: number; lng: number; source: string } | null = null;
 
-  if (org.wikidataId) {
+  // 1. An explicit location (entered, from Apollo, or from the dossier) is the most specific.
+  if (org.location) {
+    const g = await geocode(db, org.location);
+    if (g === "busy") return "retry";
+    if (g) point = { lat: g.lat, lng: g.lng, source: "nominatim" };
+  }
+  // 2. Wikidata headquarters city, then the item's own coordinates (often coarse).
+  if (!point && org.wikidataId) {
     const wd = await wikidataOrg(db, org.wikidataId);
-    if (wd?.coordinates) point = { ...wd.coordinates, source: "wikidata" };
-    else if (wd?.hqQid) {
-      const hq = await wikidataOrg(db, wd.hqQid);
-      if (hq?.coordinates) point = { ...hq.coordinates, source: "wikidata" };
-    }
+    const hq = wd?.hqQid ? await wikidataOrg(db, wd.hqQid) : null;
+    const c = hq?.coordinates ?? wd?.coordinates;
+    if (c) point = { ...c, source: "wikidata" };
   }
-  if (!point) {
-    const query = org.location || org.country;
-    if (!query) return "none";
-    const g = await geocode(db, query);
-    if (g === null) {
-      // null can mean "rate slot busy" or "no result"; a second attempt distinguishes them.
-      return "retry";
-    }
-    point = { lat: g.lat, lng: g.lng, source: "nominatim" };
+  // 3. Country as a last resort.
+  if (!point && org.country) {
+    const g = await geocode(db, org.country);
+    if (g === "busy") return "retry";
+    if (g) point = { lat: g.lat, lng: g.lng, source: "nominatim" };
   }
+  if (!point) return "none";
   const sources: FieldSources = { ...org.fieldSources, lat: { source: point.source, at: new Date().toISOString() } };
   await db.update(organizations).set({ lat: point.lat, lng: point.lng, geoSource: point.source, fieldSources: sources }).where(eq(organizations.id, org.id));
   await backfillTriggerCoordinates(db, org.id, point.lat, point.lng);
