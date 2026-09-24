@@ -40,7 +40,7 @@ ${markdownToHtml(md)}
 </body></html>`;
 }
 
-export const safeFileName = (s: string) => s.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 80) || "contract";
+export const safeFileName = (s: string) => s.replace(/[^\w\- ]+/g, "").trim().replace(/[\s-]+/g, "-").slice(0, 80) || "contract";
 
 // Blank templates: named brackets instead of [TO CONFIRM], so counsel sees what each blank is for.
 const BLANK_TERMS: ContractTerms = {
