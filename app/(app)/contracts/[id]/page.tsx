@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
+import { withBase } from "@/lib/base-path";
 import { sendBlockers } from "@/lib/contracts/engine";
 import { CONTRACT_KIND_LABEL, CONTRACT_STATUS_LABEL, MILESTONE_STATUS_LABEL, money } from "@/lib/contracts/labels";
 import { getContract } from "@/lib/contracts/queries";
@@ -36,6 +37,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader title={c.title} actions={<>
+        <a className="btn btn--primary" href={withBase(`/api/contracts/download?contract=${c.id}`)} download>Download (.doc)</a>
         <Link className="btn" href={`/contracts/${c.id}/print`}>Print or save as PDF</Link>
         <Link className="btn" href="/contracts">All contracts</Link>
       </>} />

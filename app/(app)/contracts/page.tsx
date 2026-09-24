@@ -5,6 +5,8 @@ import { EmptyState, PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
+import { withBase } from "@/lib/base-path";
+import { templateLibrary } from "@/lib/contracts/export";
 import { contractAlerts } from "@/lib/contracts/engine";
 import { CONTRACT_KIND_LABEL, CONTRACT_STATUS_LABEL, money } from "@/lib/contracts/labels";
 import { contractSources, listContracts } from "@/lib/contracts/queries";
@@ -22,6 +24,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     contractSources(user.scope),
     contractAlerts(appDb(), user.scope.mandateIds),
   ]);
+  const templates = templateLibrary();
+  const groups = [...new Set(templates.map(t => t.group))];
   const alertCount = alerts.awaitingSignature.length + alerts.renewals.length + alerts.milestonesDue.length;
 
   return (
@@ -57,6 +61,19 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
               </table>
             </div>
           )}
+
+          <section className={r.panel} id="templates" style={{ marginTop: 16 }}>
+            <p className={r.panelTitle}><span>Contract templates ({templates.length})</span><a className={`${ui.miniBtn} ${ui.miniPrimary}`} href={withBase("/api/contracts/download?all=1")} download>Download all (.zip)</a></p>
+            <p className={ui.sub} style={{ marginTop: 0 }}>Blank templates for counsel review, as Word files (.doc: opens in Word, Google Docs and Pages). Bracketed items are blanks. The capital advisory and capital screening letters include the success-fee clause.</p>
+            {groups.map(g => (
+              <div key={g} style={{ marginTop: 10 }}>
+                <b style={{ fontSize: 13 }}>{g}</b>
+                <table className={ui.table}><tbody>{templates.filter(t => t.group === g).map(t => (
+                  <tr key={t.key}><td>{t.name}</td><td style={{ textAlign: "right" }}><a className={ui.miniBtn} href={withBase(`/api/contracts/download?template=${t.key}`)} download>Download</a></td></tr>
+                ))}</tbody></table>
+              </div>
+            ))}
+          </section>
         </div>
 
         <aside>
