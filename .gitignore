@@ -45,3 +45,4 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+/public/maplibre-gl-worker.js

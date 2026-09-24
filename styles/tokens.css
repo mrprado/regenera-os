@@ -28,26 +28,5 @@
   --radius-card: 12px;
 }
 
-/* Dark theme: ink ground (fern stays the sidebar), wax text, pollen accents (SPEC section 11). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: var(--ink);
-    --surface: #1b251b;
-    --text: var(--wax);
-    --text-muted: #b5bdb0;
-    --heading: var(--wax);
-    --eyebrow: var(--reed);
-    --link: var(--reed);
-    --line: rgba(239, 233, 220, 0.18);
-  }
-}
-:root[data-theme="dark"] {
-  --bg: var(--ink);
-  --surface: #1b251b;
-  --text: var(--wax);
-  --text-muted: #b5bdb0;
-  --heading: var(--wax);
-  --eyebrow: var(--reed);
-  --link: var(--reed);
-  --line: rgba(239, 233, 220, 0.18);
-}
+/* Light only, like regenera.bio: the work area is always white. Only the header and sidebar are fern. */
+:root { color-scheme: light; }

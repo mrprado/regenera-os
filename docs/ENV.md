@@ -14,6 +14,8 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | `ANTHROPIC_API_KEY` | 1 | Anthropic Console; set a monthly spend limit |
 | `APOLLO_API_KEY` | 1 | Free Apollo.io account registered with a work email (e.g. alanprado@regenera.bio) → Settings → Integrations → API |
 | `APOLLO_MONTHLY_CREDIT_BUDGET` | 1 | Credits per month the OS may spend on enrichment. Default 50; keep it within the free plan's allowance |
+| `ESRI_API_KEY` | 1 (optional) | Free ArcGIS Location Platform account → API key with the basemap tiles privilege, referrer-restricted to os.regenera.bio. Enables satellite imagery on the Map; without it the Map uses NASA Blue Marble relief |
+| `AI_MONTHLY_BUDGET_USD` | 1 | Monthly Anthropic spend cap for research and triggers. Default 50 |
 | `APOLLO_PLAN` | 1 | `free` (default). Sets the rate limits the OS enforces |
 | `SITE_WEBHOOK_SECRET`, `SITE_EXPORT_TOKEN` | 1 | Generate; the same values are set on the regenera.bio Sites project |
 | `RESEND_API_KEY`, `RESEND_FROM` | 2 | Existing Resend account the site uses; `RESEND_FROM` e.g. `Regenera OS <os@mail.regenera.bio>` |

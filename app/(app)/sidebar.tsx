@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Building2, ChartColumn, ClipboardCheck, Handshake, House, Inbox, ListChecks,
+  Building2, ChartColumn, ClipboardCheck, Earth, Handshake, House, Inbox, ListChecks,
   Radar, Send, Settings, SquareCheckBig, SquareKanban, Users, type LucideIcon,
 } from "lucide-react";
 import styles from "./shell.module.css";
@@ -12,7 +12,7 @@ type Item = { href: string; label: string; icon: LucideIcon };
 
 // Apollo-style information architecture (SPEC section 11), in Regenera vocabulary.
 const GROUPS: { label?: string; items: Item[] }[] = [
-  { items: [{ href: "/today", label: "Home", icon: House }] },
+  { items: [{ href: "/today", label: "Home", icon: House }, { href: "/map", label: "Map", icon: Earth }] },
   {
     label: "Prospect",
     items: [

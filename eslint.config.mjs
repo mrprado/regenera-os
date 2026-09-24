@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   globalIgnores([".next/**", "out/**", "build/**", "dist/**", "next-env.d.ts", "public/**", "extension/**"]),
   {
     // Mandate-scoped tables must be read through lib/db/scoped.ts (SPEC section 9).
-    files: ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    files: ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
     ignores: ["lib/db/**"],
     rules: {
       "no-restricted-imports": ["error", {

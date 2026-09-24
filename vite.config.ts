@@ -35,6 +35,9 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // lucide-react is used from client components; pre-bundling it separately for the RSC and client
+    // environments made vite warn "inconsistently optimized" and broke client navigation in dev.
+    optimizeDeps: { exclude: ["lucide-react"] },
     server: {
       ...(managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {}),
       ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),

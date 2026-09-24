@@ -24,7 +24,7 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
 
 ## Commands
 - npm run dev (vinext, port 5180 via -- --port 5180; local mock sign-in at /signin-with-chatgpt?return_to=/today
-  as seedy@sites.test) / build / start / lint / typecheck / test
+  as Alan Prado, alanprado@regenera.bio) / build / start / lint / typecheck / test
 - npm run db:generate (drizzle-kit) after editing db/schema.ts
 - npm run build once, then npm run db:migrate:local and npm run db:seed:local for the
   local preview D1 (.wrangler/state). Production migrations apply on Sites publish

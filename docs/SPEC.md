@@ -458,21 +458,22 @@ Daily send caps per domain ramp up during warm-up, and pause automatically if th
 
 ### Shell
 
-- **Header:** white, full width, 1px `--line` rule and the gold REGENERA wordmark, the same treatment as the regenera.bio header. Global search sits here (phase 1), with the account menu on the right.
+- **Header:** fern (`--fern`), full width, continuous with the sidebar, with the gold REGENERA wordmark. Global search sits here (phase 1), with the account menu on the right. Decided Sep 23, 2026: only the header and sidebar are green; the work area is always white.
 - **Sidebar:** fern (`--fern`), fixed on the left under the header. Nav groups use Apollo's structure in Regenera's vocabulary:
-  - **Home**
+  - **Home**, **Map**
   - **Prospect:** People, Companies, Lists, Triggers
   - **Engage:** Sequences, Approval queue, Tasks, Inbox
   - **Win:** Deals, Partners, Reports
   - **Settings** at the foot
 
   The active item gets a pollen marker.
-- **Responsive:** icon rail between 821 and 1100px. On a phone, a white header with a menu button and the fern menu dropping down beneath it.
+- **Responsive:** icon rail between 821 and 1100px. On a phone, the fern header with a menu button and the fern menu dropping down beneath it.
 
 ### Screens
 
 | Screen | Apollo equivalent | Key elements |
 |---|---|---|
+| Map | (no Apollo equivalent) | A Google Earth Pro style globe: satellite imagery (Esri World Imagery with a free ArcGIS key, or NASA Blue Marble relief without one), 3D terrain (AWS terrain tiles), gold country borders and labels (OpenFreeMap). Layers: organizations by sector, deals, this year's triggers, open tenders and EOIs, and live GDACS hazards. Search, fly-to, a detail panel with the decision read and source, and a globe or flat toggle |
 | Home | Home | Queue count, replies to handle, meetings today with briefs, overdue actions and tasks, top 5 new triggers, new site inquiries and referrals |
 | People | People search | **Two tabs:** "Saved" (people in the OS) and "Find in Apollo" (net-new via the Apollo API, section 12). Filter panel on the left: segment, sector, region, title, seniority, tier, score, trigger, email status, list, stage. The table has a checkbox column, customizable columns and sorting. **Bulk actions:** save, add to list, enrich, research, score, add to sequence, export. Clicking a row opens a side panel preview. Import CSV |
 | Companies | Companies search | The same pattern for organizations: sector, region, segment, mandate parameters (ticket, stage, structure), trigger history, headcount, and people at the company |
@@ -517,7 +518,7 @@ Daily send caps per domain ramp up during warm-up, and pause automatically if th
 - **Typography.** Helvetica Neue (fallback Helvetica, Arial), body 16px/1.45. Headings are weight 600 with tight tracking (`-.055em` for display sizes). Eyebrows are 12px uppercase, `.16em` tracking, weight 700, in `--leaf`.
 - **Components.** Pill buttons (`border-radius: 999px`), with pollen fill for primary actions. 1px `--line` rules instead of heavy shadows. Icons are `lucide-react`, the set the site already uses. Tables are compact (36px rows, 13px text) for Apollo-level density; page and record chrome keeps the site's spacing.
 - **Styling approach.** Global tokens in `styles/tokens.css`, plus CSS Modules per screen, the same pattern as `app/tracker/tracker.module.css` and `app/partners/partners.module.css` on the site.
-- **Dark mode.** The site is light only. The OS adds a dark theme derived from `--fern` as the ground, with `--wax` text and `--pollen` accents. It is defined as tokens only and never hard-coded.
+- **Light only.** Like regenera.bio, the work area is always white regardless of the viewer's system theme. Only the header and sidebar are fern. The Map is the one dark surface, because it shows space around the globe.
 - **Colour meaning.** Trigger urgency and deal stages get consistent colour tokens that never rely on colour alone.
 
 ## 12. Integrations and connectivity

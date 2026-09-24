@@ -5,9 +5,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 
-const localUserId = "local_seedy";
-const localEmail = "seedy@sites.test";
-const localFullName = "Seedy";
+// Regenera OS: local dev identity changed from the upstream "Seedy" mock to Alan (loopback only; never in production builds).
+const localUserId = "local_alan";
+const localEmail = "alanprado@regenera.bio";
+const localFullName = "Alan Prado";
 const localCookieName = "__sites_local_auth";
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 const localAddresses = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
