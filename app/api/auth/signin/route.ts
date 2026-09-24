@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const email = normalizeEmail(form.get("email"));
   const back = (error: string) => redirectTo(request, `/signin?error=${error}&return_to=${encodeURIComponent(returnTo)}`);
   if (!email) return back("invalid");
-  // OS_PASSWORD (local development) overrides the tracker check.
+  // OS_PASSWORD (a Worker secret) is the password when set; otherwise the tracker password is checked.
   const check = env.OS_PASSWORD
     ? fixedPasswordCheck(env.OS_PASSWORD)
     : trackerPasswordCheck(env.TRACKER_AUTH_URL ?? `${env.SITE_BASE_URL ?? "https://regenera.bio"}/api/pipeline/auth`);

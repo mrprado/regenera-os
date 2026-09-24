@@ -18,12 +18,13 @@ Email + password (lib/session.ts, app/api/auth/signin). The password is the trac
 the site's `/api/pipeline/auth` (`TRACKER_AUTH_URL` overrides) and never stores it, so changing the tracker
 password (`PIPELINE_PASSWORD` on the site) changes the OS password too. The email must be a mandate member, or
 in `OS_ALLOWLIST` while no member exists. 5 failures lock an email for 15 minutes; 20 lock an IP. Sessions last
-30 days in D1; Sign out revokes them. Locally, `OS_PASSWORD` in `.dev.vars` replaces the tracker check.
+30 days in D1; Sign out revokes them. When the `OS_PASSWORD` secret is set it is the password instead (locally, in `.dev.vars`).
 
 ## Secrets (set once, by Prado)
 
 ```bash
 node scripts/setup-secrets.mjs alanprado@regenera.bio
+npx wrangler secret put OS_PASSWORD --name regenera-os         # type the password at the prompt
 npx wrangler secret put ANTHROPIC_API_KEY --name regenera-os    # optional: Claude reads, drafts, Ask the OS
 npx wrangler secret put RESEND_API_KEY --name regenera-os       # optional: digest and notifications
 ```

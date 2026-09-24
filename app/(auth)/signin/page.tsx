@@ -30,7 +30,6 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
         <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={200} />
         <button className="btn btn--primary" type="submit">Sign in</button>
       </form>
-      <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Same password as the Regenera tracker.</p>
     </main>
   );
 }
