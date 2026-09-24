@@ -15,6 +15,13 @@
       "when": 1790206099227,
       "tag": "0001_wooden_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790215434698,
+      "tag": "0002_bizarre_gressill",
+      "breakpoints": true
     }
   ]
 }

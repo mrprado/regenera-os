@@ -26,5 +26,9 @@ declare namespace Cloudflare {
     APP_BASE_URL?: string;
     BOOKING_URL?: string;
     COMPANY_POSTAL_ADDRESS?: string;
+    SENDING_DOMAIN?: string;
+    SENDING_WARMUP_STARTED?: string;
+    PRIMARY_DAILY_CAP?: string;
+    SENDING_DAILY_CAP?: string;
   }
 }

@@ -10,6 +10,7 @@ export default async function SettingsLayout({ children }: Readonly<{ children: 
       <PageHeader title="Settings" />
       <nav className={styles.tabs} aria-label="Settings sections">
         <Link href="/settings/connections">Connections</Link>
+        <Link href="/settings/sending">Sending</Link>
         <Link href="/settings/jobs">Jobs</Link>
         <Link href="/settings/members">Members</Link>
       </nav>

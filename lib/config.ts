@@ -30,3 +30,21 @@ export function sendPolicy() {
     postalAddress: env.COMPANY_POSTAL_ADDRESS ?? null,
   };
 }
+
+/** Phase 2 outreach settings (docs/plans/phase-2.md defaults). */
+export function outreachConfig() {
+  const baseUrl = env.APP_BASE_URL ?? "https://os.regenera.bio";
+  return {
+    appBaseUrl: baseUrl,
+    bookingUrl: env.BOOKING_URL ?? null,
+    primaryDomain: "regenera.bio",
+    sendingDomain: env.SENDING_DOMAIN ?? null,
+    unsubscribe: env.UNSUBSCRIBE_SIGNING_SECRET ? { secret: env.UNSUBSCRIBE_SIGNING_SECRET, baseUrl } : null,
+    caps: {
+      primary: Number(env.PRIMARY_DAILY_CAP ?? 25),
+      sendingCeiling: Number(env.SENDING_DAILY_CAP ?? 40),
+      warmupStartedOn: env.SENDING_WARMUP_STARTED ?? null,
+    },
+    resend: env.RESEND_API_KEY && env.RESEND_FROM && env.NOTIFY_EMAIL ? { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM, to: env.NOTIFY_EMAIL } : null,
+  };
+}

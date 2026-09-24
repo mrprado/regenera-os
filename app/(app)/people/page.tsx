@@ -12,6 +12,8 @@ import { APOLLO_FREE_LIMITS, searchPeople, type PeopleSearchParams } from "@/lib
 import { SourceError } from "@/lib/sources/http";
 import { APOLLO_SENIORITIES, EMAIL_STATUSES, TIERS } from "@/lib/vocab";
 import { addToList, bulkEnrichPeople, bulkResearch, saveApolloPeople } from "../crm-actions";
+import { enrollAction } from "../outreach-actions";
+import { activeSequencesForPicker } from "@/lib/outreach/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "People" };
@@ -23,9 +25,10 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const user = await requireOsUser("/people");
   const sp = await searchParams;
   const tab = sp.tab === "apollo" ? "apollo" : "saved";
-  const [segs, peopleLists, saved] = await Promise.all([
+  const [segs, peopleLists, saved, sequencesForPicker] = await Promise.all([
     listSegments(), listLists(user.scope, "people"),
     listContacts(user.scope, { q: sp.q, title: sp.title, seniority: sp.seniority, emailStatus: sp.email, tier: sp.tier, segment: sp.segment, source: sp.source, list: sp.list, org: sp.org, sort: sp.sort, page: Number(sp.page) || 1 }),
+    activeSequencesForPicker(user.scope),
   ]);
   return (
     <>
@@ -36,13 +39,13 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         <Link className={`${ui.tab} ${tab === "apollo" ? ui.tabActive : ""}`} href="/people?tab=apollo">Find in Apollo</Link>
       </nav>
       {tab === "saved"
-        ? <SavedTab sp={sp} data={saved} segs={segs} peopleLists={peopleLists} />
+        ? <SavedTab sp={sp} data={saved} segs={segs} peopleLists={peopleLists} sequencesForPicker={sequencesForPicker} />
         : <ApolloTab sp={sp} segs={segs} />}
     </>
   );
 }
 
-function SavedTab({ sp, data, segs, peopleLists }: { sp: SP; data: Awaited<ReturnType<typeof listContacts>>; segs: Awaited<ReturnType<typeof listSegments>>; peopleLists: Awaited<ReturnType<typeof listLists>> }) {
+function SavedTab({ sp, data, segs, peopleLists, sequencesForPicker }: { sp: SP; data: Awaited<ReturnType<typeof listContacts>>; segs: Awaited<ReturnType<typeof listSegments>>; peopleLists: Awaited<ReturnType<typeof listLists>>; sequencesForPicker: Awaited<ReturnType<typeof activeSequencesForPicker>> }) {
   const back = withParams("/people", sp, { notice: undefined });
   return (
     <div className={ui.workspace}>
@@ -78,6 +81,10 @@ function SavedTab({ sp, data, segs, peopleLists }: { sp: SP; data: Awaited<Retur
                 <button className={ui.miniBtn} formAction={addToList} type="submit">Add to list</button>
                 <button className={ui.miniBtn} formAction={bulkResearch} type="submit" name="depth" value="full">Research</button>
                 <button className={ui.miniBtn} formAction={bulkEnrichPeople} type="submit">Enrich email (Apollo, 1 credit each)</button>
+                <select name="sequenceId" aria-label="Sequence" defaultValue="" style={{ height: 28, borderRadius: 999, border: "1px solid var(--line)", fontSize: 12, padding: "0 10px" }}>
+                  <option value="">Sequence…</option>{sequencesForPicker.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
+                </select>
+                <button className={`${ui.miniBtn} ${ui.miniPrimary}`} formAction={enrollAction} type="submit">Enroll</button>
               </div>
             </div>
             <div className={ui.tableWrap}>

@@ -33,6 +33,10 @@ Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
 - Code that touches the DB takes a `db: Db` parameter so it is testable; only
   route/page/action edges call appDb() or read `env`
 - node scripts/dev-post-site-event.mjs <event.json> posts a signed regenera.bio event to the local webhook
+- Outreach (phase 2): lib/outreach/* (sequences + enrollment guards + drafting/approval, sender with
+  recipient windows, caps, warm-up, threading and unsubscribe, reply watcher + routing, calendar sync +
+  briefs, relationships (metadata only), deliverability, digest). Pages: /queue /sequences /tasks /inbox
+  /settings/sending. Server actions: app/(app)/outreach-actions.ts
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:

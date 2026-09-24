@@ -5,6 +5,8 @@ import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { aiConfig, apolloConfig } from "@/lib/config";
 import { homeData } from "@/lib/crm/home";
+import { deliverabilityIssues } from "@/lib/outreach/deliverability";
+import { engageCounts, sendingOverview, upcomingMeetings } from "@/lib/outreach/queries";
 import { DEAL_STAGES } from "@/lib/vocab";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +19,23 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 
 export default async function HomePage() {
   const user = await requireOsUser("/today");
-  const d = await homeData(user.scope);
+  const [d, engage, sending, meetings] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope)]);
+  const now = new Date().toISOString();
+  const alerts = [
+    ...sending.checks.flatMap(c => deliverabilityIssues(c)),
+    ...sending.state.filter(s => s.pausedUntil && s.pausedUntil > now).map(s => `${s.role === "primary" ? "regenera.bio" : "Sending"} mailbox paused: ${s.pauseReason ?? ""}`),
+  ];
   const first = user.displayName.split(/[\s@]/)[0];
   const ai = aiConfig();
   const apollo = apolloConfig();
   return (
     <>
       <PageHeader title={`Good to see you, ${first}`} />
+      {alerts.length > 0 && <p className={ui.notice}><Link href="/settings/sending">Sending</Link>: {alerts.join(" · ")}</p>}
       <div className={ui.stats}>
+        <Stat n={engage.queue} label="Drafts to approve" href="/queue" />
+        <Stat n={engage.replies} label="Replies to handle" href="/inbox" warn />
+        <Stat n={engage.tasksDue} label="Tasks due today" href="/tasks" />
         <Stat n={d.newTriggers} label="New triggers this year" href="/triggers" />
         <Stat n={d.newInquiries} label="Site inquiries and referrals, 7 days" href="/deals" />
         <Stat n={d.dossiersReady} label="Dossiers ready, 7 days" href="/companies" />
@@ -65,6 +76,28 @@ export default async function HomePage() {
           </section>
         </div>
         <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}>Meetings, next 7 days</p>
+            {meetings.length === 0 ? <p className={r.empty}>No meetings with CRM contacts. Calendar syncs every 30 minutes.</p> : (
+              <ul className={r.timeline}>{meetings.map(({ b, contactName, orgName }) => {
+                const brief = b.brief as { context?: string; questions?: string[]; regenera_angle?: string } | null;
+                return (
+                  <li key={b.id}>
+                    <span className={r.when}>{b.startsAt.slice(5, 16).replace("T", " ")} UTC</span>
+                    <span><b>{b.title}</b>{contactName ? ` · ${contactName}` : ""}{orgName ? `, ${orgName}` : ""}
+                      {brief ? (
+                        <details><summary>Brief</summary>
+                          {brief.context && <p style={{ margin: "6px 0" }}>{brief.context}</p>}
+                          {brief.regenera_angle && <p style={{ margin: "6px 0" }}><b>Angle:</b> {brief.regenera_angle}</p>}
+                          {brief.questions?.length ? <ol style={{ margin: "6px 0", paddingLeft: 18 }}>{brief.questions.map(q => <li key={q}>{q}</li>)}</ol> : null}
+                        </details>
+                      ) : <span className={ui.sub}>Brief is written 24 hours before</span>}
+                    </span>
+                  </li>
+                );
+              })}</ul>
+            )}
+          </section>
           <section className={r.panel}>
             <p className={r.panelTitle}>From regenera.bio</p>
             {d.recentInquiries.length === 0 ? <p className={r.empty}>No inquiries or referrals yet.</p> : (

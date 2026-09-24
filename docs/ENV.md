@@ -24,6 +24,10 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | `BOOKING_URL` | 2 | `https://calendar.app.google/FDK2Hz8rs3VpZSRp7` |
 | `UNSUBSCRIBE_SIGNING_SECRET` | 2 | Generate |
 | `COMPANY_POSTAL_ADDRESS` | 2 (before first mass send) | Legal entity postal address |
+| `SENDING_DOMAIN` | 2 | The secondary sending domain for the mass tier (e.g. `regenera-mail.com`). Checked daily for SPF, DKIM, DMARC and MX |
+| `SENDING_WARMUP_STARTED` | 2 | `YYYY-MM-DD` the secondary mailbox started warming up. Cap ramps 10 per day +3 per day to `SENDING_DAILY_CAP` |
+| `PRIMARY_DAILY_CAP`, `SENDING_DAILY_CAP` | 2 (optional) | Defaults 25 and 40 |
+| `APP_ENV`, `SEND_ALLOWED_DOMAINS` | 2 | `APP_ENV=production` only on the live OS. Anywhere else, sequence and reply sends go only to the comma-separated test domains in `SEND_ALLOWED_DOMAINS` |
 | `EXTENSION_TOKEN_SECRET` | 3 | Generate |
 
 ## Bindings (declared in `.openai/hosting.json`)

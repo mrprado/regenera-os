@@ -1,6 +1,7 @@
 // Research and scoring pipeline (docs/plans/phase-1.md sections 3 and 4).
 // research.gather (web search + fetch) -> research.dossier (structured, sources checked) -> score.match.
 import type Anthropic from "@anthropic-ai/sdk";
+import { warmPaths } from "@/lib/outreach/relationships";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
@@ -144,8 +145,10 @@ export async function scoreContact(db: Db, cfg: AiConfig, contactId: string, cli
   const seg = c.segmentId ? (await db.select().from(segments).where(eq(segments.id, c.segmentId)))[0] : undefined;
   const orgTriggers = await db.select().from(triggers).where(and(eq(triggers.orgId, c.orgId), inArray(triggers.status, ["new", "pursued", "watched"]), gte(triggers.eventDate, freshnessSince().toISOString().slice(0, 10))));
   const [{ touches }] = await db.select({ touches: sql<number>`count(*)` }).from(activities).where(eq(activities.contactId, c.id));
+  const warm = await warmPaths(db, c.mandateId, org.domain);
   const context = [
     `Contact: ${c.fullName}${c.title ? `, ${c.title}` : ""} at ${org.name}`, `Source: ${c.source}`, `Prior touches recorded: ${touches}`,
+    warm.length ? `Warm paths (Regenera mailbox metadata, strength 0 to 100; use for the access axis):\n${warm.map(w => `- ${w.email} via ${w.mailbox}: ${w.emailsSent} sent, ${w.emailsReceived} received, ${w.meetings} meetings, last ${w.lastContactAt?.slice(0, 10) ?? "unknown"}, strength ${w.strength}`).join("\n")}` : "No warm paths found in Regenera mailboxes.",
     seg ? `Segment: ${seg.name}. Entry offer: ${seg.entryOffer}. Angle: ${seg.angle}` : "",
     orgTriggers.length ? `Current triggers:\n${orgTriggers.map(t => `- ${t.eventDate} ${t.type} (urgency ${t.urgency}): ${t.summary}`).join("\n")}` : "No current trigger.",
     d ? `Dossier:\n${JSON.stringify(d.fields).slice(0, 12000)}` : "No dossier yet.",

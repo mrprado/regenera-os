@@ -60,7 +60,7 @@ describe("send", () => {
     const claims = await Promise.all(Array.from({ length: 5 }, () => claimMessage(t.db, r.messageId)));
     expect(claims.filter(Boolean)).toHaveLength(1);
     let calls = 0;
-    const fakeGmail = (async () => { calls++; return new Response(JSON.stringify({ id: "gm1", threadId: "th1" }), { status: 200 }); }) as unknown as typeof fetch;
+    const fakeGmail = (async (_u: unknown, init?: RequestInit) => { if (init?.method === "POST") calls++; return new Response(JSON.stringify({ id: "gm1", threadId: "th1" }), { status: 200 }); }) as unknown as typeof fetch;
     const res = await sendClaimedMessage(t.db, r.messageId, async () => ({ accessToken: "t", email: "alanprado@regenera.bio" }), STAGING, fakeGmail);
     expect(res.sent).toBe(true);
     const again = await sendClaimedMessage(t.db, r.messageId, async () => ({ accessToken: "t", email: "alanprado@regenera.bio" }), STAGING, fakeGmail);

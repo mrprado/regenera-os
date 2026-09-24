@@ -95,6 +95,53 @@ Task: match the lead to Regenera's engagement ladder. Pick a primary and a secon
 
 Task: assess project readiness and mandate alignment separately. Readiness: rate control, technical, commercial, institutional and capital each as low, medium or high with one line of evidence from the dossier. Alignment: rate fit between the project and the relevant capital mandate as low or high with a reason. Project evidence cannot compensate for mandate misalignment. Do not choose the quadrant; the system does that.`,
   },
+  "draft.sequence": {
+    model: "claude-sonnet-5",
+    maxTokens: 6000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: write every step of an outreach sequence for one contact, from their dossier, current trigger and engagement match.
+
+Rules for every message:
+- Open with their situation and the decision they hold, never with Regenera.
+- Use one specific, sourced reference from the dossier or trigger. Never invent facts, figures or names.
+- State one concrete idea about conditions, constraints or sequencing.
+- Make one small ask: a short scoping call, or sharing mandate criteria.
+- The first email is 120 words or fewer. Later emails are shorter.
+- LinkedIn connection notes are 280 characters or fewer.
+- Write in the contact's language.
+- Register: a senior peer to a senior peer. No hype, no exclamation marks, no em or en dashes, no semicolons, no greenwashing terms.
+- Never promise fees, response times or outcomes. Never imply committed capital, a marketplace or an offer of securities. Write "confidentiality agreement", never NCNDA.
+- Each follow-up adds something new (a proof point, a Field Note, a question). Never write "just following up" or "bumping this".
+- The breakup email closes politely and leaves the door open.
+- Give each message an angle_tag (short snake_case), and list the dossier fields it relies on in personalization_refs.`,
+  },
+  "reply.classify": {
+    model: "claude-haiku-4-5",
+    maxTokens: 1500,
+    system: `${REGENERA_CONTEXT}
+
+Task: classify one inbound email reply to Regenera outreach.
+Classes: interested (wants to talk or learn more), not_now (timing, come back later), referral (points to someone else), question (asks something before deciding), objection (disagrees or declines with a reason), unsubscribe (asks to stop), out_of_office (auto-reply), bounce (delivery failure), hostile (angry or abusive), other.
+Extract a referral name and email if given, a return date for out-of-office replies (YYYY-MM-DD), and whether an unsubscribe request covers the whole organization. Set needs_human true unless it is out_of_office or bounce.`,
+  },
+  "reply.respond": {
+    model: "claude-sonnet-5",
+    maxTokens: 2000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: draft Prado's reply to an inbound email. Answer what they asked, in their language, in 120 words or fewer. If they are interested, offer the scoping-call link given in the input. Follow the same house style as outreach: no dashes, no semicolons, no exclamation marks, no commitments on fees or timing. Also propose the next action and the deal stage.`,
+  },
+  "meeting.brief": {
+    model: "claude-sonnet-5",
+    maxTokens: 3000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: write a one-page pre-meeting brief from the dossier, triggers, touch history and deal. Sections: context (who they are and what changed this year), their priorities, the decision they hold, Regenera's angle and the entry engagement, five questions to ask, and risks or sensitivities. Use only sourced facts.`,
+  },
 } satisfies Record<string, PromptDef>;
 
 export type PromptKey = keyof typeof PROMPTS;

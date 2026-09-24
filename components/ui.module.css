@@ -1,5 +1,5 @@
 /* Shared Apollo-style work surfaces in Regenera tokens: tabs, filter bar, dense tables, chips. */
-.tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin: 0 0 16px; overflow-x: auto; }
+.tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin: 0 0 16px; overflow-x: auto; overflow-y: hidden; }
 .tab { padding: 10px 0 11px; font-size: 13px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tab:hover { color: var(--heading); }
 .tabActive { color: var(--heading); border-bottom-color: var(--pollen); }

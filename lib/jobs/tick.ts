@@ -1,4 +1,6 @@
 import type { Db } from "@/db";
+import { ensureRegeneraMandate, REGENERA_MANDATE_ID } from "@/lib/membership";
+import { ensureSequences } from "@/lib/outreach/sequences";
 import { ensurePrompts } from "@/lib/ai/run";
 import { ensureSegments } from "@/lib/segments";
 import { getState, setState } from "@/lib/state";
@@ -55,7 +57,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-23.1";
+const REFERENCE_VERSION = "2026-09-24.2";
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {
@@ -63,5 +65,7 @@ export async function ensureReferenceData(db: Db): Promise<void> {
   await ensureSegments(db);
   await ensurePrompts(db);
   await ensureTriggerQueries(db);
+  await ensureRegeneraMandate(db);
+  await ensureSequences(db, REGENERA_MANDATE_ID);
   await setState(db, "reference_version", REFERENCE_VERSION);
 }

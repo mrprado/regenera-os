@@ -110,3 +110,6 @@ export const CONSENT_BASES = ["legitimate_interest", "consent", "existing_relati
 export const PARTNER_TYPES = ["epc", "engineering", "law", "big4", "architect", "bank_lender", "fund_manager", "operator", "technology"] as const;
 export const ACTIVITY_TYPES = ["email", "call", "meeting", "note", "linkedin", "stage_change", "import", "research", "site_inquiry", "referral"] as const;
 export const APOLLO_SENIORITIES = ["owner", "founder", "c_suite", "partner", "vp", "head", "director", "manager", "senior", "entry", "intern"] as const;
+export const REPLY_CLASSES = ["interested", "not_now", "referral", "question", "objection", "unsubscribe", "out_of_office", "bounce", "hostile", "other"] as const;
+// "drafting" = messages being written; then active / paused / completed / stopped (SPEC section 21).
+export const ENROLLMENT_STATUSES_ALL = ["drafting", "active", "paused", "completed", "stopped"] as const;

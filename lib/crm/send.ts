@@ -3,7 +3,7 @@
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { activities, contacts, mandates, messages, oauthAccounts } from "@/db/schema";
-import { buildRawMessage, gmailSend } from "@/lib/google/gmail";
+import { buildRawMessage, gmailGetMessage, gmailSend, header } from "@/lib/google/gmail";
 import { validateMessage, type StyleIssue } from "@/lib/style/validate";
 
 export type SendPolicy = {
@@ -50,7 +50,18 @@ export async function claimMessage(db: Db, messageId: string) {
   return rows[0] ?? null;
 }
 
-export async function sendClaimedMessage(db: Db, messageId: string, getToken: () => Promise<{ accessToken: string; email: string }>, policy: SendPolicy, fetchImpl?: typeof fetch) {
+export type SendOptions = {
+  threadId?: string;            // explicit Gmail thread (sequence follow-ups); default: the contact's latest thread
+  subject?: string;             // override (e.g. "Re: <first subject>" when threading)
+  inReplyTo?: string;
+  references?: string;
+  extraHeaders?: Record<string, string>;
+  footerExtra?: string;         // appended after the postal footer (unsubscribe line)
+  activitySource?: "manual" | "job";
+  now?: Date;
+};
+
+export async function sendClaimedMessage(db: Db, messageId: string, getToken: () => Promise<{ accessToken: string; email: string }>, policy: SendPolicy, fetchImpl?: typeof fetch, opts: SendOptions = {}) {
   const [msg] = await db.select().from(messages).where(eq(messages.id, messageId));
   if (!msg || msg.status !== "sending") return { sent: false as const, reason: "not_claimed" };
   const [thread] = await db.select({ threadId: messages.gmailThreadId }).from(messages)
@@ -58,12 +69,16 @@ export async function sendClaimedMessage(db: Db, messageId: string, getToken: ()
   try {
     const { accessToken, email } = await getToken();
     const footer = policy.postalAddress ? `\n\n--\nRegenera · ${policy.postalAddress}` : "";
-    const raw = buildRawMessage({ from: email, to: msg.toEmail, subject: msg.subject, text: `${msg.body}${footer}` });
-    const res = await gmailSend(accessToken, raw, thread?.threadId ?? undefined, fetchImpl);
-    const now = new Date().toISOString();
-    await db.update(messages).set({ status: "sent", gmailMessageId: res.id, gmailThreadId: res.threadId, sentAt: now, updatedAt: now }).where(eq(messages.id, msg.id));
+    const extra = opts.footerExtra ? `${footer ? "\n" : "\n\n--\n"}${opts.footerExtra}` : "";
+    const raw = buildRawMessage({ from: email, to: msg.toEmail, subject: opts.subject ?? msg.subject, text: `${msg.body}${footer}${extra}`, inReplyTo: opts.inReplyTo, references: opts.references, extraHeaders: opts.extraHeaders });
+    const res = await gmailSend(accessToken, raw, opts.threadId ?? thread?.threadId ?? undefined, fetchImpl);
+    // RFC Message-ID, used for In-Reply-To on follow-ups. Best effort: threading still works by threadId.
+    let rfcMessageId: string | null = null;
+    try { const meta = await gmailGetMessage(accessToken, res.id, "metadata", fetchImpl); rfcMessageId = meta ? header(meta, "Message-ID") ?? null : null; } catch { /* keep null */ }
+    const now = (opts.now ?? new Date()).toISOString();
+    await db.update(messages).set({ status: "sent", gmailMessageId: res.id, gmailThreadId: res.threadId, rfcMessageId, sentAt: now, updatedAt: now }).where(eq(messages.id, msg.id));
     const [c] = await db.select({ orgId: contacts.orgId, leadState: contacts.leadState }).from(contacts).where(eq(contacts.id, msg.contactId));
-    await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${msg.subject}`, source: "manual", actor: msg.approvedBy });
+    await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${opts.subject ?? msg.subject}`, source: opts.activitySource ?? "manual", actor: msg.approvedBy });
     if (c && ["sourced", "researched", "qualified", "queued"].includes(c.leadState)) await db.update(contacts).set({ leadState: "contacted" }).where(eq(contacts.id, msg.contactId));
     return { sent: true as const, gmailId: res.id };
   } catch (error) {
