@@ -293,3 +293,19 @@ Built as scoped, additive only (migration 0013: 5 tables).
 - Today: Regulatory panel. Isolation test extended to KYC data.
 - Tests: tests/integration/regulatory.test.ts (4). Full suite 31 files passing. Browser: checklist seed, permit on
   Today, review panels on opportunity and contract pages.
+
+## Build report: M5 Provenance and integrations + M6 Place (2026-09-24)
+
+Built additive only (migration 0014: integrations, sources, verifications, place_facts).
+- Integration registry of 43 providers with licence, commercial use, attribution, caching, redistribution,
+  credential, rate limit, refresh, tier and feature state; seeded per code version, owner overrides kept; enforced in
+  `fetchJson` (disabled and licence-required sources are never called); stale fallback; health from the call ledger.
+  Settings → Integrations.
+- Place profile adapters: NASA POWER, World Bank Indicators (with country resolution), OpenStreetMap Overpass, USGS,
+  GBIF (aggregate counts only). Project Place tab with provenance per fact, stale labelling, gaps listed as open.
+  Daily refresh job for profiles older than 30 days.
+- Checked live against the real APIs for a Yucatán site: 19 facts from 5 sources. Found and fixed: Overpass 504 on the
+  public instance (query lightened, longer timeout); NASA's annual T2M_MAX value was misleading as a "mean daily
+  maximum" and was removed.
+- Tests: tests/integration/place.test.ts (7). Full suite 32 files passing.
+- Docs: integrations.md, integration-licensing.md, source-provenance.md.

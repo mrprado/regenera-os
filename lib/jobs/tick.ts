@@ -13,6 +13,7 @@ import { ensureTriggerQueries } from "@/lib/triggers/queries";
 import { DEFAULT_SCHEDULES, handlers as defaultHandlers, type JobHandler } from "./handlers";
 import { claim, complete, fail, reclaimStale } from "./queue";
 import { ensureSchedules, materializeDue } from "./schedules";
+import { ensureIntegrations } from "@/lib/integrations/engine";
 
 export type TickResult = { scheduled: number; ran: number; retried: number; dead: number; stoppedForBudget: boolean };
 
@@ -62,7 +63,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-24.8";
+const REFERENCE_VERSION = "2026-09-24.9";
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {
@@ -70,6 +71,7 @@ export async function ensureReferenceData(db: Db): Promise<void> {
   await ensureSegments(db);
   await ensurePrompts(db);
   await ensureTriggerQueries(db);
+  await ensureIntegrations(db);
   await ensureRegeneraMandate(db);
   await ensureInvestmentMandates(db);
   await ensureSequences(db, REGENERA_MANDATE_ID);

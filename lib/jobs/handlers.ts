@@ -38,6 +38,7 @@ import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } fr
 import { enqueue, type Job } from "./queue";
 import { expireQualifications } from "@/lib/capital/engine";
 import { expirePermits } from "@/lib/regulatory/engine";
+import { buildPlaceProfile, projectsNeedingPlace } from "@/lib/place/engine";
 
 export type JobContext = { db: Db; job: Job; now: Date };
 export type JobHandler = (ctx: JobContext) => Promise<void>;
@@ -237,6 +238,12 @@ export const handlers: Record<string, JobHandler> = {
     if (!aiConfig()) return; // unread opportunities keep their keyword fit until a key exists
     await deferOnBudget(ctx, () => readFunding(ctx.db, requireAi(), 12, ctx.now));
   },
+  "place.profile": async ({ db, job }) => {
+    await buildPlaceProfile(db, String(job.payload.projectId));
+  },
+  "place.refresh": async ({ db, now }) => {
+    for (const id of await projectsNeedingPlace(db, now)) await enqueue(db, "place.profile", { projectId: id }, { dedupeKey: `place:${id}:${now.toISOString().slice(0, 10)}`, now });
+  },
   "regulatory.expire": async ({ db, now }) => {
     await expirePermits(db, now);
   },
@@ -294,4 +301,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "funding.scan": "every:2h",
   "capital.expire": "daily:05:30",
   "regulatory.expire": "daily:05:35",
+  "place.refresh": "daily:04:10",
 };

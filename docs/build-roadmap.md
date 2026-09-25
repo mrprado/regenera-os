@@ -9,5 +9,5 @@ Plan and decisions: docs/plans/phase-6.md. Each milestone ships with tests, docs
 | M2 Capital relationships and compliance gate | Built 2026-09-24 |
 | M3 Contracts, obligations and documents | Built 2026-09-24 (documents as links until R2 is enabled) |
 | M4 Regulatory | Built 2026-09-24 |
-| M5 Provenance and integrations | Next |
-| M6 Place | Planned |
+| M5 Provenance and integrations | Built 2026-09-24 |
+| M6 Place | Built 2026-09-24 (first adapters) |

@@ -4,6 +4,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db";
 import { providerCalls, sourceCache, systemState } from "@/db/schema";
+import { assertIntegrationAllowed } from "@/lib/integrations/engine";
 
 export const USER_AGENT = "RegeneraOS/1.0 (+https://regenera.bio; alanprado@regenera.bio)";
 
@@ -73,11 +74,32 @@ export type FetchJsonOptions<T> = {
   credits?: (data: T) => number;
   fetchImpl?: typeof fetch;
   now?: Date;
+  /** When every attempt fails, return the last cached copy (even expired) instead of throwing. */
+  staleOnError?: boolean;
 };
 
 /** GET/POST JSON with identification, retries on 429/5xx, zod validation, cache and ledger. */
 export async function fetchJson<T>(db: Db, o: FetchJsonOptions<T>): Promise<T> {
   const now = o.now ?? new Date();
+  // Integration registry (phase 6 M5): disabled or licence-required sources are never called.
+  await assertIntegrationAllowed(db, o.provider);
+  if (o.staleOnError) {
+    try { return await fetchJsonOnce(db, o, now); } catch (error) {
+      const stale = o.cacheKey ? await cacheGetStale(db, `${o.provider}:${o.cacheKey}`) : undefined;
+      if (stale !== undefined) return o.schema.parse(stale);
+      throw error;
+    }
+  }
+  return fetchJsonOnce(db, o, now);
+}
+
+/** The last cached value whatever its age (for "source unavailable, showing data synchronized on …"). */
+async function cacheGetStale(db: Db, key: string): Promise<unknown | undefined> {
+  const [row] = await db.select().from(sourceCache).where(eq(sourceCache.key, key));
+  return row ? JSON.parse(row.value) : undefined;
+}
+
+async function fetchJsonOnce<T>(db: Db, o: FetchJsonOptions<T>, now: Date): Promise<T> {
   if (o.cacheKey) {
     const hit = await cacheGet(db, `${o.provider}:${o.cacheKey}`, now);
     if (hit !== undefined) return o.schema.parse(hit);
