@@ -234,6 +234,8 @@ export const messages = sqliteTable("messages", {
   mandateId: mandateId(),
   contactId: text("contact_id").notNull(),
   dealId: text("deal_id"),
+  capitalOpportunityId: text("capital_opportunity_id"),   // investment communications pass the compliance gate (phase 6 M2)
+  outreachType: text("outreach_type", { enum: ["relationship", "project_introduction", "investment_communication", "financial_promotion", "approved_offering"] }).notNull().default("relationship"),
   channel: text("channel", { enum: CHANNELS }).notNull().default("email"),
   direction: text("direction", { enum: ["out", "in"] }).notNull().default("out"),
   mailboxRole: text("mailbox_role", { enum: ["primary", "sending"] }).notNull().default("primary"),

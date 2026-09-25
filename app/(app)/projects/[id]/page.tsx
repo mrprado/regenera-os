@@ -17,6 +17,8 @@ import {
   addConstraintAction, addPartyAction, addProjectTaskAction, addRequirementAction, addTrancheAction, constraintStatusAction,
   linkToProjectAction, removePartyAction, setReadinessAction, setStageAction, updateProjectAction, updateRequirementAction,
 } from "../../project-actions";
+import { createOpportunityAction } from "../../capital-actions";
+import { GATE_STATES } from "@/lib/capital/vocab";
 import styles from "../projects.module.css";
 
 export const dynamic = "force-dynamic";
@@ -240,6 +242,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                     {(req.economics || req.term || req.seniority || req.security) && <><dt>Terms</dt><dd>{[req.economics, req.term, req.seniority, req.security].filter(Boolean).join(" · ")}</dd></>}
                     <dt>Regulatory</dt><dd>{req.regulatoryStatus}</dd>
                   </dl>
+                  {data.capitalOpportunities.filter(co => co.requirementId === req.id).map(co => (
+                    <p key={co.id} className={ui.sub}>Capital opportunity: <Link href={`/capital/opportunities/${co.id}`}>{co.title}</Link> · gate {GATE_STATES[co.gateState].toLowerCase()}</p>
+                  ))}
+                  <form action={createOpportunityAction} style={{ display: "inline-block", marginTop: 6 }}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="requirementId" value={req.id} /><button className={ui.miniBtn} type="submit">Offer to investors</button></form>
                   <form action={updateRequirementAction} className={styles.inline} style={{ marginTop: 8 }}>
                     <input type="hidden" name="requirementId" value={req.id} />
                     <select name="status" defaultValue={req.status} aria-label="Status">{Object.entries(CAPITAL_STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
@@ -252,7 +258,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                     <table className={ui.table}><tbody>{tr.map(t => (
                       <tr key={t.id}><td>{t.name}<span className={ui.sub}>{INSTRUMENTS[t.instrument]}{t.targetInvestorType ? ` · for ${t.targetInvestorType}` : ""}{t.eligibility ? ` · eligibility: ${t.eligibility}` : ""}</span></td>
                         <td className={ui.num}>{compactMoney(t.target, t.currency)}<span className={ui.sub}>{t.minParticipation || t.maxParticipation ? `${compactMoney(t.minParticipation, t.currency)}–${compactMoney(t.maxParticipation, t.currency)} per investor` : ""}</span></td>
-                        <td>{CAPITAL_STATUSES[t.status]}</td></tr>
+                        <td>{CAPITAL_STATUSES[t.status]}</td>
+                        <td><form action={createOpportunityAction}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="trancheId" value={t.id} /><button className={ui.miniBtn} type="submit">Offer</button></form></td></tr>
                     ))}</tbody></table>
                   )}
                   <details style={{ marginTop: 8 }}><summary className={ui.sub}>Add a tranche</summary>

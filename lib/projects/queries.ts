@@ -1,7 +1,7 @@
 // Read models for the Projects screens. Every query is mandate-scoped.
 import { and, asc, desc, eq, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import {
-  activities, capitalRequirements, constraints, contacts, contracts, deals, fundingMatches, fundingOpportunities, organizations,
+  activities, capitalOpportunities, capitalRequirements, constraints, contacts, contracts, deals, fundingMatches, fundingOpportunities, organizations,
   projectParties, projectReadiness, projects, projectStageHistory, tasks, triggers,
 } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
@@ -59,9 +59,10 @@ export async function getProject(scope: Scope, id: string) {
     db.select({ m: fundingMatches, title: fundingOpportunities.title, deadline: fundingOpportunities.deadline, opportunityId: fundingOpportunities.id }).from(fundingMatches)
       .innerJoin(fundingOpportunities, eq(fundingOpportunities.id, fundingMatches.opportunityId)).where(eq(fundingMatches.projectId, id)),
   ]);
+  const capitalOpps = await db.select().from(capitalOpportunities).where(eq(capitalOpportunities.projectId, id));
   const dealIds = linkedDeals.map(d => d.id);
   const acts = dealIds.length ? await db.select().from(activities).where(inArray(activities.dealId, dealIds)).orderBy(desc(activities.occurredAt)).limit(40) : [];
-  return { p, parties, readiness, constraints: cons, history, capital, deals: linkedDeals, contracts: linkedContracts, tasks: linkedTasks, triggers: linkedTriggers, funding: fundMatches, activities: acts };
+  return { p, parties, readiness, constraints: cons, history, capital, deals: linkedDeals, contracts: linkedContracts, tasks: linkedTasks, triggers: linkedTriggers, funding: fundMatches, activities: acts, capitalOpportunities: capitalOpps };
 }
 
 /** Choices for forms: organizations and people in scope, deals without a project. */

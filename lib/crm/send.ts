@@ -5,6 +5,7 @@ import type { Db } from "@/db";
 import { activities, contacts, mandates, messages, oauthAccounts } from "@/db/schema";
 import { buildRawMessage, gmailGetMessage, gmailSend, header } from "@/lib/google/gmail";
 import { validateMessage, type StyleIssue } from "@/lib/style/validate";
+import { gateCheck, recordDeliveryForMessage } from "@/lib/capital/engine";
 
 export type SendPolicy = {
   production: boolean;
@@ -73,6 +74,13 @@ export type SendOptions = {
 export async function sendClaimedMessage(db: Db, messageId: string, getToken: () => Promise<{ accessToken: string; email: string }>, policy: SendPolicy, fetchImpl?: typeof fetch, opts: SendOptions = {}) {
   const [msg] = await db.select().from(messages).where(eq(messages.id, messageId));
   if (!msg || msg.status !== "sending") return { sent: false as const, reason: "not_claimed" };
+  // Compliance gate (phase 6 M2): investment communications never leave without an approved opportunity,
+  // an approved recipient and eligibility on record. A held message goes back to the approval queue.
+  const gate = await gateCheck(db, msg);
+  if (!gate.ok) {
+    await db.update(messages).set({ status: "pending_approval", error: `Held by the compliance gate: ${gate.reasons.join("; ")}`.slice(0, 500), updatedAt: new Date().toISOString() }).where(eq(messages.id, msg.id));
+    return { sent: false as const, reason: "compliance_gate" };
+  }
   const [thread] = await db.select({ threadId: messages.gmailThreadId }).from(messages)
     .where(and(eq(messages.contactId, msg.contactId), eq(messages.status, "sent"), isNotNull(messages.gmailThreadId))).orderBy(desc(messages.sentAt)).limit(1);
   try {
@@ -90,6 +98,7 @@ export async function sendClaimedMessage(db: Db, messageId: string, getToken: ()
     const evidence = msg.priorRelationship ? ` | Prior relationship: ${msg.priorRelationship.how}, since ${msg.priorRelationship.since}. Evidence: ${msg.priorRelationship.evidence}` : "";
     await db.insert(activities).values({ mandateId: msg.mandateId, contactId: msg.contactId, orgId: c?.orgId ?? null, dealId: msg.dealId, type: "email", method: "gmail", detail: `Sent: ${opts.subject ?? msg.subject}${evidence}`, source: opts.activitySource ?? "manual", actor: msg.approvedBy });
     if (c && ["sourced", "researched", "qualified", "queued"].includes(c.leadState)) await db.update(contacts).set({ leadState: "contacted" }).where(eq(contacts.id, msg.contactId));
+    if (msg.capitalOpportunityId) await recordDeliveryForMessage(db, msg.id);
     return { sent: true as const, gmailId: res.id };
   } catch (error) {
     await db.update(messages).set({ status: "failed", error: (error as Error).message.slice(0, 500), updatedAt: new Date().toISOString() }).where(eq(messages.id, msg.id));

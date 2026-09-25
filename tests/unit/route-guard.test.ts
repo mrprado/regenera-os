@@ -83,4 +83,14 @@ describe("route guard", () => {
   it("nothing trusts identity headers a client could send (the OS runs on a plain Worker)", () => {
     for (const f of files) expect(f.src.includes("oai-authenticated"), `${f.path} reads a Sites identity header`).toBe(false);
   });
+
+  it("private investor data never reaches Ask the OS or the MCP server", () => {
+    const lib = join(__dirname, "..", "..", "lib");
+    for (const dir of ["ask", "mcp"]) {
+      for (const f of readdirSync(join(lib, dir))) {
+        const src = readFileSync(join(lib, dir, f), "utf8");
+        expect(/privateCapitalProfiles|investorQualifications|private_capital_profiles|investor_qualifications/.test(src), `lib/${dir}/${f} touches private investor data`).toBe(false);
+      }
+    }
+  });
 });

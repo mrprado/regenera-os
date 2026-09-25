@@ -36,6 +36,7 @@ import { freshnessSince } from "@/lib/freshness";
 import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
+import { expireQualifications } from "@/lib/capital/engine";
 
 export type JobContext = { db: Db; job: Job; now: Date };
 export type JobHandler = (ctx: JobContext) => Promise<void>;
@@ -235,6 +236,9 @@ export const handlers: Record<string, JobHandler> = {
     if (!aiConfig()) return; // unread opportunities keep their keyword fit until a key exists
     await deferOnBudget(ctx, () => readFunding(ctx.db, requireAi(), 12, ctx.now));
   },
+  "capital.expire": async ({ db, now }) => {
+    await expireQualifications(db, now);
+  },
   "funding.place": async ({ db, now }) => {
     const { more } = await placeFunding(db, 15);
     if (more) await enqueue(db, "funding.place", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `funding-place:${now.toISOString().slice(0, 16)}` });
@@ -284,4 +288,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "backup.nightly": "daily:02:30",
   "backup.verify": "monthly:3:04:00",
   "funding.scan": "every:2h",
+  "capital.expire": "daily:05:30",
 };

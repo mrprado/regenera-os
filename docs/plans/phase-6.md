@@ -252,3 +252,19 @@ Built as scoped, additive only (migration 0010: 7 tables, 5 nullable `project_id
 - Tests: tests/integration/projects.test.ts (6, including the first slice of the critical workflow). Full suite 28
   files passing. Checked in the browser: create project, every tab, constraint and requirement forms, Today panel.
 - Docs: data-model.md, project-lifecycle.md, capital-model.md, build-roadmap.md.
+
+## Build report: M2 Capital relationships and compliance gate (2026-09-24)
+
+Built as scoped, additive only (migration 0011: 11 tables; `messages.capital_opportunity_id` and `outreach_type`).
+- Capital partners page (partners, private investors [owners only], capital opportunities, introductions, bonds and
+  notes); partner and private investor records; capital opportunity record (formation, matches, ledger,
+  deliveries, gate, approved materials, offering and roles). "Offer to investors" on each requirement and tranche.
+- Engine (lib/capital/engine.ts): commercial fit with reasons, eligibility from qualification records only,
+  matching across partners (best active mandate) and private investors, commitment ledger with events and an
+  evidence rule, formation without double counting, gate with reviewer and evidence, send-time gate in
+  `sendClaimedMessage`, material delivery log, daily qualification expiry.
+- Today: capital opportunities awaiting gate review. Sidebar: Capital partners.
+- Tests: tests/integration/capital.test.ts (6) and a route-guard check that private investor data never reaches Ask
+  the OS or MCP. Full suite 29 files passing. Checked in the browser: opportunity from a project requirement, gate
+  refusal without reviewer, partner creation, matching with reasons.
+- Docs: capital-model.md, private-capital-model.md, regulatory-model.md.
