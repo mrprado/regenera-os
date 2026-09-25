@@ -64,7 +64,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   compliance gate in lib/crm/send.ts; agreement register + obligations + documents (lib/contracts/register.ts,
   /documents); regulatory (db/regulatory.ts, lib/regulatory/*; the OS records reviews, never "compliant");
   integration registry enforced in fetchJson (lib/integrations/*, Settings → Integrations); place adapters
-  (lib/place/*); global search (lib/search.ts, /api/search, Cmd+K). Migrations are additive only.
+  (lib/place/*); global search (lib/search.ts, /api/search, Cmd+K); delivery + economics (db/delivery.ts, db/economics.ts,
+  lib/delivery/* critical path and study gaps, lib/economics/* screening model; Plan/Engineering/Economics tabs;
+  docs/engineering-model.md). Migrations are additive only.
 - React drops name/value on a button whose formAction is a function: use one server action per button
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)

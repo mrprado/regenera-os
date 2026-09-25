@@ -24,11 +24,14 @@ import styles from "../projects.module.css";
 import RegulatoryTab from "../regulatory-tab";
 import PlaceTab from "../place-tab";
 import RiskTab from "../risk-tab";
+import PlanTab from "../plan-tab";
+import EngineeringTab from "../engineering-tab";
+import EconomicsTab from "../economics-tab";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["constraints", "Constraints"], ["risk", "Risk"], ["capital", "Capital"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -312,7 +315,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
       {tab === "regulatory" && <RegulatoryTab projectId={p.id} scope={user.scope} />}
       {tab === "place" && <PlaceTab project={p} />}
-      {tab === "risk" && <RiskTab projectId={p.id} />}
+      {tab === "risk" && <RiskTab projectId={p.id} currency={p.currency ?? "USD"} />}
+      {tab === "plan" && <PlanTab projectId={p.id} />}
+      {tab === "engineering" && <EngineeringTab project={p} />}
+      {tab === "economics" && <EconomicsTab project={p} caseId={sp.case} />}
 
       {tab === "partners" && needs && (
         <div className={r.grid}>

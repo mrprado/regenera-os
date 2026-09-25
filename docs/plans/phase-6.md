@@ -333,8 +333,28 @@ Built additive only (migration 0014: integrations, sources, verifications, place
   owner, trigger, status, residual; Risk tab ordered by likelihood × impact; included in the project brief.
 - Tests: projects test extended. Full suite 33 files passing. Browser: risk added and shown; brief still renders.
 
+## Build report: M7 delivery and M8 economics (2026-09-25)
+
+Roadmap step 4 (milestones, critical path, decisions) plus the engineering, E&S, insurance and economics slices the
+project success test asks for ("buildability, engineering, E&S, missing engineering information, what next").
+Details: docs/engineering-model.md.
+- Migration 0016 (additive, 9 tables): project_milestones, decisions, studies, design_packages,
+  engineering_requirements, es_issues, insurance_policies, revenue_streams, economic_cases.
+- Critical path (lib/delivery/cpm.ts): forward/backward pass from today, slack, forecast vs due date, cycle refusal.
+- Study gaps per asset class (CORE_STUDIES) with ESIA from Development; reviewer required to accept a study, engineer of
+  record required to approve a design package or confirm a code. Never a compliance verdict.
+- E&S issues judged against host law or a named lender standard, with the mitigation hierarchy; insurance lines with
+  expiry.
+- Screening economics (lib/economics/model.ts): sculpted debt, project/equity IRR, NPV, DSCR, LLCR, payback; derived
+  downside/upside; nine sensitivities. Labelled as indicative, not bankable.
+- Surfaces: project tabs Plan, Engineering, Risk & E&S (risk + E&S + insurance), Economics; Today → Delivery; project
+  brief PDF; Ask the OS `project_delivery` (entity-scoped).
+- Tests: tests/unit/delivery-economics.test.ts (CPM, study gaps, IRR, debt sizing, scenarios, sensitivities) and
+  tests/integration/delivery.test.ts (dependencies and cycles, Today scoping, revenue from streams, scenario refresh).
+- Browser: milestones added through the form (PPA condition 24 days late on the critical path, on Today), revenue
+  stream + base case with derived scenarios and sensitivities, Engineering and Risk tabs, brief PDF.
+
 ## Where phase 6 stands
-Built: M1–M6 plus search, brief, automation and risks. Not built, by design (they need real project data first):
-engineering (studies, design packages, codes), materials/EPD/BoQ/circularity, E&S assessments beyond the regulatory
-tracks, procurement and supply chain, construction and operations, economics and scenarios, external portals, finer
-roles. Each gets its own plan when there are projects to exercise it.
+Built: M1–M8 plus search, brief, automation and risks. Not built, by design (they need real project data first):
+materials/EPD/BoQ/circularity, procurement and supply chain, EPC network matching, construction control tower and
+operations, external portals, finer roles. Each gets its own plan when there are projects to exercise it.

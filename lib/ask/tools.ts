@@ -4,7 +4,8 @@
 import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
-import { activities, capitalRequirements, constraints, contacts, deals, fundingOpportunities, lists, organizations, projectReadiness, projects, proposals, replies, segments, sequences, triggers } from "@/db/schema";
+import { activities, capitalRequirements, constraints, contacts, deals, decisions, economicCases, esIssues, fundingOpportunities, insurancePolicies, lists, organizations, projectReadiness, projects, proposals, replies, segments, sequences, studies, triggers } from "@/db/schema";
+import { projectPlan, studyGaps } from "@/lib/delivery/engine";
 import { mandateCondition, type UserScope } from "@/lib/db/scoped";
 import { computeMetrics } from "@/lib/reports/metrics";
 import { DEAL_STAGES } from "@/lib/vocab";
@@ -187,6 +188,31 @@ export const TOOLS: ToolDef[] = [
         .filter(p => (a.needsCapital ? p.capitalRequirements.some(r => (r.target ?? 0) > r.secured) : true) && (a.blockedOnly ? p.blockers.length > 0 : true))
         .slice(0, a.limit);
       return { shown: out.length, projects: out };
+    },
+  }),
+  tool({
+    name: "project_delivery", kind: "read",
+    description: "One project's delivery picture: milestones with critical path and forecast vs due dates, open decisions, missing core studies, open E&S issues, insurance, and screening economics (IRR, DSCR, NPV per case). Use for 'what is on the critical path', 'what studies are missing', 'what are the economics' questions. Find the project id with search_projects first.",
+    input: z.object({ projectId: z.string().uuid() }),
+    run: async (ctx, a) => {
+      const [p] = await ctx.db.select().from(projects).where(and(eq(projects.id, a.projectId), mandateCondition(ctx.scope, projects.mandateId)));
+      if (!p) return { error: "Project not found" };
+      const today = (ctx.now ?? new Date()).toISOString().slice(0, 10);
+      const [plan, st, es, ins, cases, ds] = await Promise.all([
+        projectPlan(ctx.db, p.id, today),
+        ctx.db.select({ type: studies.type, status: studies.status, provider: studies.provider, reviewer: studies.reviewer }).from(studies).where(eq(studies.projectId, p.id)),
+        ctx.db.select({ topic: esIssues.topic, framework: esIssues.framework, severity: esIssues.severity, description: esIssues.description, mitigationStep: esIssues.mitigationStep, status: esIssues.status }).from(esIssues).where(and(eq(esIssues.projectId, p.id), sql`${esIssues.status} <> 'closed'`)),
+        ctx.db.select({ type: insurancePolicies.type, status: insurancePolicies.status, expiresAt: insurancePolicies.expiresAt }).from(insurancePolicies).where(eq(insurancePolicies.projectId, p.id)),
+        ctx.db.select().from(economicCases).where(eq(economicCases.projectId, p.id)),
+        ctx.db.select({ title: decisions.title, dueDate: decisions.dueDate }).from(decisions).where(and(eq(decisions.projectId, p.id), eq(decisions.status, "open"))),
+      ]);
+      return {
+        project: p.name, stage: p.stage, forecastFinish: plan.cpm.finish,
+        milestones: plan.milestones.filter(m => m.status !== "cancelled").map(m => { const n = plan.cpm.nodes.get(m.id); return { name: m.name, status: m.status, dueDate: m.dueDate, forecast: n?.finish, critical: n?.critical, lateDays: n?.lateDays, owner: m.owner, evidence: m.evidence }; }),
+        openDecisions: ds, studies: st, missingStudies: studyGaps(p, st).missing, esIssues: es, insurance: ins,
+        economics: cases.filter(c => c.outputs).map(c => ({ name: c.name, kind: c.kind, projectIrr: c.outputs!.projectIrr, equityIrr: c.outputs!.equityIrr, minDscr: c.outputs!.minDscr, npv: c.outputs!.npv, currency: c.inputs.currency, source: c.source })),
+        note: "Economics are an indicative screening model, not a bankable model. Study and code statuses record who reviewed; they are not compliance certifications.",
+      };
     },
   }),
   tool({

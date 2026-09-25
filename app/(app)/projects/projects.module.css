@@ -21,3 +21,17 @@
 .inline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .inline input, .inline select { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 12.5px; }
 @media (max-width: 900px) { .board { grid-template-columns: repeat(5, 240px); } .grid2 { grid-template-columns: 1fr; } }
+.gantt { display: grid; gap: 4px; margin: 6px 0 10px; }
+.gRow { display: grid; grid-template-columns: minmax(120px, 30%) 1fr; gap: 8px; align-items: center; font-size: 12.5px; }
+.gRow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gTrack { position: relative; height: 14px; background: color-mix(in srgb, var(--wax) 45%, var(--paper)); border-radius: 3px; }
+.gBar { position: absolute; top: 2px; height: 10px; border-radius: 2px; background: var(--water); min-width: 3px; }
+.gCrit { background: #b0432f; }
+.gDone { background: var(--text-muted); opacity: .5; }
+.gDue { position: absolute; top: -2px; width: 2px; height: 18px; background: var(--heading); }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.metric { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.metric span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.metric b { font-size: 17px; color: var(--heading); }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
+.checks label { display: flex; gap: 4px; align-items: center; color: var(--text); }
