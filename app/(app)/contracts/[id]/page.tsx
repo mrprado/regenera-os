@@ -37,7 +37,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader title={c.title} actions={<>
-        <a className="btn btn--primary" href={withBase(`/api/contracts/download?contract=${c.id}`)} download>Download (.doc)</a>
+        <a className="btn btn--primary" href={withBase(`/api/contracts/download?contract=${c.id}`)} download>Download PDF</a>
         <Link className="btn" href={`/contracts/${c.id}/print`}>Print or save as PDF</Link>
         <Link className="btn" href="/contracts">All contracts</Link>
       </>} />

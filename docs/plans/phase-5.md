@@ -216,4 +216,8 @@ alongside the pipeline.
   Reports (contracted value by engagement, paid and outstanding).
 - **Not included:** e-signature (DocuSign and similar are paid, so ask first), and file uploads until R2 is
   enabled. The signed copy is a link.
-- **Tests:** tests/integration/contracts.test.ts (8).
+- **Downloads:** every contract and all 15 blank templates (engagement letter and SOW per engagement, NDA, referral
+  agreement, amendment) as PDFs, one at a time or all together as a .zip. Each PDF has the Regenera mark and
+  wordmark in the header, a title block, numbered sections, two-column signature blocks, and a footer with
+  confidentiality, status, version and page numbers.
+- **Tests:** tests/integration/contracts.test.ts (8), tests/unit/contract-export.test.ts (4).

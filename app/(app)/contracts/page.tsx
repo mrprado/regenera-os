@@ -63,13 +63,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           )}
 
           <section className={r.panel} id="templates" style={{ marginTop: 16 }}>
-            <p className={r.panelTitle}><span>Contract templates ({templates.length})</span><a className={`${ui.miniBtn} ${ui.miniPrimary}`} href={withBase("/api/contracts/download?all=1")} download>Download all (.zip)</a></p>
-            <p className={ui.sub} style={{ marginTop: 0 }}>Blank templates for counsel review, as Word files (.doc: opens in Word, Google Docs and Pages). Bracketed items are blanks. The capital advisory and capital screening letters include the success-fee clause.</p>
+            <p className={r.panelTitle}><span>Contract templates ({templates.length})</span><a className={`${ui.miniBtn} ${ui.miniPrimary}`} href={withBase("/api/contracts/download?all=1")} download>Download all PDFs (.zip)</a></p>
+            <p className={ui.sub} style={{ marginTop: 0 }}>Blank templates for counsel review, as PDFs with the Regenera header and footer. Bracketed items are blanks. The capital advisory and capital screening letters include the success-fee clause.</p>
             {groups.map(g => (
               <div key={g} style={{ marginTop: 10 }}>
                 <b style={{ fontSize: 13 }}>{g}</b>
                 <table className={ui.table}><tbody>{templates.filter(t => t.group === g).map(t => (
-                  <tr key={t.key}><td>{t.name}</td><td style={{ textAlign: "right" }}><a className={ui.miniBtn} href={withBase(`/api/contracts/download?template=${t.key}`)} download>Download</a></td></tr>
+                  <tr key={t.key}><td>{t.name}</td><td style={{ textAlign: "right" }}><a className={ui.miniBtn} href={withBase(`/api/contracts/download?template=${t.key}`)} download>PDF</a></td></tr>
                 ))}</tbody></table>
               </div>
             ))}
