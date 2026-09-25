@@ -322,3 +322,19 @@ Built additive only (migration 0014: integrations, sources, verifications, place
   security, permissions, ai-governance, build-roadmap, deployment, testing. Not yet written because not built:
   engineering-model, materials-model, place-model beyond integrations.md.
 - Tests: tests/integration/search.test.ts (2). Full suite 33 files passing.
+
+## Build report: automation and risk register (2026-09-24)
+
+- Automation (part LXXVII): daily `capital.rematch` re-runs matching for every open capital opportunity (mandate,
+  profile and qualification changes flow through); moving a project to Capital Alignment creates an action to set up
+  its capital opportunities (never an outreach). Existing automations: qualification and permit expiry, place
+  refresh, funding scans, obligations and renewals on Today and in the digest.
+- Risk register (part LIX), migration 0015: category (26), description, evidence, likelihood, impact, mitigation,
+  owner, trigger, status, residual; Risk tab ordered by likelihood × impact; included in the project brief.
+- Tests: projects test extended. Full suite 33 files passing. Browser: risk added and shown; brief still renders.
+
+## Where phase 6 stands
+Built: M1–M6 plus search, brief, automation and risks. Not built, by design (they need real project data first):
+engineering (studies, design packages, codes), materials/EPD/BoQ/circularity, E&S assessments beyond the regulatory
+tracks, procurement and supply chain, construction and operations, economics and scenarios, external portals, finer
+roles. Each gets its own plan when there are projects to exercise it.

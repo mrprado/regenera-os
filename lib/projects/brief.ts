@@ -2,15 +2,16 @@
 // status and agreements, as Markdown for the branded PDF renderer. Unknown stays visible as Unknown.
 import { asc, eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { capitalRequirements, capitalTranches, constraints, contracts, organizations, permits, placeFacts, projectJurisdictions, projectParties, projectReadiness, projects, requirements } from "@/db/schema";
+import { capitalRequirements, capitalTranches, constraints, contracts, organizations, permits, placeFacts, projectJurisdictions, projectParties, projectReadiness, projects, requirements, risks } from "@/db/schema";
 import { LIFECYCLE, typeLabel } from "@/lib/contracts/catalog";
 import { JURISDICTION_ROLES, PERMIT_STATUSES, REQUIREMENT_STATUSES } from "@/lib/regulatory/vocab";
 import { compactMoney, stageLabel } from "./labels";
-import { ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, INSTRUMENTS, PARTY_ROLES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, SEVERITIES } from "./vocab";
+import { ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, IMPACT, INSTRUMENTS, LIKELIHOOD, PARTY_ROLES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, RISK_CATEGORIES, SEVERITIES } from "./vocab";
 
 export async function projectBriefMarkdown(db: Db, projectId: string, today: string) {
   const [p] = await db.select().from(projects).where(eq(projects.id, projectId));
   if (!p) return null;
+  const riskRows = await db.select().from(risks).where(eq(risks.projectId, projectId));
   const [parties, readiness, cons, reqs, tranches, facts, juris, regs, permitRows, agreements] = await Promise.all([
     db.select({ role: projectParties.role, confirmed: projectParties.confirmed, name: organizations.name }).from(projectParties).leftJoin(organizations, eq(organizations.id, projectParties.orgId)).where(eq(projectParties.projectId, projectId)),
     db.select().from(projectReadiness).where(eq(projectReadiness.projectId, projectId)),
@@ -44,6 +45,8 @@ export async function projectBriefMarkdown(db: Db, projectId: string, today: str
     }), "",
     "## Open constraints",
     ...(open.length ? open.map(c => `- **${SEVERITIES[c.severity]}** ${CONSTRAINT_CATEGORIES[c.category]}: ${c.description}${c.owner ? ` · owner ${c.owner}` : ""}${c.deadline ? ` · due ${c.deadline}` : ""}${c.resolutionAction ? ` · ${c.resolutionAction}` : ""}`) : ["None recorded."]), "",
+    "## Risks",
+    ...(riskRows.filter(x => x.status !== "closed").length ? riskRows.filter(x => x.status !== "closed").map(x => `- **${RISK_CATEGORIES[x.category]}** (${LIKELIHOOD[x.likelihood]} / ${IMPACT[x.impact]}): ${x.description}${x.mitigation ? ` · mitigation: ${x.mitigation}` : ""}`) : ["None recorded."]), "",
     "## Capital stack",
     ...(reqs.length ? reqs.flatMap(r => [
       `- **${r.purpose}** (${INSTRUMENTS[r.instrument]}): ${compactMoney(r.target, r.currency)} target, ${compactMoney(r.secured, r.currency)} secured · ${CAPITAL_STATUSES[r.status]}${r.targetClose ? ` · close ${r.targetClose}` : ""}`,

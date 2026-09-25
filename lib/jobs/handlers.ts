@@ -3,8 +3,8 @@ import type { Db } from "@/db";
 import { processImportChunk, r2Store } from "@/lib/import/process";
 import { AiBudgetError } from "@/lib/ai/run";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
-import { listSources, organizations } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { capitalOpportunities, listSources, organizations } from "@/db/schema";
+import { eq, ne } from "drizzle-orm";
 import { runListSource } from "@/lib/radar/lists";
 import { dueSavedSearches, runSavedSearch } from "@/lib/radar/saved-searches";
 import { draftPlaybookTemplates } from "@/lib/radar/playbooks";
@@ -36,7 +36,7 @@ import { freshnessSince } from "@/lib/freshness";
 import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
-import { expireQualifications } from "@/lib/capital/engine";
+import { expireQualifications, runMatches } from "@/lib/capital/engine";
 import { expirePermits } from "@/lib/regulatory/engine";
 import { buildPlaceProfile, projectsNeedingPlace } from "@/lib/place/engine";
 
@@ -247,6 +247,12 @@ export const handlers: Record<string, JobHandler> = {
   "regulatory.expire": async ({ db, now }) => {
     await expirePermits(db, now);
   },
+  "capital.rematch": async ({ db, now }) => {
+    // Daily: partner mandates, profiles and qualifications change; matches (and eligibility) follow.
+    for (const o of await db.select({ id: capitalOpportunities.id }).from(capitalOpportunities).where(ne(capitalOpportunities.status, "closed")).limit(200)) {
+      await runMatches(db, o.id, now);
+    }
+  },
   "capital.expire": async ({ db, now }) => {
     await expireQualifications(db, now);
   },
@@ -300,6 +306,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "backup.verify": "monthly:3:04:00",
   "funding.scan": "every:2h",
   "capital.expire": "daily:05:30",
+  "capital.rematch": "daily:05:45",
   "regulatory.expire": "daily:05:35",
   "place.refresh": "daily:04:10",
 };

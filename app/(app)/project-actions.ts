@@ -3,14 +3,14 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { capitalRequirements, capitalTranches, constraints, contracts, deals, projectParties, projects, tasks } from "@/db/schema";
+import { capitalRequirements, capitalTranches, constraints, contracts, deals, projectParties, projects, risks, tasks } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { createProject, createProjectFromDeal, projectNote, setReadiness, setStage } from "@/lib/projects/engine";
 import {
-  ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, INSTRUMENTS, PARTY_ROLES, PROJECT_STAGES,
-  PROJECT_STATUSES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, SEVERITIES,
+  ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, IMPACT, INSTRUMENTS, LIKELIHOOD, PARTY_ROLES, PROJECT_STAGES,
+  PROJECT_STATUSES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, RESIDUAL, RISK_CATEGORIES, RISK_STATUSES, SEVERITIES,
 } from "@/lib/projects/vocab";
 import { SECTORS } from "@/lib/vocab";
 
@@ -231,4 +231,31 @@ export async function addProjectTaskAction(formData: FormData) {
     await appDb().insert(tasks).values({ mandateId: p.mandateId, projectId: id, type: "other", title, body: str(formData, "body", 2000), dueAt: date(formData, "dueAt") ?? new Date().toISOString().slice(0, 10) });
   });
   redirect(note(`/projects/${id}`, "Action added (see Tasks)."));
+}
+
+export async function addRiskAction(formData: FormData) {
+  const id = zId.parse(formData.get("id"));
+  const category = z.enum(keys(RISK_CATEGORIES)).parse(formData.get("category"));
+  const description = z.string().trim().min(3).max(1000).parse(formData.get("description"));
+  await withOsUser(async user => {
+    const p = await scopedProject(user.scope, id);
+    await appDb().insert(risks).values({
+      projectId: id, mandateId: p.mandateId, category, description, likelihood: pick(LIKELIHOOD, formData, "likelihood") ?? "possible", impact: pick(IMPACT, formData, "impact") ?? "medium",
+      mitigation: str(formData, "mitigation", 1000), owner: opt(formData, "owner", 120), trigger: str(formData, "trigger", 500), evidence: str(formData, "evidence", 1000),
+    });
+  });
+  redirect(note(`/projects/${id}?tab=risk`, "Risk added."));
+}
+
+export async function updateRiskAction(formData: FormData) {
+  const riskId = zId.parse(formData.get("riskId"));
+  let projectId = "";
+  await withOsUser(async user => {
+    const [x] = await appDb().select().from(risks).where(and(eq(risks.id, riskId), mandateCondition(user.scope, risks.mandateId)));
+    if (!x) throw new Error("Not found");
+    projectId = x.projectId;
+    await appDb().update(risks).set({ status: pick(RISK_STATUSES, formData, "status") ?? x.status, residual: pick(RESIDUAL, formData, "residual") ?? x.residual, updatedAt: new Date().toISOString() }).where(eq(risks.id, riskId));
+    await audit(appDb(), { actor: user.email, action: "risk_updated", entity: "risks", entityId: riskId, before: { status: x.status, residual: x.residual } });
+  });
+  redirect(note(`/projects/${projectId}?tab=risk`, "Risk updated."));
 }

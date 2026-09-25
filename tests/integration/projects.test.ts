@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   activities, capitalRequirements, capitalTranches, constraints, deals, mandates, organizations, projectParties, projectReadiness,
-  projects, projectStageHistory,
+  projects, projectStageHistory, risks, tasks,
 } from "@/db/schema";
 import { capitalSummary, createProject, createProjectFromDeal, projectAlerts, setReadiness, setStage } from "@/lib/projects/engine";
 import { createTestDb } from "../helpers/d1";
@@ -15,7 +15,7 @@ const M = "mandate_regenera", OTHER = "mandate_other";
 const NOW = new Date("2026-09-24T12:00:00Z");
 
 beforeEach(async () => {
-  for (const x of [capitalTranches, capitalRequirements, constraints, projectParties, projectReadiness, projectStageHistory, activities, deals, projects, organizations, mandates]) await t.db.delete(x);
+  for (const x of [risks, tasks, capitalTranches, capitalRequirements, constraints, projectParties, projectReadiness, projectStageHistory, activities, deals, projects, organizations, mandates]) await t.db.delete(x);
   await t.db.insert(mandates).values([
     { id: M, slug: "regenera", name: "Regenera", type: "advisory", rules: { massAllowed: true, approvalRequired: true } },
     { id: OTHER, slug: "other", name: "Other", type: "advisory", rules: { massAllowed: true, approvalRequired: true } },
@@ -107,5 +107,14 @@ describe("project spine", () => {
     expect(today.blocked.length).toBeGreaterThanOrEqual(2);
     expect(today.capitalNow[0]).toMatchObject({ name: "Valle Solar", purpose: "Development", gap: 2_000_000 });
     expect(today.moved[0]).toMatchObject({ to: "diagnostic" });
+  });
+
+  it("reaching Capital Alignment queues the capital work as an action; risks stay with their project", async () => {
+    const p = await createProject(t.db, { mandateId: M, name: "Valle Solar" }, "alan");
+    await setStage(t.db, p.id, "capital_alignment", "alan", "Readiness substantially complete");
+    const ts = await t.db.select().from(tasks);
+    expect(ts).toEqual([expect.objectContaining({ projectId: p.id, title: "Capital alignment: set up capital opportunities for Valle Solar" })]);
+    await t.db.insert(risks).values({ projectId: p.id, mandateId: M, category: "fx", description: "Peso depreciation vs USD debt", likelihood: "likely", impact: "high" });
+    expect((await t.db.select().from(risks))[0]).toMatchObject({ status: "open", residual: "unknown" });
   });
 });

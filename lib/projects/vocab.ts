@@ -64,3 +64,15 @@ export const INSTRUMENTS = {
 } as const;
 
 export const CAPITAL_STATUSES = { planned: "Planned", seeking: "Seeking", in_discussion: "In discussion", committed: "Committed", closed: "Closed", cancelled: "Cancelled" } as const;
+
+// Risk register (master spec LIX). A risk may happen; a constraint is blocking now.
+export const RISK_CATEGORIES = {
+  country: "Country", political: "Political", currency: "Currency", regulatory: "Regulatory", permitting: "Permitting", land: "Land",
+  environmental: "Environmental", social: "Social", climate: "Climate", technology: "Technology", engineering: "Engineering", construction: "Construction",
+  supply_chain: "Supply chain", materials: "Materials", commercial: "Commercial", offtake: "Offtake", feedstock: "Feedstock", capital: "Capital",
+  interest: "Interest rate", fx: "FX", tax: "Tax", counterparty: "Counterparty", force_majeure: "Force majeure", cyber: "Cyber", insurance: "Insurance", reputation: "Reputation",
+} as const;
+export const LIKELIHOOD = { rare: "Rare", unlikely: "Unlikely", possible: "Possible", likely: "Likely", almost_certain: "Almost certain" } as const;
+export const IMPACT = { low: "Low", medium: "Medium", high: "High", severe: "Severe" } as const;
+export const RISK_STATUSES = { open: "Open", mitigating: "Mitigating", accepted: "Accepted", closed: "Closed" } as const;
+export const RESIDUAL = { unknown: "Not assessed", low: "Low", medium: "Medium", high: "High" } as const;

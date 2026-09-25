@@ -4,8 +4,8 @@ import { sql } from "drizzle-orm";
 import { index, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { FieldSources } from "./crm";
 import {
-  ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, INSTRUMENTS, PARTY_ROLES, PROJECT_STAGES,
-  PROJECT_STATUSES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, SEVERITIES,
+  ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, IMPACT, INSTRUMENTS, LIKELIHOOD, PARTY_ROLES, PROJECT_STAGES,
+  PROJECT_STATUSES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, RESIDUAL, RISK_CATEGORIES, RISK_STATUSES, SEVERITIES,
 } from "../lib/projects/vocab";
 
 const now = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
@@ -140,3 +140,20 @@ export const capitalTranches = sqliteTable("capital_tranches", {
   status: text("status", { enum: keys(CAPITAL_STATUSES) }).notNull().default("planned"),
   ...timestamps,
 }, t => [index("capital_tranches_requirement").on(t.requirementId)]);
+
+export const risks = sqliteTable("risks", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  mandateId: text("mandate_id").notNull(),
+  category: text("category", { enum: keys(RISK_CATEGORIES) }).notNull(),
+  description: text("description").notNull(),
+  evidence: text("evidence").notNull().default(""),
+  likelihood: text("likelihood", { enum: keys(LIKELIHOOD) }).notNull().default("possible"),
+  impact: text("impact", { enum: keys(IMPACT) }).notNull().default("medium"),
+  mitigation: text("mitigation").notNull().default(""),
+  owner: text("owner"),
+  trigger: text("trigger").notNull().default(""),
+  status: text("status", { enum: keys(RISK_STATUSES) }).notNull().default("open"),
+  residual: text("residual", { enum: keys(RESIDUAL) }).notNull().default("unknown"),
+  ...timestamps,
+}, t => [index("risks_project").on(t.projectId, t.status)]);
