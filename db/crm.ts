@@ -147,6 +147,7 @@ export const triggers = sqliteTable("triggers", {
   lat: real("lat"),
   lng: real("lng"),
   signalId: text("signal_id"),
+  projectId: text("project_id"),            // physical project this row is about (phase 6)
   relevance: integer("relevance"),        // 0-100, Claude's fit to Regenera's scope
   suggestedEngagement: text("suggested_engagement"),
   decisionRead: text("decision_read"),
@@ -198,6 +199,7 @@ export const deals = sqliteTable("deals", {
   triggerId: text("trigger_id"),
   expectedClose: text("expected_close"),     // YYYY-MM-DD, for the forecast
   opportunityId: text("opportunity_id"),     // a bid on a funding opportunity (phase 5)
+  projectId: text("project_id"),            // physical project this row is about (phase 6)
   monthlyValue: real("monthly_value"),       // retainers
   stageChangedAt: text("stage_changed_at").notNull().default(now),
   archivedAt: text("archived_at"),

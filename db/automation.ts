@@ -69,6 +69,7 @@ export const tasks = sqliteTable("tasks", {
   contactId: text("contact_id"),
   orgId: text("org_id"),
   dealId: text("deal_id"),
+  projectId: text("project_id"),            // physical project this row is about (phase 6)
   enrollmentId: text("enrollment_id"),
   messageId: text("message_id"),
   type: text("type", { enum: ["linkedin_connect", "linkedin_message", "call", "follow_up", "meeting_notes", "other"] }).notNull(),

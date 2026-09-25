@@ -71,6 +71,13 @@
       "when": 1790287345700,
       "tag": "0009_gorgeous_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790298389007,
+      "tag": "0010_fluffy_electro",
+      "breakpoints": true
     }
   ]
 }

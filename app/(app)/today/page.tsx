@@ -15,9 +15,11 @@ import { confirmProposalAction, rejectProposalAction } from "../intel-actions";
 import { fundingCounts } from "@/lib/funding/queries";
 import { contractTotals } from "@/lib/contracts/queries";
 import { DEAL_STAGES } from "@/lib/vocab";
+import { projectAlerts } from "@/lib/projects/engine";
+import { stageLabel } from "@/lib/projects/labels";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Home" };
+export const metadata = { title: "Today" };
 
 function Stat({ n, label, href, warn }: { n: number | string; label: string; href?: string; warn?: boolean }) {
   const body = <><b style={warn && Number(n) > 0 ? { color: "#b0432f" } : undefined}>{n}</b><span>{label}</span></>;
@@ -27,7 +29,7 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const [d, engage, sending, meetings, funding, contractStats] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope)]);
+  const [d, engage, sending, meetings, funding, contractStats, projectFlags] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds)]);
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const now = new Date().toISOString();
@@ -67,13 +69,25 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <Stat n={d.newTriggers} label="New triggers this year" href="/triggers" />
         <Stat n={d.newInquiries} label="Site inquiries and referrals, 7 days" href="/deals" />
         <Stat n={d.dossiersReady} label="Dossiers ready, 7 days" href="/companies" />
-        <Stat n={d.overdue} label="Deals with overdue next actions" href="/deals?view=table" warn />
-        <Stat n={d.noNext} label="Open deals with no next action" href="/deals?view=table" warn />
+        <Stat n={d.overdue} label="Opportunities with overdue next actions" href="/deals?view=table" warn />
+        <Stat n={d.noNext} label="Open opportunities with no next action" href="/deals?view=table" warn />
         <Stat n={d.awaitingAi} label="Signals waiting for Claude" href="/triggers?tab=signals&status=new" />
       </div>
 
       <div className={r.grid}>
         <div>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Projects</span><Link href="/projects">All projects</Link></p>
+            {projectFlags.blocked.length + projectFlags.capitalNow.length + projectFlags.moved.length === 0 ? (
+              <p className={r.empty}>No project blockers, near-term capital needs or stage moves this week. <Link href="/projects">Projects</Link> hold readiness, constraints and capital requirements.</p>
+            ) : (
+              <ul className={r.timeline}>
+                {projectFlags.blocked.slice(0, 8).map((b, i) => <li key={`b${i}`}><span className={r.when} style={{ color: "#b0432f" }}>Blocked</span><span><Link href={`/projects/${b.projectId}?tab=constraints`}>{b.name}</Link>: {b.why}</span></li>)}
+                {projectFlags.capitalNow.slice(0, 6).map((c, i) => <li key={`c${i}`}><span className={r.when}>{c.targetClose}</span><span>Capital needed: <Link href={`/projects/${c.projectId}?tab=capital`}>{c.name}</Link>, {c.purpose}, {c.currency} {Math.round(c.gap).toLocaleString("en-US")} open</span></li>)}
+                {projectFlags.moved.slice(0, 6).map((m, i) => <li key={`m${i}`}><span className={r.when}>{m.at.slice(0, 10)}</span><span><Link href={`/projects/${m.projectId}`}>{m.name}</Link> moved {m.from ? `${stageLabel(m.from)} → ` : ""}{stageLabel(m.to)}</span></li>)}
+              </ul>
+            )}
+          </section>
           <section className={r.panel}>
             <p className={r.panelTitle}><span>Top new triggers</span><Link href="/triggers">All triggers</Link></p>
             {d.topTriggers.length === 0 ? <p className={r.empty}>{ai ? "No new triggers. The scanners run every 15 minutes." : "Triggers appear once ANTHROPIC_API_KEY is set. The scanners are already collecting current signals."}</p> : (

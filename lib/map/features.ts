@@ -1,7 +1,7 @@
-// GeoJSON for the Map screen (SPEC section 11): organizations, deals, triggers and open procurement,
+// GeoJSON for the Map screen: projects, organizations, deals, triggers and open procurement,
 // all mandate-scoped. Hazards come from the regenera.bio intelligence API on the client.
 import { and, isNotNull, isNull, ne } from "drizzle-orm";
-import { deals, fundingOpportunities, organizations, triggers } from "@/db/schema";
+import { deals, fundingOpportunities, organizations, projects, triggers } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { freshnessSince } from "@/lib/freshness";
 
@@ -53,8 +53,14 @@ export async function mapFeatures(scope: Scope, now = new Date()) {
     orgId: null, orgName: f.funder, status: null, decisionRead: f.summary?.summary ?? null, href: `/funding/${f.id}`,
   }));
 
+  // Projects: their own coordinates (the physical site), not the sponsor's office.
+  const projectRows = await db.select({ id: projects.id, name: projects.name, stage: projects.stage, assetClass: projects.assetClass, country: projects.country, capacity: projects.capacity, capacityUnit: projects.capacityUnit, lat: projects.lat, lng: projects.lng })
+    .from(projects).where(and(mandateCondition(scope, projects.mandateId), isNull(projects.archivedAt), isNotNull(projects.lat), isNotNull(projects.lng)));
+  const projectPoints = projectRows.map(p => point(p.lng!, p.lat!, { id: p.id, name: p.name, stage: p.stage, assetClass: p.assetClass, country: p.country, capacity: p.capacity, capacityUnit: p.capacityUnit }));
+
   return {
     generatedAt: now.toISOString(),
+    projects: fc(projectPoints),
     since,
     organizations: fc(orgRows.map(o => point(o.lng!, o.lat!, { id: o.id, name: o.name, sector: o.sector, country: o.country, location: o.location, source: o.source, domain: o.domain }))),
     deals: fc(dealPoints),

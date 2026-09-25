@@ -23,11 +23,12 @@ const TRIGGER_COLORS: [string, string][] = [
   ["capital", C.pollen], ["crisis", C.ember], ["people", "#d9c7f0"], ["project", C.reed], ["regulatory", "#e59f5a"], ["commitment", "#5fb3a1"], ["event", C.wax],
 ];
 
-type LayerKey = "organizations" | "deals" | "triggers" | "procurement" | "hazards";
+type LayerKey = "projects" | "organizations" | "deals" | "triggers" | "procurement" | "hazards";
 const LAYER_META: Record<LayerKey, { label: string; swatch: string }> = {
+  projects: { label: "Projects", swatch: C.wax },
   triggers: { label: "Triggers (this year)", swatch: C.ember },
   procurement: { label: "Funding, tenders and calls", swatch: C.sky },
-  deals: { label: "Deals", swatch: C.pollen },
+  deals: { label: "Opportunities", swatch: C.pollen },
   organizations: { label: "Organizations", swatch: C.reed },
   hazards: { label: "Live hazards (GDACS)", swatch: "#e0672f" },
 };
@@ -78,6 +79,7 @@ function addDataLayers(map: maplibregl.Map) {
   const empty = { type: "FeatureCollection" as const, features: [] };
   map.addSource("organizations", { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 9 });
   map.addSource("deals", { type: "geojson", data: empty });
+  map.addSource("projects", { type: "geojson", data: empty });
   map.addSource("triggers", { type: "geojson", data: empty });
   map.addSource("procurement", { type: "geojson", data: empty });
   map.addSource("hazards", { type: "geojson", data: empty });
@@ -104,6 +106,11 @@ function addDataLayers(map: maplibregl.Map) {
     "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 7, 10, 13], "circle-color": "rgba(201,168,77,0.12)",
     "circle-stroke-color": C.pollen, "circle-stroke-width": 2.4,
   } });
+  // Projects: square-ish marker in wax with a fern ring, drawn above opportunities.
+  map.addLayer({ id: "projects", type: "circle", source: "projects", paint: {
+    "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 6, 10, 12], "circle-color": C.wax,
+    "circle-stroke-color": "#173b2a", "circle-stroke-width": 3,
+  } });
   map.addLayer({ id: "procurement", type: "circle", source: "procurement", paint: {
     "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky,
     "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2,
@@ -119,7 +126,7 @@ function addDataLayers(map: maplibregl.Map) {
 
 const LAYER_IDS: Record<LayerKey, string[]> = {
   organizations: ["organizations", "organizations-cluster", "organizations-count"],
-  deals: ["deals"], triggers: ["triggers", "triggers-halo"], procurement: ["procurement"], hazards: ["hazards"],
+  projects: ["projects"], deals: ["deals"], triggers: ["triggers", "triggers-halo"], procurement: ["procurement"], hazards: ["hazards"],
 };
 
 export default function MapClient({ esriKey }: { esriKey: string | null }) {
@@ -127,7 +134,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [data, setData] = useState<MapPayload | null>(null);
   const [hazardCount, setHazardCount] = useState(0);
-  const [visible, setVisible] = useState<Record<LayerKey, boolean>>({ triggers: true, procurement: true, deals: true, organizations: true, hazards: true });
+  const [visible, setVisible] = useState<Record<LayerKey, boolean>>({ projects: true, triggers: true, procurement: true, deals: true, organizations: true, hazards: true });
   const [terrain3d, setTerrain3d] = useState(false);
   const [globe, setGlobe] = useState(true);
   const [selected, setSelected] = useState<Selected>(null);
@@ -156,7 +163,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
     map.on("load", () => {
       addDataLayers(map);
       map.setTerrain(null);
-      for (const layer of ["organizations", "deals", "triggers", "procurement", "hazards"] as LayerKey[]) {
+      for (const layer of ["projects", "organizations", "deals", "triggers", "procurement", "hazards"] as LayerKey[]) {
         const ids = layer === "organizations" ? ["organizations", "organizations-cluster"] : [layer];
         for (const id of ids) {
           map.on("click", id, e => {
@@ -189,9 +196,10 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
         setData(d);
         (map.getSource("organizations") as GeoJSONSource).setData(d.organizations);
         (map.getSource("deals") as GeoJSONSource).setData(d.deals);
+        (map.getSource("projects") as GeoJSONSource).setData(d.projects);
         (map.getSource("triggers") as GeoJSONSource).setData(d.triggers);
         (map.getSource("procurement") as GeoJSONSource).setData(d.procurement);
-        const all = [...d.organizations.features, ...d.triggers.features, ...d.procurement.features].map(f => f.geometry.coordinates);
+        const all = [...d.projects.features, ...d.organizations.features, ...d.triggers.features, ...d.procurement.features].map(f => f.geometry.coordinates);
         if (all.length > 0) {
           const b = all.reduce((acc, c) => acc.extend(c as [number, number]), new maplibregl.LngLatBounds(all[0] as [number, number], all[0] as [number, number]));
           map.fitBounds(b, { padding: 120, maxZoom: 5, duration: 2600, essential: true });
@@ -243,6 +251,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const searchable = useMemo(() => {
     if (!data) return [];
     return [
+      ...data.projects.features.map(f => ({ label: String(f.properties.name), sub: String(f.properties.country ?? ""), layer: "projects" as LayerKey, f })),
       ...data.organizations.features.map(f => ({ label: String(f.properties.name), sub: String(f.properties.location ?? f.properties.country ?? ""), layer: "organizations" as LayerKey, f })),
       ...data.triggers.features.map(f => ({ label: String(f.properties.summary), sub: String(f.properties.orgName ?? ""), layer: "triggers" as LayerKey, f })),
       ...data.procurement.features.map(f => ({ label: String(f.properties.summary), sub: String(f.properties.orgName ?? ""), layer: "procurement" as LayerKey, f })),
@@ -258,6 +267,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   };
 
   const counts: Record<LayerKey, number> = {
+    projects: data?.projects.features.length ?? 0,
     organizations: data?.counts.organizations ?? 0,
     deals: data?.deals.features.length ?? 0,
     triggers: data?.triggers.features.length ?? 0,
@@ -336,12 +346,20 @@ function Detail({ selected }: { selected: NonNullable<Selected> }) {
       <Link className={styles.open} href={`/companies/${p.id}`}>Open record</Link>
     </>
   );
+  if (selected.layer === "projects") return (
+    <>
+      <p className={styles.kicker}>Project · {String(p.stage).replace(/_/g, " ")}</p>
+      <h3>{p.name}</h3>
+      <p className={styles.meta}>{[p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}` : null, p.country].filter(Boolean).join(" · ")}</p>
+      <Link className={styles.open} href={`/projects/${p.id}`}>Open project</Link>
+    </>
+  );
   if (selected.layer === "deals") return (
     <>
-      <p className={styles.kicker}>Deal · {String(p.stage).replace(/_/g, " ")}</p>
+      <p className={styles.kicker}>Opportunity · {String(p.stage).replace(/_/g, " ")}</p>
       <h3>{p.name}</h3>
       <p className={styles.meta}>{p.orgName} · {String(p.engagement).replace(/_/g, " ")}</p>
-      <Link className={styles.open} href={`/deals?focus=${p.id}`}>Open deal</Link>
+      <Link className={styles.open} href={`/deals?focus=${p.id}`}>Open opportunity</Link>
     </>
   );
   if (selected.layer === "hazards") return (

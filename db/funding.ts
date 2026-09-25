@@ -58,6 +58,7 @@ export const fundingMatches = sqliteTable("funding_matches", {
   mandateId: text("mandate_id").notNull(),
   opportunityId: text("opportunity_id").notNull(),
   orgId: text("org_id").notNull(),
+  projectId: text("project_id"),            // physical project this row is about (phase 6)
   reason: text("reason").notNull(),
   status: text("status", { enum: ["suggested", "contacted", "dismissed"] }).notNull().default("suggested"),
   ...timestamps,

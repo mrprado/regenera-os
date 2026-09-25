@@ -116,3 +116,4 @@ export * from "./intel";
 export * from "./funding";
 export * from "./auth";
 export * from "./contracts";
+export * from "./projects";

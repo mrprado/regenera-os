@@ -4,7 +4,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
-import { activities, contacts, deals, fundingOpportunities, lists, organizations, proposals, replies, segments, sequences, triggers } from "@/db/schema";
+import { activities, capitalRequirements, constraints, contacts, deals, fundingOpportunities, lists, organizations, projectReadiness, projects, proposals, replies, segments, sequences, triggers } from "@/db/schema";
 import { mandateCondition, type UserScope } from "@/lib/db/scoped";
 import { computeMetrics } from "@/lib/reports/metrics";
 import { DEAL_STAGES } from "@/lib/vocab";
@@ -157,6 +157,36 @@ export const TOOLS: ToolDef[] = [
         .from(replies).leftJoin(contacts, eq(contacts.id, replies.contactId))
         .where(and(mandateCondition(ctx.scope, replies.mandateId), a.unhandledOnly ? eq(replies.handled, false) : undefined)).orderBy(desc(replies.receivedAt)).limit(a.limit);
       return { shown: rows.length, replies: rows };
+    },
+  }),
+  tool({
+    name: "search_projects", kind: "read",
+    description: "Projects (physical assets): stage, location, sector, blockers (Blocked readiness, open high/critical constraints) and capital requirements with target, secured and target close. Use for questions about projects, what is blocked and which projects need capital.",
+    input: z.object({
+      query: z.string().optional().describe("Name or description text"), country: z.string().optional(), stage: z.string().optional(),
+      needsCapital: z.boolean().optional().describe("Only projects with an open capital requirement"), blockedOnly: z.boolean().optional(), limit,
+    }),
+    run: async (ctx, a) => {
+      const conds: (SQL | undefined)[] = [
+        mandateCondition(ctx.scope, projects.mandateId), isNull(projects.archivedAt),
+        a.query ? or(like(sql`lower(${projects.name})`, like_(a.query)), like(sql`lower(${projects.description})`, like_(a.query))) : undefined,
+        a.country ? like(sql`lower(coalesce(${projects.country}, ''))`, like_(a.country)) : undefined,
+        a.stage ? eq(projects.stage, a.stage as never) : undefined,
+      ];
+      const rows = await ctx.db.select({ id: projects.id, name: projects.name, stage: projects.stage, country: projects.country, sector: projects.sector, assetClass: projects.assetClass, capacity: projects.capacity, capacityUnit: projects.capacityUnit, capex: projects.capex, currency: projects.currency })
+        .from(projects).where(and(...conds)).orderBy(desc(projects.updatedAt)).limit(60);
+      const ids = rows.map(r => r.id);
+      if (!ids.length) return { shown: 0, projects: [] };
+      const cons = await ctx.db.select({ projectId: constraints.projectId, category: constraints.category, severity: constraints.severity, description: constraints.description, deadline: constraints.deadline })
+        .from(constraints).where(and(inArray(constraints.projectId, ids), inArray(constraints.status, ["open", "in_progress"]), inArray(constraints.severity, ["high", "critical"])));
+      const blocked = await ctx.db.select({ projectId: projectReadiness.projectId, dimension: projectReadiness.dimension }).from(projectReadiness)
+        .where(and(inArray(projectReadiness.projectId, ids), eq(projectReadiness.status, "blocked")));
+      const reqs = await ctx.db.select({ projectId: capitalRequirements.projectId, purpose: capitalRequirements.purpose, instrument: capitalRequirements.instrument, target: capitalRequirements.target, secured: capitalRequirements.secured, currency: capitalRequirements.currency, targetClose: capitalRequirements.targetClose, status: capitalRequirements.status })
+        .from(capitalRequirements).where(and(inArray(capitalRequirements.projectId, ids), sql`${capitalRequirements.status} not in ('closed', 'cancelled')`));
+      const out = rows.map(p => ({ ...p, blockers: [...blocked.filter(b => b.projectId === p.id).map(b => `readiness blocked: ${b.dimension}`), ...cons.filter(c => c.projectId === p.id).map(c => `${c.severity} ${c.category}: ${c.description}`)], capitalRequirements: reqs.filter(r => r.projectId === p.id) }))
+        .filter(p => (a.needsCapital ? p.capitalRequirements.some(r => (r.target ?? 0) > r.secured) : true) && (a.blockedOnly ? p.blockers.length > 0 : true))
+        .slice(0, a.limit);
+      return { shown: out.length, projects: out };
     },
   }),
   tool({

@@ -28,6 +28,7 @@ export const contracts = sqliteTable("contracts", {
   id: id(),
   mandateId: text("mandate_id").notNull(),
   dealId: text("deal_id"),
+  projectId: text("project_id"),            // physical project this row is about (phase 6)
   orgId: text("org_id"),
   kind: text("kind", { enum: CONTRACT_KINDS }).notNull(),
   engagement: text("engagement"),

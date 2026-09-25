@@ -6,7 +6,7 @@ import { isMandateAdmin, mandateAdminList } from "@/lib/mandates";
 import { counselAction, createMandateAction, memberAction, updateMandateAction } from "../../mandate-actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Mandates" };
+export const metadata = { title: "Entities" };
 
 const input = { height: 32, border: "1px solid var(--line)", borderRadius: 8, padding: "0 9px", fontSize: 13, width: "100%" } as const;
 

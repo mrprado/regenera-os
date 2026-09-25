@@ -3,42 +3,44 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Building2, ChartColumn, FileSignature, HandCoins, ClipboardCheck, Earth, Handshake, House, Inbox, ListChecks,
+  Building2, ChartColumn, FileSignature, HandCoins, ClipboardCheck, Earth, Handshake, House, Inbox, Landmark, ListChecks,
   Radar, Telescope, Send, Settings, SquareCheckBig, SquareKanban, Users, type LucideIcon,
 } from "lucide-react";
 import styles from "./shell.module.css";
 
 type Item = { href: string; label: string; icon: LucideIcon };
 
-// Apollo-style information architecture (SPEC section 11), in Regenera vocabulary.
+// Navigation from the master spec (docs/master-spec.md part VI; docs/plans/phase-6.md §10). Same routes, regrouped.
 const GROUPS: { label?: string; items: Item[] }[] = [
-  { items: [{ href: "/today", label: "Home", icon: House }, { href: "/map", label: "Map", icon: Earth }] },
+  { items: [{ href: "/today", label: "Today", icon: House }] },
   {
-    label: "Prospect",
+    label: "Origination",
     items: [
-      { href: "/people", label: "People", icon: Users },
-      { href: "/companies", label: "Companies", icon: Building2 },
-      { href: "/lists", label: "Lists", icon: ListChecks },
-      { href: "/triggers", label: "Triggers", icon: Radar },
       { href: "/prospecting", label: "Prospecting", icon: Telescope },
-      { href: "/funding", label: "Funding", icon: HandCoins },
-    ],
-  },
-  {
-    label: "Engage",
-    items: [
+      { href: "/lists", label: "Lists", icon: ListChecks },
+      { href: "/deals", label: "Opportunities", icon: SquareKanban },
       { href: "/sequences", label: "Sequences", icon: Send },
       { href: "/queue", label: "Approval queue", icon: ClipboardCheck },
-      { href: "/tasks", label: "Tasks", icon: SquareCheckBig },
       { href: "/inbox", label: "Inbox", icon: Inbox },
     ],
   },
+  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }] },
+  { label: "Capital", items: [{ href: "/funding", label: "Funding", icon: HandCoins }] },
   {
-    label: "Win",
+    label: "Intelligence",
     items: [
-      { href: "/deals", label: "Deals", icon: SquareKanban },
+      { href: "/triggers", label: "Intelligence", icon: Radar },
+      { href: "/people", label: "People", icon: Users },
+      { href: "/companies", label: "Companies", icon: Building2 },
+      { href: "/partners", label: "Partner network", icon: Handshake },
+      { href: "/map", label: "Map", icon: Earth },
+    ],
+  },
+  {
+    label: "Work",
+    items: [
+      { href: "/tasks", label: "Actions", icon: SquareCheckBig },
       { href: "/contracts", label: "Contracts", icon: FileSignature },
-      { href: "/partners", label: "Partners", icon: Handshake },
       { href: "/reports", label: "Reports", icon: ChartColumn },
     ],
   },

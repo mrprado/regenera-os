@@ -11,11 +11,12 @@ import { DEAL_STAGES, ENGAGEMENT_PATHS } from "@/lib/vocab";
 import { importTrackerAction, moveDeal, setForecastAction } from "./actions";
 import Kanban, { type KanbanDeal } from "./kanban";
 import { createContractAction } from "../contract-actions";
+import { createProjectFromDealAction } from "../project-actions";
 import { CONTRACT_STATUS_LABEL } from "@/lib/contracts/labels";
 import { contractsByDeal } from "@/lib/contracts/queries";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Deals" };
+export const metadata = { title: "Opportunities" };
 
 const BOARD = ["lead", "contacted", "engaged", "call_booked", "proposal", "signed", "active", "expansion"] as const;
 const CLOSED = ["completed", "churned", "lost", "nurture"] as const;
@@ -26,7 +27,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const view = sp.view === "table" ? "table" : "board";
   const rows = await appDb().select({
     id: deals.id, name: deals.name, stage: deals.stage, orgId: deals.orgId, orgName: organizations.name, engagement: deals.engagement, path: deals.path,
-    value: deals.valueEstimate, monthly: deals.monthlyValue, probability: deals.probability, expectedClose: deals.expectedClose, nextAction: deals.nextAction, nextActionDate: deals.nextActionDate, source: deals.source, updatedAt: deals.updatedAt, feeType: deals.feeType,
+    value: deals.valueEstimate, monthly: deals.monthlyValue, probability: deals.probability, expectedClose: deals.expectedClose, nextAction: deals.nextAction, nextActionDate: deals.nextActionDate, source: deals.source, updatedAt: deals.updatedAt, feeType: deals.feeType, projectId: deals.projectId,
   }).from(deals).leftJoin(organizations, eq(organizations.id, deals.orgId))
     .where(and(mandateCondition(user.scope, deals.mandateId), isNull(deals.archivedAt), sp.path ? eq(deals.path, sp.path as never) : undefined))
     .orderBy(asc(deals.nextActionDate), asc(deals.name));
@@ -38,7 +39,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Deals" count={open.length} actions={
+      <PageHeader title="Opportunities" count={open.length} actions={
         <>
           {isOwner(user.scope) && <form action={importTrackerAction}><button className="btn" type="submit">Import regenera.bio tracker</button></form>}
         </>
@@ -52,13 +53,13 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         ))}
       </nav>
       {rows.length === 0 ? (
-        <EmptyState icon={SquareKanban} title="No deals yet" body="Deals arrive from regenera.bio inquiries and Partner Network referrals, from the tracker import, and from pursued triggers." />
+        <EmptyState icon={SquareKanban} title="No opportunities yet" body="Opportunities arrive from regenera.bio inquiries and Partner Network referrals, from the tracker import, and from pursued triggers." />
       ) : view === "board" ? (
         <Kanban columns={[...BOARD].map(k => ({ key: k, label: DEAL_STAGES[k] }))} deals={kanban.filter(d => (BOARD as readonly string[]).includes(d.stage))} action={moveDeal} back={back} />
       ) : (
         <div className={ui.tableWrap}>
           <table className={ui.table}>
-            <thead><tr><th>Deal</th><th>Organization</th><th>Stage</th><th>Engagement</th><th>Fee</th><th>Contract</th><th>Next action</th><th>Forecast (value, monthly, %, close)</th></tr></thead>
+            <thead><tr><th>Deal</th><th>Organization</th><th>Stage</th><th>Engagement</th><th>Fee</th><th>Project</th><th>Contract</th><th>Next action</th><th>Forecast (value, monthly, %, close)</th></tr></thead>
             <tbody>
               {rows.map(d => (
                 <tr key={d.id}>
@@ -67,6 +68,9 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                   <td><span className={ui.chip}>{DEAL_STAGES[d.stage as keyof typeof DEAL_STAGES]}</span></td>
                   <td>{d.engagement.replace(/_/g, " ")}</td>
                   <td>{d.feeType.replace(/_/g, " ")}</td>
+                  <td>{d.projectId
+                    ? <Link href={`/projects/${d.projectId}`}>Open project</Link>
+                    : <form action={createProjectFromDealAction}><input type="hidden" name="dealId" value={d.id} /><button className={ui.miniBtn} type="submit">Create project</button></form>}</td>
                   <td>{dealContracts.get(d.id)
                     ? <Link href={`/contracts/${dealContracts.get(d.id)!.id}`}>{CONTRACT_STATUS_LABEL[dealContracts.get(d.id)!.status as keyof typeof CONTRACT_STATUS_LABEL]}</Link>
                     : <form action={createContractAction}><input type="hidden" name="kind" value="engagement_letter" /><input type="hidden" name="source" value={`deal:${d.id}`} /><button className={ui.miniBtn} type="submit">Draft</button></form>}</td>

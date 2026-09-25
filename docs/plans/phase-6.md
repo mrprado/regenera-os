@@ -238,3 +238,17 @@ contracts, funding and tasks can attach to projects as soon as it lands.
 4. GIS on D1 with GeoJSON (no PostGIS for now; changing databases would be a stack change and a paid service).
 5. Still pending from before: **Workers Paid** (the live OS cannot render signed-in pages without it) and **R2**
    (documents and backups, needed by M3).
+
+## Build report: M1 Project spine (2026-09-24)
+
+Built as scoped, additive only (migration 0010: 7 tables, 5 nullable `project_id` columns).
+- Projects page (table and Pipeline board by lifecycle phase, filters for stage, sector, country, blocked, capital
+  needed), create from scratch or from an opportunity; project record with Overview, Readiness, Constraints, Capital,
+  Partners, Contracts, Funding and Activity tabs.
+- Today: Projects panel (blocked, capital needed within 180 days, stage moves this week).
+- Map: projects layer at the project's own coordinates. Ask the OS: `search_projects`. Cmd+K: Projects, Pipeline.
+- Navigation regrouped (Today, Origination, Projects, Capital, Intelligence, Work); Deals shown as Opportunities;
+  header and settings "mandates" shown as Entities. Opportunities table has a Project column.
+- Tests: tests/integration/projects.test.ts (6, including the first slice of the critical workflow). Full suite 28
+  files passing. Checked in the browser: create project, every tab, constraint and requirement forms, Today panel.
+- Docs: data-model.md, project-lifecycle.md, capital-model.md, build-roadmap.md.
