@@ -309,3 +309,16 @@ Built additive only (migration 0014: integrations, sources, verifications, place
   maximum" and was removed.
 - Tests: tests/integration/place.test.ts (7). Full suite 32 files passing.
 - Docs: integrations.md, integration-licensing.md, source-provenance.md.
+
+## Build report: global search, project brief, documentation (2026-09-24)
+
+- Global search (master spec VIII) in Cmd+K: projects, capital opportunities, capital partners, private investors
+  (owners only), companies, people, opportunities, contracts, funding and documents, entity-scoped
+  (`lib/search.ts`, `/api/search`). Structured natural-language queries remain with Ask the OS.
+- Project brief PDF (export list, part LXXXVI): identity, parties, place facts with sources, readiness, open
+  constraints, capital stack, regulatory status, agreements. Checked visually.
+- Docs from part XCVI now in /docs: regenera-os-architecture, data-model, integrations, integration-licensing,
+  source-provenance, project-lifecycle, capital-model, private-capital-model, regulatory-model, contracts-model,
+  security, permissions, ai-governance, build-roadmap, deployment, testing. Not yet written because not built:
+  engineering-model, materials-model, place-model beyond integrations.md.
+- Tests: tests/integration/search.test.ts (2). Full suite 33 files passing.

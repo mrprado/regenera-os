@@ -33,6 +33,7 @@ export default function CommandBar() {
   const [value, setValue] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [hits, setHits] = useState<{ type: string; label: string; sub: string; href: string }[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const endRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,17 @@ export default function CommandBar() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [turns, busy]);
+  // Record search across projects, capital, companies, people, contracts, funding and documents (scoped server-side).
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < 2) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(withBase(`/api/search?q=${encodeURIComponent(q)}`), { signal: ctrl.signal })
+        .then(r => (r.ok ? r.json() as Promise<{ hits: typeof hits }> : { hits: [] })).then(d => setHits(d.hits)).catch(() => {});
+    }, 200);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [value]);
 
   async function ask(question: string) {
     const q = question.trim();
@@ -85,6 +97,7 @@ export default function CommandBar() {
     }
   }
 
+  const shownHits = value.trim().length >= 2 ? hits : [];
   const filteredPages = PAGES.filter(([label]) => !value || label.toLowerCase().includes(value.toLowerCase()));
 
   return (
@@ -94,9 +107,9 @@ export default function CommandBar() {
       </button>
       <Command.Dialog open={open} onOpenChange={setOpen} label="Ask the OS" className={styles.dialog} overlayClassName={styles.overlay} shouldFilter={false}>
         <div className={styles.head}>
-          <Command.Input value={value} onValueChange={setValue} placeholder="Ask a question or jump to a page" className={styles.input}
+          <Command.Input value={value} onValueChange={setValue} placeholder="Search records, ask a question, or jump to a page" className={styles.input}
             onKeyDown={e => {
-              if (e.key === "Enter" && value.trim() && filteredPages.length === 0) { e.preventDefault(); void ask(value); }
+              if (e.key === "Enter" && value.trim() && filteredPages.length === 0 && shownHits.length === 0) { e.preventDefault(); void ask(value); }
             }} />
         </div>
         {(turns.length > 0 || busy) && (
@@ -124,6 +137,16 @@ export default function CommandBar() {
           {turns.length === 0 && !value && (
             <Command.Group heading="Try asking" className={styles.group}>
               {EXAMPLES.map(x => <Command.Item key={x} value={x} onSelect={() => void ask(x)} className={styles.item}>{x}</Command.Item>)}
+            </Command.Group>
+          )}
+          {shownHits.length > 0 && (
+            <Command.Group heading="Records" className={styles.group}>
+              {shownHits.map(h => (
+                <Command.Item key={`${h.type}:${h.href}:${h.label}`} value={`rec:${h.type}:${h.label}:${h.href}`} className={styles.item}
+                  onSelect={() => { setOpen(false); if (/^https?:/.test(h.href)) window.open(h.href, "_blank", "noopener"); else router.push(h.href); }}>
+                  {h.label}<span style={{ opacity: 0.6, marginLeft: 8, fontSize: 12 }}>{h.type}{h.sub ? ` · ${h.sub}` : ""}</span>
+                </Command.Item>
+              ))}
             </Command.Group>
           )}
           {filteredPages.length > 0 && (

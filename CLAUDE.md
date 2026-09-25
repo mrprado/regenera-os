@@ -58,6 +58,13 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   the template note, and counsel review for success fee / equity / capital work / investment mandates.
   components/markdown-lite.tsx renders contract text as React (never HTML). Downloads are PDFs from lib/contracts/pdf.ts
   (pdf-lib, Regenera header/footer, runs in the Worker) via /api/contracts/download
+- Phase 6 (master spec; docs/regenera-os-architecture.md): projects spine (db/projects.ts, lib/projects/*, /projects,
+  Place/Readiness/Constraints/Capital/Regulatory tabs, brief PDF); capital (db/capital.ts, lib/capital/*, /capital;
+  private profiles, qualifications and KYC are OWNER-ONLY and must never reach lib/ask or lib/mcp: tested); send-time
+  compliance gate in lib/crm/send.ts; agreement register + obligations + documents (lib/contracts/register.ts,
+  /documents); regulatory (db/regulatory.ts, lib/regulatory/*; the OS records reviews, never "compliant");
+  integration registry enforced in fetchJson (lib/integrations/*, Settings → Integrations); place adapters
+  (lib/place/*); global search (lib/search.ts, /api/search, Cmd+K). Migrations are additive only.
 - React drops name/value on a button whose formAction is a function: use one server action per button
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)

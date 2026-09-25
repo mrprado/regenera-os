@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
+import { withBase } from "@/lib/base-path";
 import { kindLabel, lifecycleLabel } from "@/lib/contracts/labels";
 import { compactMoney, stageLabel } from "@/lib/projects/labels";
 import { fundingForProject, getProject, projectPickers } from "@/lib/projects/queries";
@@ -47,7 +48,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   return (
     <>
-      <PageHeader title={p.name} actions={<Link className="btn" href="/projects">All projects</Link>} />
+      <PageHeader title={p.name} actions={<><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a><Link className="btn" href="/projects">All projects</Link></>} />
       <Notice text={sp.notice} />
       <p className={ui.sub} style={{ marginTop: -6, marginBottom: 12 }}>
         <span className={ui.chip}>{stageLabel(p.stage)}</span> {PROJECT_STATUSES[p.status]}
