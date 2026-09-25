@@ -89,7 +89,7 @@ describe("route guard", () => {
     for (const dir of ["ask", "mcp"]) {
       for (const f of readdirSync(join(lib, dir))) {
         const src = readFileSync(join(lib, dir, f), "utf8");
-        expect(/privateCapitalProfiles|investorQualifications|private_capital_profiles|investor_qualifications/.test(src), `lib/${dir}/${f} touches private investor data`).toBe(false);
+        expect(/privateCapitalProfiles|investorQualifications|kycChecks|private_capital_profiles|investor_qualifications|kyc_checks/.test(src), `lib/${dir}/${f} touches private investor data`).toBe(false);
       }
     }
   });

@@ -14,6 +14,7 @@ import { compactMoney } from "@/lib/projects/labels";
 import { INSTRUMENTS } from "@/lib/projects/vocab";
 import { addMaterialAction, matchStatusAction, runMatchesAction, setCommitmentAction, setGateAction, updateOpportunityAction } from "../../../capital-actions";
 import styles from "../../../projects/projects.module.css";
+import { ReviewsPanel } from "../../../regulatory/reviews-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Capital opportunity" };
@@ -145,6 +146,8 @@ export default async function CapitalOpportunityPage({ params, searchParams }: {
             ) : <p className={ui.sub}>Only entity owners record gate reviews.</p>}
           </section>
 
+          <ReviewsPanel subjectType="capital_opportunity" subjectId={o.id} back={`/capital/opportunities/${o.id}`} scope={user.scope}
+            topics={["offering_exemption", "private_placement", "general_solicitation", "financial_promotion", "intermediary", "investment_advice", "compensation", "kyc_aml", "sanctions", "cross_border", "other"]} />
           <section className={r.panel}>
             <p className={r.panelTitle}>Approved materials</p>
             {o.approvedMaterials.length === 0 ? <p className={r.empty}>None. Investment communications cannot go out without approved materials.</p> : (

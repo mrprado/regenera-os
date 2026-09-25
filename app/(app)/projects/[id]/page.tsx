@@ -20,11 +20,12 @@ import {
 import { createOpportunityAction } from "../../capital-actions";
 import { GATE_STATES } from "@/lib/capital/vocab";
 import styles from "../projects.module.css";
+import RegulatoryTab from "../regulatory-tab";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["readiness", "Readiness"], ["constraints", "Constraints"], ["capital", "Capital"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["readiness", "Readiness"], ["constraints", "Constraints"], ["capital", "Capital"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -305,6 +306,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           </aside>
         </div>
       )}
+
+      {tab === "regulatory" && <RegulatoryTab projectId={p.id} scope={user.scope} />}
 
       {tab === "partners" && needs && (
         <div className={r.grid}>

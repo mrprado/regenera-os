@@ -13,6 +13,7 @@ import { compactMoney } from "@/lib/projects/labels";
 import { addIntroductionAction, addQualificationAction, updatePrivateProfileAction } from "../../../capital-actions";
 import styles from "../../../projects/projects.module.css";
 import CriteriaFields from "../../criteria-fields";
+import { KycPanel } from "../../../regulatory/reviews-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Private investor" };
@@ -125,6 +126,7 @@ export default async function PrivateInvestorPage({ params, searchParams }: { pa
               </form>
             </details>
           </section>
+          <KycPanel contactId={p.contactId} back={`/capital/private/${p.id}`} />
           <section className={r.panel}>
             <p className={r.panelTitle}>Introductions</p>
             {intros.length === 0 ? <p className={r.empty}>None recorded.</p> : (

@@ -18,6 +18,7 @@ import { DEAL_STAGES } from "@/lib/vocab";
 import { projectAlerts } from "@/lib/projects/engine";
 import { stageLabel } from "@/lib/projects/labels";
 import { obligationAlerts } from "@/lib/contracts/register";
+import { regulatoryAlerts } from "@/lib/regulatory/engine";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Today" };
@@ -30,7 +31,7 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds)]);
+  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds)]);
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const [gateQueue] = await appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
@@ -89,6 +90,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 {projectFlags.blocked.slice(0, 8).map((b, i) => <li key={`b${i}`}><span className={r.when} style={{ color: "#b0432f" }}>Blocked</span><span><Link href={`/projects/${b.projectId}?tab=constraints`}>{b.name}</Link>: {b.why}</span></li>)}
                 {projectFlags.capitalNow.slice(0, 6).map((c, i) => <li key={`c${i}`}><span className={r.when}>{c.targetClose}</span><span>Capital needed: <Link href={`/projects/${c.projectId}?tab=capital`}>{c.name}</Link>, {c.purpose}, {c.currency} {Math.round(c.gap).toLocaleString("en-US")} open</span></li>)}
                 {projectFlags.moved.slice(0, 6).map((m, i) => <li key={`m${i}`}><span className={r.when}>{m.at.slice(0, 10)}</span><span><Link href={`/projects/${m.projectId}`}>{m.name}</Link> moved {m.from ? `${stageLabel(m.from)} → ` : ""}{stageLabel(m.to)}</span></li>)}
+              </ul>
+            )}
+          </section>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Regulatory</span><Link href="/projects">Projects</Link></p>
+            {regFlags.permitsExpiring.length + regFlags.verificationsDue.length + regFlags.counselReview.length === 0 ? (
+              <p className={r.empty}>No permits expiring in 90 days, no requirements due for re-verification, nothing waiting for counsel.</p>
+            ) : (
+              <ul className={r.timeline}>
+                {regFlags.permitsExpiring.slice(0, 6).map(x => <li key={x.id}><span className={r.when} style={{ color: x.expired ? "#b0432f" : undefined }}>{x.expiresAt}</span><span>{x.expired ? "Expired" : "Expires"}: {x.name} · <Link href={`/projects/${x.projectId}?tab=regulatory`}>{x.project}</Link></span></li>)}
+                {regFlags.verificationsDue.slice(0, 6).map(x => <li key={x.id}><span className={r.when}>{x.nextVerification}</span><span>Re-verify: {x.title} · <Link href={`/projects/${x.projectId}?tab=regulatory`}>{x.project}</Link></span></li>)}
+                {regFlags.counselReview.slice(0, 6).map(x => <li key={x.id}><span className={r.when}>Counsel</span><span>{x.title} · <Link href={`/projects/${x.projectId}?tab=regulatory`}>{x.project}</Link></span></li>)}
               </ul>
             )}
           </section>

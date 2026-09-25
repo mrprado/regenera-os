@@ -118,3 +118,4 @@ export * from "./auth";
 export * from "./contracts";
 export * from "./projects";
 export * from "./capital";
+export * from "./regulatory";

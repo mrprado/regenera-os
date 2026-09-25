@@ -281,3 +281,15 @@ stay as they are (Regenera fee tracking); obligations cover everything else, so 
 - Tests: tests/integration/register.test.ts (5). Full suite 30 files passing. Checked in the browser: register a PPA
   on a project, add a recurring obligation, abstract PDF, CSVs, Today.
 - Docs: contracts-model.md.
+
+## Build report: M4 Regulatory (2026-09-24)
+
+Built as scoped, additive only (migration 0013: 5 tables).
+- Project Regulatory tab: jurisdiction matrix, host-country requirements and lender/investor standards as separate
+  tracks (one-click IFC PS, World Bank ESF, Equator Principles, EHS Guidelines), permits with expiry, reviews.
+- Reviews panel on projects, capital opportunities and registered contracts; KYC status panel on private investors.
+- Rules: approved / not applicable need evidence and reviewer; reviews need reviewer, role and evidence; conditional
+  conclusions need conditions; approved permits need an approval date; daily permit expiry job.
+- Today: Regulatory panel. Isolation test extended to KYC data.
+- Tests: tests/integration/regulatory.test.ts (4). Full suite 31 files passing. Browser: checklist seed, permit on
+  Today, review panels on opportunity and contract pages.

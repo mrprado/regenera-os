@@ -17,6 +17,7 @@ import {
 } from "../../contract-actions";
 import styles from "../contracts.module.css";
 import { PartiesObligations, RegisteredMain } from "../agreement-panels";
+import { ReviewsPanel } from "../../regulatory/reviews-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contract" };
@@ -53,6 +54,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
               <dt>Version</dt><dd>{c.version}</dd>
             </dl>
           </section>
+          <ReviewsPanel subjectType="contract" subjectId={c.id} back={`/contracts/${c.id}`} scope={user.scope} topics={["compensation", "intermediary", "tax", "environmental", "land_title", "other"]} />
           <section className={r.panel}>
             <p className={r.panelTitle}>History</p>
             <ul className={r.timeline}>{versions.map(v => <li key={v.version}><span className={r.when}>v{v.version}</span><span>{v.note || "Edited"}<span className={ui.sub}>{v.createdAt.slice(0, 16).replace("T", " ")} · {v.createdBy}</span></span></li>)}</ul>
