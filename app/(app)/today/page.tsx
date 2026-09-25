@@ -20,6 +20,7 @@ import { stageLabel } from "@/lib/projects/labels";
 import { obligationAlerts } from "@/lib/contracts/register";
 import { regulatoryAlerts } from "@/lib/regulatory/engine";
 import { deliveryAlerts } from "@/lib/delivery/engine";
+import { procurementAlerts } from "@/lib/procurement/engine";
 import { ES_TOPICS, INSURANCE_TYPES, STUDY_TYPES } from "@/lib/delivery/vocab";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds), deliveryAlerts(appDb(), user.scope.mandateIds)]);
+  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery, procurement] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds), deliveryAlerts(appDb(), user.scope.mandateIds), procurementAlerts(appDb(), user.scope.mandateIds)]);
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const [gateQueue] = await appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
@@ -97,14 +98,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </section>
           <section className={r.panel}>
             <p className={r.panelTitle}><span>Delivery</span><Link href="/projects">Projects</Link></p>
-            {delivery.milestones.length + delivery.decisions.length + delivery.missingEngineering.length + delivery.es.length + delivery.insurance.length === 0 ? (
-              <p className={r.empty}>No milestones due or slipping, no decisions waiting, no missing core studies, no high E&amp;S issues or insurance gaps.</p>
+            {delivery.milestones.length + delivery.decisions.length + delivery.missingEngineering.length + delivery.es.length + delivery.insurance.length + procurement.bidsDue.length + procurement.awardLate.length + procurement.leadTime.length === 0 ? (
+              <p className={r.empty}>No milestones due or slipping, no decisions waiting, no missing core studies, no high E&amp;S issues or insurance gaps, no bids due or supply arriving late.</p>
             ) : (
               <ul className={r.timeline}>
                 {delivery.milestones.slice(0, 8).map(m => <li key={m.id}><span className={r.when} style={{ color: m.red ? "#b0432f" : undefined }}>{m.dueDate ?? "Plan"}</span><span>{m.why}: {m.name} · <Link href={`/projects/${m.projectId}?tab=plan`}>{m.project}</Link></span></li>)}
                 {delivery.decisions.slice(0, 5).map(x => <li key={x.id}><span className={r.when} style={{ color: x.overdue ? "#b0432f" : undefined }}>{x.dueDate}</span><span>Decision needed: {x.title} · <Link href={`/projects/${x.projectId}?tab=plan`}>{x.project}</Link></span></li>)}
                 {delivery.missingEngineering.slice(0, 5).map(x => <li key={x.projectId}><span className={r.when}>Studies</span><span>Missing engineering information: {x.missing.map(t => STUDY_TYPES[t as keyof typeof STUDY_TYPES] ?? t).join(", ")} · <Link href={`/projects/${x.projectId}?tab=engineering`}>{x.project}</Link></span></li>)}
                 {delivery.es.slice(0, 5).map(x => <li key={x.id}><span className={r.when} style={{ color: "#b0432f" }}>E&amp;S</span><span>{ES_TOPICS[x.topic as keyof typeof ES_TOPICS] ?? x.topic}: {x.description} · <Link href={`/projects/${x.projectId}?tab=risk`}>{x.project}</Link></span></li>)}
+                {procurement.bidsDue.slice(0, 5).map(x => <li key={x.id}><span className={r.when}>{x.date}</span><span>Bids due: {x.name} · <Link href={`/projects/${x.projectId}?tab=procurement&pkg=${x.id}`}>{x.project}</Link></span></li>)}
+                {procurement.awardLate.slice(0, 5).map(x => <li key={x.id}><span className={r.when} style={{ color: "#b0432f" }}>{x.date}</span><span>Award overdue: {x.name} · <Link href={`/projects/${x.projectId}?tab=procurement&pkg=${x.id}`}>{x.project}</Link></span></li>)}
+                {procurement.leadTime.slice(0, 5).map(x => <li key={x.id}><span className={r.when} style={{ color: "#b0432f" }}>Supply</span><span>{x.name}: {x.why} · <Link href={`/projects/${x.projectId}?tab=procurement&pkg=${x.id}`}>{x.project}</Link></span></li>)}
                 {delivery.insurance.slice(0, 5).map(x => <li key={x.id}><span className={r.when}>{x.date ?? "Insurance"}</span><span>{x.why}: {INSURANCE_TYPES[x.type as keyof typeof INSURANCE_TYPES] ?? x.type} · <Link href={`/projects/${x.projectId}?tab=risk`}>{x.project}</Link></span></li>)}
               </ul>
             )}

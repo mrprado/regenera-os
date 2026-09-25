@@ -27,11 +27,13 @@ import RiskTab from "../risk-tab";
 import PlanTab from "../plan-tab";
 import EngineeringTab from "../engineering-tab";
 import EconomicsTab from "../economics-tab";
+import MaterialsTab from "../materials-tab";
+import ProcurementTab from "../procurement-tab";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -319,6 +321,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "plan" && <PlanTab projectId={p.id} />}
       {tab === "engineering" && <EngineeringTab project={p} />}
       {tab === "economics" && <EconomicsTab project={p} caseId={sp.case} />}
+      {tab === "materials" && <MaterialsTab project={p} scope={user.scope} />}
+      {tab === "procurement" && <ProcurementTab project={p} scope={user.scope} pkgId={sp.pkg} />}
 
       {tab === "partners" && needs && (
         <div className={r.grid}>

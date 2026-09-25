@@ -6,6 +6,9 @@ import { capitalRequirements, capitalTranches, constraints, contracts, decisions
 import { projectPlan, studyGaps } from "@/lib/delivery/engine";
 import { DESIGN_STAGES, DISCIPLINES, ES_FRAMEWORKS, ES_STATUSES, ES_TOPICS, INSURANCE_STATUSES, INSURANCE_TYPES, MITIGATION_STEPS, STUDY_STATUSES, STUDY_TYPES } from "@/lib/delivery/vocab";
 import { BOUNDARY, CASE_KINDS } from "@/lib/economics/vocab";
+import { bids, boqItems, epds, procurementPackages } from "@/db/schema";
+import { embodiedCarbon } from "@/lib/procurement/logic";
+import { PACKAGE_CATEGORIES, PACKAGE_STAGES } from "@/lib/procurement/vocab";
 import { LIFECYCLE, typeLabel } from "@/lib/contracts/catalog";
 import { JURISDICTION_ROLES, PERMIT_STATUSES, REQUIREMENT_STATUSES } from "@/lib/regulatory/vocab";
 import { compactMoney, stageLabel } from "./labels";
@@ -37,6 +40,13 @@ export async function projectBriefMarkdown(db: Db, projectId: string, today: str
     db.select().from(decisions).where(eq(decisions.projectId, projectId)),
   ]);
   const gaps = studyGaps(p, st);
+  const [boq, epdRows, pkgs, bidRows] = await Promise.all([
+    db.select().from(boqItems).where(eq(boqItems.projectId, projectId)),
+    db.select().from(epds).where(eq(epds.mandateId, p.mandateId)),
+    db.select().from(procurementPackages).where(eq(procurementPackages.projectId, projectId)),
+    db.select().from(bids).where(eq(bids.projectId, projectId)),
+  ]);
+  const carbon = embodiedCarbon(boq, epdRows, today);
   const pc = (x: number | null) => (x === null ? "n/a" : `${(x * 100).toFixed(1)}%`);
   const open = cons.filter(c => c.status === "open" || c.status === "in_progress");
   const where = [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not recorded";
@@ -74,6 +84,9 @@ export async function projectBriefMarkdown(db: Db, projectId: string, today: str
     ...(st.length ? st.map(s => `- ${STUDY_TYPES[s.type]}${s.title ? ` (${s.title})` : ""}: ${STUDY_STATUSES[s.status]}${s.provider ? ` · ${s.provider}` : ""}${s.reviewer ? ` · reviewed by ${s.reviewer}` : ""}`) : ["No studies recorded."]),
     ...(gaps.missing.length ? [`Missing studies: ${gaps.missing.map(t => STUDY_TYPES[t]).join(", ")}.`] : []),
     ...(dp.length ? [`Design: ${dp.filter(x => x.status !== "superseded").map(x => `${DISCIPLINES[x.discipline]} ${DESIGN_STAGES[x.stage]}`).join("; ")}.`] : []), "",
+    "## Materials and procurement",
+    ...(boq.length ? [`Bill of quantities: ${boq.length} items; upfront embodied carbon (A1–A5, from EPDs) ${carbon.upfrontTonnes.toLocaleString("en-US", { maximumFractionDigits: 0 })} t CO2e covering ${Math.round(carbon.coverage * 100)}% of items; items without EPDs are not estimated.`] : ["No bill of quantities recorded."]),
+    ...pkgs.map(k => { const w = bidRows.find(b => b.id === k.awardedBidId); return `- ${k.name} (${PACKAGE_CATEGORIES[k.category]}): ${PACKAGE_STAGES[k.stage]} · ${bidRows.filter(b => b.packageId === k.id && b.status !== "invited").length} bids${w ? ` · awarded to ${w.bidder}` : ""}${k.requiredOnSiteAt ? ` · needed on site ${k.requiredOnSiteAt}` : ""}`; }), "",
     "## Environmental and social",
     ...(es.filter(x => x.status !== "closed").length ? es.filter(x => x.status !== "closed").map(x => `- **${SEVERITIES[x.severity]}** ${ES_TOPICS[x.topic]} (${ES_FRAMEWORKS[x.framework]}${x.reference ? `, ${x.reference}` : ""}): ${x.description} · ${MITIGATION_STEPS[x.mitigationStep]} · ${ES_STATUSES[x.status]}`) : ["No open issues recorded."]), "",
     "## Insurance",

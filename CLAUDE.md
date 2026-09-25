@@ -66,7 +66,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   integration registry enforced in fetchJson (lib/integrations/*, Settings → Integrations); place adapters
   (lib/place/*); global search (lib/search.ts, /api/search, Cmd+K); delivery + economics (db/delivery.ts, db/economics.ts,
   lib/delivery/* critical path and study gaps, lib/economics/* screening model; Plan/Engineering/Economics tabs;
-  docs/engineering-model.md). Migrations are additive only.
+  docs/engineering-model.md); materials + procurement + network (db/procurement.ts, lib/procurement/*, Materials/
+  Procurement tabs, /network with the EPD library; carbon only from EPDs; award registers the agreement;
+  docs/materials-model.md). Migrations are additive only.
 - React drops name/value on a button whose formAction is a function: use one server action per button
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)

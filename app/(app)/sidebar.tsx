@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote, Building2, ChartColumn, FileSignature, Files, HandCoins, ClipboardCheck, Earth, Handshake, House, Inbox, Landmark, ListChecks,
-  Radar, Telescope, Send, Settings, SquareCheckBig, SquareKanban, Users, type LucideIcon,
-} from "lucide-react";
+  Radar, Telescope, Send, Settings, SquareCheckBig, SquareKanban, Users, HardHat, type LucideIcon } from "lucide-react";
 import styles from "./shell.module.css";
 
 type Item = { href: string; label: string; icon: LucideIcon };
@@ -24,7 +23,7 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/inbox", label: "Inbox", icon: Inbox },
     ],
   },
-  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }] },
+  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }, { href: "/network", label: "Builders & suppliers", icon: HardHat }] },
   { label: "Capital", items: [{ href: "/funding", label: "Funding", icon: HandCoins }, { href: "/capital", label: "Capital partners", icon: Banknote }] },
   {
     label: "Intelligence",

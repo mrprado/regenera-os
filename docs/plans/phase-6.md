@@ -354,7 +354,22 @@ Details: docs/engineering-model.md.
 - Browser: milestones added through the form (PPA condition 24 days late on the critical path, on Today), revenue
   stream + base case with derived scenarios and sensitivities, Engineering and Risk tabs, brief PDF.
 
+## Build report: M9 materials, procurement and network (2026-09-25)
+
+Details: docs/materials-model.md.
+- Migration 0017 (additive, 5 tables): epds, boq_items, procurement_packages, bids, network_profiles.
+- Embodied carbon only from published EPDs with matching units; gaps and expired EPDs shown, never estimated.
+- Procurement pipeline with weighted technical + commercial evaluation (cost from lowest price, unscored = 0, single-bid
+  warning); award registers a draft agreement of the right type carrying the E&S flow-down.
+- Builders & suppliers network (/network) with matching to packages by role, asset class, country, size, bankability.
+- Today → Delivery: bids due, late awards, lead-time risk against needed-on-site dates. Brief PDF: materials and
+  procurement section.
+- Tests: tests/unit/procurement.test.ts (evaluation, carbon, matching), tests/integration/procurement.test.ts (award →
+  agreement, Today scoping).
+- Browser: EPD added; steel BoQ line computed 2,268 t CO2e (tonnes matched t), modules shown as an EPD gap; EPC package
+  with two bids scored (7.05 vs 8.73, hand-checked), award → draft EPC agreement with the IFC PS2 flow-down; network
+  profile matched under "Who could bid".
+
 ## Where phase 6 stands
-Built: M1–M8 plus search, brief, automation and risks. Not built, by design (they need real project data first):
-materials/EPD/BoQ/circularity, procurement and supply chain, EPC network matching, construction control tower and
-operations, external portals, finer roles. Each gets its own plan when there are projects to exercise it.
+Built: M1–M9 plus search, brief, automation and risks. Not built, by design (they need real project data first):
+construction control tower and operations, external portals, finer roles, industrial symbiosis / material passports.
