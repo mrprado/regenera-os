@@ -8,7 +8,7 @@ import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { sendBlockers } from "@/lib/contracts/engine";
-import { CONTRACT_KIND_LABEL, CONTRACT_STATUS_LABEL, MILESTONE_STATUS_LABEL, money } from "@/lib/contracts/labels";
+import { CONTRACT_STATUS_LABEL, kindLabel, MILESTONE_STATUS_LABEL, money } from "@/lib/contracts/labels";
 import { getContract } from "@/lib/contracts/queries";
 import { isOwner } from "@/lib/db/scoped";
 import { DEAL_STAGES } from "@/lib/vocab";
@@ -16,6 +16,7 @@ import {
   addMilestoneAction, closeContractAction, counselReviewAction, markSentAction, markSignedAction, milestoneStatusAction, regenerateContractAction, saveContractAction, scheduleRetainerAction,
 } from "../../contract-actions";
 import styles from "../contracts.module.css";
+import { PartiesObligations, RegisteredMain } from "../agreement-panels";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contract" };
@@ -34,6 +35,33 @@ export default async function ContractPage({ params, searchParams }: { params: P
   const paid = milestones.filter(m => m.status === "paid").reduce((s, m) => s + (m.amount ?? 0), 0);
   const open = milestones.filter(m => m.status === "pending" || m.status === "invoiced").reduce((s, m) => s + (m.amount ?? 0), 0);
 
+  if (c.kind === "registered") return (
+    <>
+      <PageHeader title={c.title} actions={<><a className="btn btn--primary" href={withBase(`/api/contracts/download?contract=${c.id}`)} download>Download PDF</a><Link className="btn" href="/contracts?tab=register">Agreement register</Link></>} />
+      <Notice text={sp.notice} />
+      <div className={r.grid}>
+        <div>
+          <RegisteredMain c={c} scope={user.scope} />
+          <PartiesObligations c={c} scope={user.scope} />
+        </div>
+        <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}>At a glance</p>
+            <dl className={r.kv}>
+              {c.projectId && <><dt>Project</dt><dd><Link href={`/projects/${c.projectId}?tab=contracts`}>Open project</Link></dd></>}
+              <dt>Value</dt><dd>{money(c.value, t.currency)}</dd>
+              <dt>Version</dt><dd>{c.version}</dd>
+            </dl>
+          </section>
+          <section className={r.panel}>
+            <p className={r.panelTitle}>History</p>
+            <ul className={r.timeline}>{versions.map(v => <li key={v.version}><span className={r.when}>v{v.version}</span><span>{v.note || "Edited"}<span className={ui.sub}>{v.createdAt.slice(0, 16).replace("T", " ")} · {v.createdBy}</span></span></li>)}</ul>
+          </section>
+        </aside>
+      </div>
+    </>
+  );
+
   return (
     <>
       <PageHeader title={c.title} actions={<>
@@ -45,7 +73,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
       <div className={r.grid}>
         <div>
           <section className={r.panel}>
-            <p className={r.panelTitle}><span>{CONTRACT_KIND_LABEL[c.kind]} · version {c.version}</span><span className={ui.chip}>{CONTRACT_STATUS_LABEL[c.status]}</span></p>
+            <p className={r.panelTitle}><span>{kindLabel(c)} · version {c.version}</span><span className={ui.chip}>{CONTRACT_STATUS_LABEL[c.status]}</span></p>
             {c.counselRequired && (
               <p className={ui.notice} style={{ marginBottom: 8 }}>
                 {c.counselReviewedAt ? `Counsel review recorded ${c.counselReviewedAt.slice(0, 10)} by ${c.counselReviewedBy}.` : "Counsel review is required before this can be sent or signed (success fee, equity, capital work or an investment mandate)."}
@@ -117,6 +145,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
               </>
             )}
           </section>
+          <PartiesObligations c={c} scope={user.scope} />
         </div>
 
         <aside>

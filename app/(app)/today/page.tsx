@@ -17,6 +17,7 @@ import { contractTotals } from "@/lib/contracts/queries";
 import { DEAL_STAGES } from "@/lib/vocab";
 import { projectAlerts } from "@/lib/projects/engine";
 import { stageLabel } from "@/lib/projects/labels";
+import { obligationAlerts } from "@/lib/contracts/register";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Today" };
@@ -29,7 +30,7 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const [d, engage, sending, meetings, funding, contractStats, projectFlags] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds)]);
+  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds)]);
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const [gateQueue] = await appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
@@ -88,6 +89,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 {projectFlags.blocked.slice(0, 8).map((b, i) => <li key={`b${i}`}><span className={r.when} style={{ color: "#b0432f" }}>Blocked</span><span><Link href={`/projects/${b.projectId}?tab=constraints`}>{b.name}</Link>: {b.why}</span></li>)}
                 {projectFlags.capitalNow.slice(0, 6).map((c, i) => <li key={`c${i}`}><span className={r.when}>{c.targetClose}</span><span>Capital needed: <Link href={`/projects/${c.projectId}?tab=capital`}>{c.name}</Link>, {c.purpose}, {c.currency} {Math.round(c.gap).toLocaleString("en-US")} open</span></li>)}
                 {projectFlags.moved.slice(0, 6).map((m, i) => <li key={`m${i}`}><span className={r.when}>{m.at.slice(0, 10)}</span><span><Link href={`/projects/${m.projectId}`}>{m.name}</Link> moved {m.from ? `${stageLabel(m.from)} → ` : ""}{stageLabel(m.to)}</span></li>)}
+              </ul>
+            )}
+          </section>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Contracts: obligations, expiries, reviews</span><Link href="/contracts?tab=obligations">Obligations</Link></p>
+            {obligationFlags.due.length + obligationFlags.expiring.length + obligationFlags.reviews.length === 0 ? (
+              <p className={r.empty}>No obligations due in the next 14 days, no agreements expiring in 90 days, no compensation reviews waiting.</p>
+            ) : (
+              <ul className={r.timeline}>
+                {obligationFlags.due.slice(0, 8).map(o => <li key={o.id}><span className={r.when} style={{ color: o.overdue ? "#b0432f" : undefined }}>{o.dueDate}</span><span>{o.overdue ? "Overdue: " : ""}{o.obligation} · {o.responsibleParty} · <Link href={`/contracts/${o.contractId}`}>{o.contractTitle}</Link></span></li>)}
+                {obligationFlags.expiring.slice(0, 5).map(e => <li key={e.id}><span className={r.when}>{e.endDate}</span><span>Expires: <Link href={`/contracts/${e.id}`}>{e.title}</Link></span></li>)}
+                {obligationFlags.reviews.slice(0, 5).map(x => <li key={x.id}><span className={r.when} style={{ color: "#b0432f" }}>Review</span><span>Compensation / regulatory review: <Link href={`/contracts/${x.id}`}>{x.title}</Link></span></li>)}
               </ul>
             )}
           </section>

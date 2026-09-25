@@ -53,7 +53,7 @@ export async function getProject(scope: Scope, id: string) {
     db.select().from(projectStageHistory).where(eq(projectStageHistory.projectId, id)).orderBy(desc(projectStageHistory.at)).limit(30),
     capitalSummary(db, id),
     db.select({ id: deals.id, name: deals.name, stage: deals.stage, engagement: deals.engagement }).from(deals).where(eq(deals.projectId, id)),
-    db.select({ id: contracts.id, title: contracts.title, status: contracts.status, kind: contracts.kind }).from(contracts).where(eq(contracts.projectId, id)),
+    db.select({ id: contracts.id, title: contracts.title, status: contracts.status, kind: contracts.kind, lifecycle: contracts.lifecycle, category: contracts.category, contractType: contracts.contractType }).from(contracts).where(eq(contracts.projectId, id)),
     db.select().from(tasks).where(eq(tasks.projectId, id)).orderBy(asc(tasks.dueAt)).limit(30),
     db.select({ id: triggers.id, summary: triggers.summary, eventDate: triggers.eventDate }).from(triggers).where(eq(triggers.projectId, id)).orderBy(desc(triggers.eventDate)).limit(20),
     db.select({ m: fundingMatches, title: fundingOpportunities.title, deadline: fundingOpportunities.deadline, opportunityId: fundingOpportunities.id }).from(fundingMatches)

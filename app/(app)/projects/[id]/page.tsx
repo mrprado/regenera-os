@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
-import { CONTRACT_STATUS_LABEL } from "@/lib/contracts/labels";
+import { kindLabel, lifecycleLabel } from "@/lib/contracts/labels";
 import { compactMoney, stageLabel } from "@/lib/projects/labels";
 import { fundingForProject, getProject, projectPickers } from "@/lib/projects/queries";
 import {
@@ -345,10 +345,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             {data.contracts.length === 0 && data.deals.length === 0 ? <p className={r.empty}>Nothing linked yet.</p> : (
               <table className={ui.table}><tbody>
                 {data.deals.map(d => <tr key={d.id}><td>Opportunity: <Link href="/deals?view=table">{d.name}</Link></td><td>{DEAL_STAGES[d.stage as keyof typeof DEAL_STAGES]}</td></tr>)}
-                {data.contracts.map(c => <tr key={c.id}><td>Contract: <Link href={`/contracts/${c.id}`}>{c.title}</Link></td><td>{CONTRACT_STATUS_LABEL[c.status as keyof typeof CONTRACT_STATUS_LABEL]}</td></tr>)}
+                {data.contracts.map(c => <tr key={c.id}><td><Link href={`/contracts/${c.id}`}>{c.title}</Link><span className={ui.sub}>{kindLabel(c)}</span></td><td>{lifecycleLabel(c.lifecycle)}</td></tr>)}
               </tbody></table>
             )}
-            <p className={ui.sub}>Project agreements beyond Regenera&apos;s own (land, PPA, interconnection, EPC, financing) arrive with the contracts and obligations milestone.</p>
+            <p className={ui.sub}><Link href="/contracts?tab=register">Register an agreement</Link> (land, PPA, interconnection, EPC, financing …) and choose this project; its obligations then appear on Today. <Link href={`/documents?project=${p.id}`}>Project documents</Link></p>
           </section>
           <aside>
             <section className={r.panel}>

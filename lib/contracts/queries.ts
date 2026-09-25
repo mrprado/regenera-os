@@ -1,12 +1,13 @@
 // Read models for the Contracts screens. Every query is mandate-scoped.
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { contractMilestones, contracts, contractVersions, deals, organizations, partners } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 
-export async function listContracts(scope: Scope, f: { status?: string; kind?: string }) {
+export async function listContracts(scope: Scope, f: { status?: string; kind?: string; registered?: boolean }) {
   return appDb().select({ c: contracts, orgName: organizations.name, dealName: deals.name }).from(contracts)
     .leftJoin(organizations, eq(organizations.id, contracts.orgId)).leftJoin(deals, eq(deals.id, contracts.dealId))
-    .where(and(mandateCondition(scope, contracts.mandateId), f.status ? eq(contracts.status, f.status as never) : undefined, f.kind ? eq(contracts.kind, f.kind as never) : undefined))
+    .where(and(mandateCondition(scope, contracts.mandateId), f.status ? eq(contracts.status, f.status as never) : undefined, f.kind ? eq(contracts.kind, f.kind as never) : undefined,
+      f.registered === undefined ? undefined : f.registered ? eq(contracts.kind, "registered") : ne(contracts.kind, "registered")))
     .orderBy(desc(contracts.updatedAt)).limit(300);
 }
 

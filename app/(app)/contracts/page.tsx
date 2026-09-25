@@ -8,10 +8,12 @@ import { requireOsUser } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { templateLibrary } from "@/lib/contracts/export";
 import { contractAlerts } from "@/lib/contracts/engine";
-import { CONTRACT_KIND_LABEL, CONTRACT_STATUS_LABEL, money } from "@/lib/contracts/labels";
+import { CONTRACT_KIND_LABEL, CONTRACT_STATUS_LABEL, kindLabel, money } from "@/lib/contracts/labels";
 import { contractSources, listContracts } from "@/lib/contracts/queries";
 import { appDb } from "@/lib/db/scoped";
 import { createContractAction } from "../contract-actions";
+import ObligationsView from "./obligations-view";
+import RegisterView from "./register-view";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts" };
@@ -19,8 +21,17 @@ export const metadata = { title: "Contracts" };
 export default async function ContractsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/contracts");
   const sp = await searchParams;
+  const views = (
+    <nav className={ui.tabs} aria-label="Contract views">
+      {[["", "Regenera contracts"], ["register", "Agreement register"], ["obligations", "Obligations"]].map(([k, label]) => (
+        <Link key={k} className={`${ui.tab} ${(sp.tab ?? "") === k ? ui.tabActive : ""}`} href={k ? `/contracts?tab=${k}` : "/contracts"}>{label}</Link>
+      ))}
+    </nav>
+  );
+  if (sp.tab === "register") return <><PageHeader title="Contracts" /><Notice text={sp.notice} />{views}<RegisterView scope={user.scope} sp={sp} /></>;
+  if (sp.tab === "obligations") return <><PageHeader title="Contracts" /><Notice text={sp.notice} />{views}<ObligationsView scope={user.scope} sp={sp} /></>;
   const [rows, sources, alerts] = await Promise.all([
-    listContracts(user.scope, { status: sp.status, kind: sp.kind }),
+    listContracts(user.scope, { status: sp.status, kind: sp.kind, registered: false }),
     contractSources(user.scope),
     contractAlerts(appDb(), user.scope.mandateIds),
   ]);
@@ -32,6 +43,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader title="Contracts" count={rows.length} />
       <Notice text={sp.notice} />
+      {views}
       <p className={ui.notice}>Templates are starting points, not legal advice. Have counsel review each contract before it is sent. Success fees, equity and capital work are blocked from sending until counsel review is recorded. Payments are tracked here only; nothing is charged or collected.</p>
 
       <div className={r.grid}>
@@ -50,7 +62,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                 <tbody>{rows.map(({ c, orgName, dealName }) => (
                   <tr key={c.id}>
                     <td><Link className={ui.primary} href={`/contracts/${c.id}`}>{c.title}</Link>
-                      <span className={ui.sub}>{CONTRACT_KIND_LABEL[c.kind]}{orgName ? ` · ${orgName}` : ""}{dealName ? ` · ${dealName}` : ""} · v{c.version}</span></td>
+                      <span className={ui.sub}>{kindLabel(c)}{orgName ? ` · ${orgName}` : ""}{dealName ? ` · ${dealName}` : ""} · v{c.version}</span></td>
                     <td><span className={c.status === "signed" ? ui.chip : ui.chipMuted}>{CONTRACT_STATUS_LABEL[c.status]}</span>
                       {c.counselRequired && !c.counselReviewedAt && <span className={ui.sub} style={{ color: "#b0432f" }}>Counsel review needed</span>}</td>
                     <td>{money(c.value, c.terms.currency)}</td>

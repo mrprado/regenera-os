@@ -268,3 +268,16 @@ Built as scoped, additive only (migration 0011: 11 tables; `messages.capital_opp
   the OS or MCP. Full suite 29 files passing. Checked in the browser: opportunity from a project requirement, gate
   refusal without reviewer, partner creation, matching with reasons.
 - Docs: capital-model.md, private-capital-model.md, regulatory-model.md.
+
+## Build report: M3 Contracts, obligations and documents (2026-09-24)
+
+Built as scoped, additive only (migration 0012: 4 tables, 12 contract columns, lifecycle backfill). Payment milestones
+stay as they are (Regenera fee tracking); obligations cover everything else, so no data was moved.
+- Agreement register for the full catalog of Part XLIX with key terms, parties, governing law, forum, dates,
+  14-state lifecycle, locking on execution, amendments linked to originals, compensation review flag.
+- Obligations with evidence rules and recurrence; Today and digest sections; contract and obligation registers as
+  CSV; contract abstract PDF for registered agreements.
+- Documents registry with versions (supersede, never overwrite) and links to any record; Documents in the sidebar.
+- Tests: tests/integration/register.test.ts (5). Full suite 30 files passing. Checked in the browser: register a PPA
+  on a project, add a recurring obligation, abstract PDF, CSVs, Today.
+- Docs: contracts-model.md.

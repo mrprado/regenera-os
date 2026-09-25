@@ -88,6 +88,7 @@ export async function updateContract(db: Db, id: string, patch: Editable, actor:
 export async function regenerateBody(db: Db, id: string, actor: string, now = new Date()) {
   const [c] = await db.select().from(contracts).where(eq(contracts.id, id));
   if (!c) throw new Error("Contract not found");
+  if (c.kind === "registered") throw new Error("Registered agreements are not generated from a template.");
   const [deal] = c.dealId ? await db.select({ name: deals.name, feeType: deals.feeType }).from(deals).where(eq(deals.id, c.dealId)) : [];
   const body = renderContract({
     kind: c.kind, engagement: (c.engagement ?? "diagnostic") as EngagementKey, feeType: (deal?.feeType ?? "one_time") as keyof typeof FEE_TYPES,
@@ -117,7 +118,7 @@ export async function markSent(db: Db, id: string, actor: string, now = new Date
   if (!c) throw new Error("Contract not found");
   const blockers = sendBlockers(c);
   if (blockers) throw new Error(blockers.join(" "));
-  await db.update(contracts).set({ status: "sent", sentAt: now.toISOString(), updatedAt: now.toISOString() }).where(eq(contracts.id, id));
+  await db.update(contracts).set({ status: "sent", lifecycle: "signature", sentAt: now.toISOString(), updatedAt: now.toISOString() }).where(eq(contracts.id, id));
   if (c.dealId) await advanceDeal(db, { mandateId: c.mandateId, orgId: c.orgId, contactId: null, dealId: c.dealId, to: "proposal", actor, source: "manual", reason: `${c.title} sent`, now });
   await audit(db, { actor, action: "contract_sent", entity: "contracts", entityId: id });
 }
@@ -131,7 +132,7 @@ export async function markSigned(db: Db, id: string, input: { signedAt: string; 
   const effectiveDate = input.effectiveDate || c.effectiveDate || input.signedAt;
   const endDate = c.endDate ?? (c.terms.termMonths ? addDays(addMonths(effectiveDate, c.terms.termMonths), -1) : null);
   await db.update(contracts).set({
-    status: "signed", signedAt: input.signedAt, effectiveDate, endDate, signedCopyUrl: input.signedCopyUrl ?? c.signedCopyUrl,
+    status: "signed", lifecycle: "active", lockedAt: now.toISOString(), executionDate: input.signedAt, signedAt: input.signedAt, effectiveDate, endDate, signedCopyUrl: input.signedCopyUrl ?? c.signedCopyUrl,
     sentAt: c.sentAt ?? now.toISOString(), updatedAt: now.toISOString(),
   }).where(eq(contracts.id, id));
   if (c.dealId && (c.kind === "engagement_letter" || c.kind === "sow")) {
@@ -142,7 +143,7 @@ export async function markSigned(db: Db, id: string, input: { signedAt: string; 
 }
 
 export async function closeContract(db: Db, id: string, to: "completed" | "terminated", actor: string, now = new Date()) {
-  await db.update(contracts).set({ status: to, updatedAt: now.toISOString() }).where(eq(contracts.id, id));
+  await db.update(contracts).set({ status: to, lifecycle: to === "completed" ? "expired" : "terminated", updatedAt: now.toISOString() }).where(eq(contracts.id, id));
   await audit(db, { actor, action: `contract_${to}`, entity: "contracts", entityId: id });
 }
 

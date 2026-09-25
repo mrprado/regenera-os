@@ -4,6 +4,7 @@ import type { Db } from "@/db";
 import { deals, deliverabilityChecks, fundingOpportunities, mailboxState, meetingBriefs, messages, replies, tasks, triggers } from "@/db/schema";
 import { deliverabilityIssues } from "./deliverability";
 import { contractAlerts, type ContractAlerts } from "@/lib/contracts/engine";
+import { obligationAlerts, type ObligationAlerts } from "@/lib/contracts/register";
 
 export type Digest = {
   date: string;
@@ -16,6 +17,7 @@ export type Digest = {
   alerts: string[];
   fundingDeadlines: { title: string; deadline: string; decision: string; daysLeft: number }[];
   contracts: ContractAlerts;
+  obligations: ObligationAlerts;
 };
 
 export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
@@ -47,9 +49,11 @@ export async function buildDigest(db: Db, now = new Date()): Promise<Digest> {
     .filter(f => f.decision === "bidding" || f.daysLeft === 14 || f.daysLeft <= 3)
     .slice(0, 10);
   const contracts = await contractAlerts(db, null, now);
+  const obligations = await obligationAlerts(db, null, now);
   return {
     fundingDeadlines,
     contracts,
+    obligations,
     date: day, newTriggers,
     queue: { pending: q.find(x => x.status === "pending_approval")?.n ?? 0, styleFailed: q.find(x => x.status === "style_failed")?.n ?? 0 },
     replies: rep, meetings, overdue, tasksDue, alerts,
@@ -67,6 +71,10 @@ export function renderDigest(d: Digest, appBaseUrl: string): { subject: string; 
 ${d.alerts.length ? section("Alerts", d.alerts.map(esc), "") : ""}
 ${section("Approval queue", [`${d.queue.pending} drafts waiting, ${d.queue.styleFailed} need a style fix · ${link("/queue", "Open queue")}`], "")}
 ${section("Replies to handle", d.replies.map(r => `${esc(r.classification ?? "unclassified")} · ${esc(r.fromEmail)} · ${esc(r.subject)}`), "No replies waiting.")}
+${section("Contract obligations", [
+  ...d.obligations.due.map(o => `${o.overdue ? "Overdue" : "Due"} ${esc(o.dueDate)} · ${esc(o.obligation)} · ${esc(o.responsibleParty)} · ${esc(o.contractTitle)}`),
+  ...d.obligations.expiring.map(e => `Expires ${esc(e.endDate)} · ${esc(e.title)}`),
+].map(x => `${x} · ${link("/contracts?tab=obligations", "Open obligations")}`), "No obligations due in the next 14 days.")}
 ${section("Contracts", [
   ...d.contracts.awaitingSignature.map(a => `Unsigned for ${a.days} days · ${esc(a.title)}`),
   ...d.contracts.renewals.map(a => `${a.autoRenew ? "Renews" : "Ends"} ${esc(a.endDate)} (notice by ${esc(a.noticeBy)}) · ${esc(a.title)}`),
