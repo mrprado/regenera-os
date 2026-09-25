@@ -1,7 +1,8 @@
 # Regenera OS
 
 Private CRM, prospecting and outreach system for Regenera (regenera.bio).
-Spec: docs/SPEC.md. Phase plans: docs/plans/. Environment: docs/ENV.md.
+Spec: docs/master-spec.md (canonical, 2026-09-24; supersedes docs/SPEC.md). Audit: docs/audit-2026-09.md.
+Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.md. Deploy: docs/DEPLOY.md.
 
 ## Stack
 - Next.js 16 App Router + React 19, TypeScript strict, built with vinext for
