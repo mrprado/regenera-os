@@ -1,12 +1,13 @@
 "use server";
 
+import { checkStageGate, gateOverrideAudit } from "@/lib/events/engine";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { capitalRequirements, capitalTranches, constraints, contracts, deals, projectParties, projects, risks, tasks } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
-import { appDb, mandateCondition } from "@/lib/db/scoped";
+import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { createProject, createProjectFromDeal, projectNote, setReadiness, setStage } from "@/lib/projects/engine";
 import {
   ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, IMPACT, INSTRUMENTS, LIKELIHOOD, PARTY_ROLES, PROJECT_STAGES,
@@ -87,11 +88,25 @@ export async function updateProjectAction(formData: FormData) {
 export async function setStageAction(formData: FormData) {
   const id = zId.parse(formData.get("id"));
   const stage = z.enum(keys(PROJECT_STAGES)).parse(formData.get("stage"));
+  let msg = `Stage set to ${PROJECT_STAGES[stage]}.`;
   await withOsUser(async user => {
     await scopedProject(user.scope, id);
-    await setStage(appDb(), id, stage, user.email, str(formData, "reason", 300));
+    const reason = str(formData, "reason", 300);
+    // Stage gates (§09): entry requirements are checked against records; a blocking gate needs an owner override with a reason.
+    const gate = await checkStageGate(appDb(), id, stage);
+    if (gate.gated && !gate.passed) {
+      const failed = gate.results.filter(r => !r.pass).map(r => r.text);
+      const override = formData.get("override") === "on";
+      if (gate.enforce === "block" && !(override && isOwner(user.scope) && reason.length >= 10)) {
+        msg = `Not moved. Gate for ${PROJECT_STAGES[stage]} not met: ${failed.join("; ")}. An owner can override with a reason (10+ characters).`;
+        return;
+      }
+      if (gate.enforce === "block") await gateOverrideAudit(appDb(), id, stage, user.email, reason, failed);
+      msg = `Stage set to ${PROJECT_STAGES[stage]}${gate.enforce === "block" ? " by override" : ""}; open gate items: ${failed.join("; ")}.`;
+    }
+    await setStage(appDb(), id, stage, user.email, reason);
   });
-  redirect(note(`/projects/${id}`, `Stage set to ${PROJECT_STAGES[stage]}.`));
+  redirect(note(`/projects/${id}`, msg));
 }
 
 export async function setReadinessAction(formData: FormData) {

@@ -1,6 +1,8 @@
 // Public intake (master build instruction §69): four professional forms whose submissions land in a review queue.
 // Spam protection: honeypot (in the route), per-IP rate limit, validation. Nothing internal is shown after submitting.
 // Conversion creates the canonical records; a broker becomes an Applied profile with a portal invite, never approved.
+import { emitEvent } from "@/lib/events/engine";
+import { REGENERA_MANDATE_ID } from "@/lib/membership";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
@@ -31,6 +33,7 @@ export async function submitIntake(db: Db, kind: IntakeKind, raw: Record<string,
   if (!parsed.success) return { ok: false as const, reason: "invalid" };
   const { name, email, organization, ...rest } = parsed.data as Record<string, string>;
   const [r] = await db.insert(intakeSubmissions).values({ kind, name, email: email.toLowerCase(), organization, payload: rest, ipHash }).returning({ id: intakeSubmissions.id });
+  await emitEvent(db, { mandateId: REGENERA_MANDATE_ID, type: "INTAKE_RECEIVED", entityType: "intake", entityId: r.id, payload: { name, kind, organization }, actor: "public" });
   return { ok: true as const, id: r.id };
 }
 

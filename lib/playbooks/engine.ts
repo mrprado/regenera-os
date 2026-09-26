@@ -1,6 +1,7 @@
 // Playbook engine (master build instruction §22–23, §44). Runs follow the approved version; tools run only where the
 // step's governance allows; "done" is decided by the proof checks; approval steps need a person; corrections become
 // draft versions that must be approved to take effect, and a correction seen twice suggests a permanent rule.
+import { emitEvent } from "@/lib/events/engine";
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { capitalOpportunities, deals, documents, organizations, playbookCorrections, playbookRuns, playbooks, playbookVersions, projects } from "@/db/schema";
@@ -81,6 +82,7 @@ export async function runStepTool(db: Db, runId: string, stepKey: string, actor:
   if (!run.entityId || tool.entity !== run.entityType) throw new Error("Tool does not apply to this entity");
   const r = await tool.run(db, run.entityId, now);
   const done = r.ok && s.governance === "autonomous";
+  if (!r.ok) await emitEvent(db, { mandateId: run.mandateId, type: "PLAYBOOK_FAILED", entityType: "playbook_run", entityId: run.id, payload: { name: `${s.title} (${run.entityLabel})`, summary: r.note }, actor });
   await db.update(playbookRuns).set({ steps: patchStep(run.steps, stepKey, { status: done ? "done" : r.ok ? "todo" : "failed", note: r.note, by: done ? `tool:${s.tool}` : null, at: now.toISOString() }), updatedAt: now.toISOString() }).where(eq(playbookRuns.id, run.id));
   return { ...r, done };
 }
@@ -103,6 +105,7 @@ export async function verifyRun(db: Db, runId: string, confirmedManual: string[]
   const openSteps = run.steps.filter(s => s.status === "todo" && def.steps.find(d => d.key === s.key)?.governance !== "approval");
   const status = !allPass || openSteps.length ? "needs_review" : needsApproval ? "awaiting_approval" : "completed";
   await db.update(playbookRuns).set({ checks, status, reviewedBy: actor, completedAt: status === "completed" ? now.toISOString() : null, updatedAt: now.toISOString() }).where(eq(playbookRuns.id, run.id));
+  if (status === "completed") await emitEvent(db, { mandateId: run.mandateId, type: "PLAYBOOK_COMPLETED", entityType: "playbook_run", entityId: run.id, payload: { name: def.purpose.slice(0, 80), entity: run.entityLabel }, actor });
   return { status, checks, openSteps: openSteps.map(s => s.key) };
 }
 

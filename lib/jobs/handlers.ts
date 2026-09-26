@@ -1,3 +1,4 @@
+import { dispatchEvents } from "@/lib/events/engine";
 import { expireBrokerRecords } from "@/lib/portal/broker";
 import { env } from "cloudflare:workers";
 import type { Db } from "@/db";
@@ -248,6 +249,10 @@ export const handlers: Record<string, JobHandler> = {
   "regulatory.expire": async ({ db, now }) => {
     await expirePermits(db, now);
   },
+  "events.dispatch": async ({ db, now }) => {
+    // Domain events → trigger rules → notifications, tasks, playbook runs, jobs (§17, §75).
+    await dispatchEvents(db, now);
+  },
   "portal.expire": async ({ db, now }) => {
     // Introducer agreements past their date expire (removing portal access); approved registrations lapse.
     await expireBrokerRecords(db, now);
@@ -314,5 +319,6 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "capital.rematch": "daily:05:45",
   "regulatory.expire": "daily:05:35",
   "portal.expire": "daily:05:40",
+  "events.dispatch": "every:5m",
   "place.refresh": "daily:04:10",
 };

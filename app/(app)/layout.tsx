@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { withBase } from "@/lib/base-path";
 import { requireOsUser } from "@/lib/auth";
 import { inArray } from "drizzle-orm";
 import { mandates } from "@/db/schema";
 import { appDb } from "@/lib/db/scoped";
 import { schedulerStatus } from "@/lib/settings";
+import { openNotifications } from "@/lib/events/engine";
 import CommandBar from "./command-bar";
 import MandateSwitcher from "./mandate-switcher";
 import { SidebarNav } from "./sidebar";
@@ -23,6 +24,8 @@ function initials(name: string): string {
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireOsUser("/today");
   const { lastTick, stale: schedulerStale } = await schedulerStatus();
+  const open = await openNotifications(appDb(), user.scope.mandateIds, user.email, new Date(), 200);
+  const unread = open.filter(n => !n.readAt).length;
   const memberOf = user.scope.memberOf ?? user.scope.mandateIds;
   const mandateOptions = memberOf.length > 1 ? await appDb().select({ id: mandates.id, name: mandates.name }).from(mandates).where(inArray(mandates.id, memberOf)) : [];
   const focus = user.scope.mandateIds.length === 1 && memberOf.length > 1 ? user.scope.mandateIds[0] : "all";
@@ -41,6 +44,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <CommandBar />
         </div>
         <div className={styles.account}>
+          <Link href="/notifications" className={styles.accountName} aria-label={`Notifications: ${unread} unread`} title="Notifications" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Bell size={16} aria-hidden />{unread > 0 && <b style={{ color: open.some(n => n.priority === "critical" && !n.readAt) ? "#b0432f" : undefined }}>{unread}</b>}</Link>
           <span className={styles.accountName} title={user.email}>{user.displayName}</span>
           <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>
           <form method="post" action={withBase("/api/auth/signout")}><button type="submit" className={styles.signOut}>Sign out</button></form>

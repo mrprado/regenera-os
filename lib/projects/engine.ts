@@ -1,5 +1,6 @@
 // Project spine logic (docs/plans/phase-6.md M1). Pure functions over a Db so they are testable; pages and actions
 // call them with appDb() after scoping.
+import { emitEvent } from "@/lib/events/engine";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
@@ -17,6 +18,7 @@ export async function createProject(db: Db, input: Omit<NewProject, "id">, actor
   await db.insert(projectReadiness).values((Object.keys(READINESS_DIMENSIONS) as ReadinessDimension[]).map(dimension => ({ projectId: p.id, mandateId: p.mandateId, dimension })));
   await db.insert(projectStageHistory).values({ projectId: p.id, mandateId: p.mandateId, toStage: p.stage, reason: "Created", actor });
   await audit(db, { actor, action: "project_created", entity: "projects", entityId: p.id, after: { name: p.name, stage: p.stage } });
+  await emitEvent(db, { mandateId: p.mandateId, type: "PROJECT_CREATED", entityType: "project", entityId: p.id, payload: { name: p.name, stage: p.stage }, actor });
   return p;
 }
 
@@ -43,6 +45,7 @@ export async function setStage(db: Db, projectId: string, to: ProjectStage, acto
   await db.update(projects).set({ stage: to, stageChangedAt: at, updatedAt: at }).where(eq(projects.id, projectId));
   await db.insert(projectStageHistory).values({ projectId, mandateId: p.mandateId, fromStage: p.stage, toStage: to, reason, actor, at });
   await audit(db, { actor, action: "project_stage", entity: "projects", entityId: projectId, before: { stage: p.stage }, after: { stage: to, reason } });
+  await emitEvent(db, { mandateId: p.mandateId, type: "PROJECT_STAGE_CHANGED", entityType: "project", entityId: projectId, payload: { name: p.name, from: p.stage, to, reason }, actor });
   // Automation (master spec LXXVII): reaching Capital Alignment queues the capital work as an action, not an outreach.
   if (to === "capital_alignment") {
     await db.insert(tasks).values({ mandateId: p.mandateId, projectId, type: "other", title: `Capital alignment: set up capital opportunities for ${p.name}`, body: "Offer each open requirement or tranche to investors (Capital tab), run matching, then record the gate review before any investment communication.", dueAt: at.slice(0, 10) });

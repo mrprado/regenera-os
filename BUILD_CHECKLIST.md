@@ -91,3 +91,15 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Verified: browser on Valle Solar: water assessment saved (constrained), intervention added, capital requirement
   created and linked. Typecheck clean.
 - Status: **Done** §20, §21.
+
+### Phase P5 — Events, trigger rules, notifications, stage gates (2026-09-26)
+- Built: migration 0021 (events, trigger_rules, notifications, notification_mutes, stage_gates); emitEvent from
+  project create/stage change, introducer registration/approval, playbook completed/failed, portal messages, public
+  intake, capital mandate changes; events.dispatch job every 5 minutes (claimed once, idempotent); 7 default rules;
+  rule builder (event + condition → notify / task / playbook / job); notification centre with read, resolve, snooze,
+  assign, mute by category, header badge; stage gates for Capital alignment, Financial close, Construction (checks
+  reuse the playbook proof checks; owner override with an audited reason).
+- Verified: tests/integration/events.test.ts (4) pass; browser: move to Construction blocked with the missing items
+  named; /notifications inbox, rules, gates and event log render.
+- Status: **Done** §09 (stage gates), §17, §62, §75. Deal (tracker) stages keep the live-site vocabulary; gates apply
+  to project stages.

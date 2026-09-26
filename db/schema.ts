@@ -127,3 +127,4 @@ export * from "./portal";
 export * from "./playbooks";
 export * from "./evidence";
 export * from "./systems";
+export * from "./events";

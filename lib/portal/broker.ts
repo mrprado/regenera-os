@@ -1,6 +1,7 @@
 // Broker / introducer workflows (master build instruction §31–33, §93): referral registration with duplicate, existing
 // relationship, competing claim, jurisdiction and agreement checks; review; commission estimates that stay "estimated"
 // until the schedule and the agreement's legal review are approved. Registration never promises economics.
+import { emitEvent } from "@/lib/events/engine";
 import { and, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { brokerProfiles, commissionEvents, commissionSchedules, contacts, deals, organizations, referralAgreements, referralRegistrations } from "@/db/schema";
@@ -51,6 +52,7 @@ export async function registerReferral(db: Db, brokerId: string, input: Referral
     matchedOrgId: org?.id ?? null, matchedContactId: contact?.id ?? null,
   }).returning();
   await audit(db, { actor: `portal:${broker.portalUserId}`, action: "referral_submitted", entity: "referral_registrations", entityId: r.id, after: { status: r.status, conflicts: conflicts.length } });
+  await emitEvent(db, { mandateId: broker.mandateId, type: "BROKER_REFERRAL_SUBMITTED", entityType: "referral", entityId: r.id, payload: { name: r.name, status: r.status, conflicts: conflicts.length }, actor: `portal:${broker.portalUserId}` });
   return r;
 }
 
@@ -63,6 +65,7 @@ export async function reviewReferral(db: Db, registrationId: string, decision: "
     expiresAt: decision === "approved" ? day(new Date(now.getTime() + REFERRAL_DAYS * 86_400_000)) : r.expiresAt,
   }).where(eq(referralRegistrations.id, r.id));
   await audit(db, { actor, action: "referral_reviewed", entity: "referral_registrations", entityId: r.id, before: { status: r.status }, after: { status: decision, note } });
+  if (decision === "approved") await emitEvent(db, { mandateId: r.mandateId, type: "BROKER_REFERRAL_APPROVED", entityType: "referral", entityId: r.id, payload: { name: r.name }, actor });
 }
 
 type Schedule = Pick<typeof commissionSchedules.$inferSelect, "type" | "rate" | "amount" | "cap" | "minimum">;

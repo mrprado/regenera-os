@@ -1,5 +1,6 @@
 "use server";
 
+import { emitEvent } from "@/lib/events/engine";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -80,6 +81,7 @@ export async function addCapitalMandateAction(formData: FormData) {
     const [p] = await appDb().select().from(capitalProfiles).where(and(eq(capitalProfiles.id, profileId), mandateCondition(user.scope, capitalProfiles.mandateId)));
     if (!p) throw new Error("Not found");
     await appDb().insert(capitalMandates).values({ mandateId: p.mandateId, profileId, name, ...criteria(formData), validFrom: date(formData, "validFrom"), validTo: date(formData, "validTo"), source: str(formData, "source", 300), lastVerifiedAt: new Date().toISOString() });
+    await emitEvent(appDb(), { mandateId: p.mandateId, type: "CAPITAL_MANDATE_CHANGED", entityType: "capital_profile", entityId: profileId, payload: { name }, actor: user.email });
   });
   redirect(note(`/capital/partners/${profileId}`, "Mandate added. Matching uses the best-fitting active mandate."));
 }

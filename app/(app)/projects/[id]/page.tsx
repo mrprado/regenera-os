@@ -154,6 +154,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <input type="hidden" name="id" value={p.id} />
                 <select name="stage" defaultValue={p.stage} aria-label="Stage">{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
                 <input name="reason" placeholder="Why (kept in the history)" aria-label="Reason" />
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}><input type="checkbox" name="override" /> Owner override of a stage gate (reason required)</label>
                 <button className="btn" type="submit">Set stage</button>
               </form>
               <ul className={r.timeline} style={{ marginTop: 10 }}>{data.history.slice(0, 6).map(h => (

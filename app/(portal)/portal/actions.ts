@@ -1,5 +1,6 @@
 "use server";
 
+import { emitEvent } from "@/lib/events/engine";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -27,6 +28,7 @@ export async function sendPortalMessageAction(formData: FormData) {
   const body = z.string().trim().min(1).max(4000).parse(formData.get("body"));
   const u = await anyUser();
   await appDb().insert(portalMessages).values({ mandateId: u.mandateId, portalUserId: u.id, direction: "in", body, author: u.name || u.email });
+  await emitEvent(appDb(), { mandateId: u.mandateId, type: "PORTAL_MESSAGE_RECEIVED", entityType: "portal_user", entityId: u.id, payload: { name: u.name || u.email, summary: body.slice(0, 200) }, actor: `portal:${u.id}` });
   redirect(note(`/portal/${u.kind}?tab=messages`, "Message sent to Regenera."));
 }
 
