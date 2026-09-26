@@ -149,3 +149,22 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Pending: AI-written brief (works through Ask the OS when ANTHROPIC_API_KEY is set; not wired into Today), portfolio
   map embedded on Today (Atlas link instead), Assign/Snooze on non-notification items.
 - Status: **Done** §07 core, §90.
+
+### Phase P9 — Document generator, PDF/DOCX, e-signature (2026-09-26)
+- Built: migration 0023 (generated_documents with versions and legal review; esign_envelopes); 27 templates
+  (lib/documents/library.ts: mutual/one-way NDA, advisory engagement, sponsor engagement, development scope, capital
+  advisory scope, broker/referral, introducer, partner MOU, collaboration, consultant SOW, EPC introduction, data room
+  access, investor qualification attestation, conflict disclosure, information request, LOI, term sheet, meeting memo,
+  investor teaser, investment memo, and data-driven reports: project brief, site intelligence, capital pathway, systems
+  assessment, monthly update, commission statement); [TO CONFIRM] for any empty field; legal documents open with
+  "DRAFT — COUNSEL REVIEW REQUIRED" and a PDF watermark until an owner records the named counsel's approval (refused
+  while items are open); versions never overwritten; PDF header "REGENERA / Regenerative Ecosystem Advisory", footer
+  with confidentiality, version, date and code; DOCX via fflate (no new dependency); e-sign provider interface with a
+  mock provider (records each signature, nothing emailed), DocuSign / Dropbox Sign adapters that report "credential
+  required", signed-PDF link as universal fallback; generator pages under Documents; downloads audited.
+- Verified: tests/integration/documents.test.ts (3) pass (draft mark, approval blockers, versioning, signature gating,
+  mock completion, report sources/unknowns, DOCX package parts); browser: site intelligence report generated for Valle
+  Solar, PDF (%PDF-, 17.8 KB) and DOCX (PK zip) downloaded.
+- Pending: charts and map snapshots inside generated PDFs (reports are text/tables), obligation extraction from an
+  approved uploaded document (obligations are entered on the agreement; §29 register already Done).
+- Status: **Done** §27, §28 (text/tables), §30.

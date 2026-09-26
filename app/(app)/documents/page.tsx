@@ -35,7 +35,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title="Documents" count={rows.length} />
+      <PageHeader title="Documents" count={rows.length} actions={<Link className="btn btn--primary" href="/documents/generator">Generate a document</Link>} />
       <Notice text={sp.notice} />
       <p className={ui.notice}>A registry, not a copy: each entry points to where the document lives (Drive, data room). New versions supersede old ones; nothing is overwritten. File uploads arrive once R2 storage is enabled.</p>
       <div className={ui.workspace}>

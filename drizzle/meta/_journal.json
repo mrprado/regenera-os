@@ -162,6 +162,13 @@
       "when": 1790453946111,
       "tag": "0022_flimsy_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790454740236,
+      "tag": "0023_flawless_kid_colt",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 // Contract PDFs in Regenera's house style: brand mark and wordmark in the header, a title block on page one,
 // numbered sections, and a footer with confidentiality, version and page numbers. Pure pdf-lib, so it runs in
 // the Worker. Text comes from the contract Markdown subset (# title, ## sections, **bold**, "- " lists, "> " notes).
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 
 const hex = (h: string) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
 const C = {
@@ -37,7 +37,7 @@ export function parseContract(md: string): Block[] {
 }
 
 /** kicker: the document's standing above the title (e.g. "Template for counsel review"); status and date go in the footer. */
-export type PdfMeta = { kicker: string; shortTitle: string; status: string; date: string };
+export type PdfMeta = { kicker: string; shortTitle: string; status: string; date: string; watermark?: string; code?: string };
 
 export async function contractPdf(md: string, meta: PdfMeta): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -171,14 +171,20 @@ export async function contractPdf(md: string, meta: PdfMeta): Promise<Uint8Array
     p.drawRectangle({ x: M, y: H - 52, width: 16, height: 16, color: C.fern });
     p.drawRectangle({ x: M + 4, y: H - 48, width: 8, height: 8, color: C.mark });
     spaced(p, "REGENERA", M + 24, H - 48.5, 10.5, bold, C.fern, 2.2);
+    p.drawText("Regenerative Ecosystem Advisory", { x: M + 24, y: H - 58, size: 6.2, font: regular, color: C.muted });
+    if (meta.watermark) {
+      const wm = safe(meta.watermark, bold);
+      const size = Math.min(34, 900 / Math.max(10, wm.length));
+      p.drawText(wm, { x: W / 2 - (bold.widthOfTextAtSize(wm, size) * Math.cos(Math.PI / 5)) / 2, y: H / 2 - 160, size, font: bold, color: C.rule, rotate: degrees(36), opacity: 0.55 });
+    }
     const right = safe(meta.shortTitle, regular).slice(0, 70);
     const rw = regular.widthOfTextAtSize(right, 8);
     p.drawText(right, { x: W - M - rw, y: H - 47, size: 8, font: regular, color: C.muted });
-    p.drawLine({ start: { x: M, y: H - 62 }, end: { x: W - M, y: H - 62 }, thickness: 0.6, color: C.rule });
+    p.drawLine({ start: { x: M, y: H - 64 }, end: { x: W - M, y: H - 64 }, thickness: 0.6, color: C.rule });
 
     p.drawLine({ start: { x: M, y: 50 }, end: { x: W - M, y: 50 }, thickness: 0.6, color: C.rule });
     p.drawText("Regenera  |  regenera.bio  |  Confidential", { x: M, y: 36, size: 7.5, font: regular, color: C.muted });
-    const mid = safe(`${meta.status}  |  ${meta.date}`, regular);
+    const mid = safe(`${meta.status}  |  ${meta.date}${meta.code ? `  |  ${meta.code}` : ""}`, regular);
     p.drawText(mid, { x: W / 2 - regular.widthOfTextAtSize(mid, 7.5) / 2, y: 36, size: 7.5, font: regular, color: C.muted });
     const pn = `Page ${i + 1} of ${pages.length}`;
     p.drawText(pn, { x: W - M - regular.widthOfTextAtSize(pn, 7.5), y: 36, size: 7.5, font: regular, color: C.muted });
