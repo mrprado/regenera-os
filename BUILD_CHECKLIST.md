@@ -168,3 +168,14 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Pending: charts and map snapshots inside generated PDFs (reports are text/tables), obligation extraction from an
   approved uploaded document (obligations are entered on the agreement; §29 register already Done).
 - Status: **Done** §27, §28 (text/tables), §30.
+
+### Phase P10 — Relationship graph and warm paths (2026-09-26)
+- Built: migration 0024 (relationship_edges: works_at, founded, owns, advises, introduced_by, invested_in,
+  partnered_with, financed, develops, supplies, contracts_with, referred, met_at, knows; strength, since, note);
+  lib/graph/graph.ts builds the graph from records (contacts at organizations, mailbox correspondence strength,
+  introductions, project parties, contract parties, bids, Regenera's projects) plus manual edges; warm paths = cheapest
+  paths from Regenera (cost 1/strength), each hop with its reason; ego network; /relationships page with path finder,
+  SVG network view and manual edge entry; sidebar entry.
+- Verified: tests/unit/graph.test.ts (2) pass; browser: warm path to Valle Solar found with its reason; network view
+  renders.
+- Status: **Done** §14 (graph, warm paths). Gmail/Calendar outreach (§15) already existed (approved one-to-one sends).
