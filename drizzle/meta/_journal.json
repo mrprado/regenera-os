@@ -141,6 +141,13 @@
       "when": 1790452179102,
       "tag": "0019_tiny_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790452645213,
+      "tag": "0020_public_miracleman",
+      "breakpoints": true
     }
   ]
 }

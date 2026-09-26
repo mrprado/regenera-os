@@ -81,3 +81,13 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
   with both autonomous tools done (place profile queued, study gaps listed), review steps open, definition of done
   2/2 checks pass, run stays "needs review" until the review steps are done; project overview renders the claims panel.
 - Status: **Done** §22, §23, §24 (claims/evidence), §44 (step governance), §74 (claims as-of).
+
+### Phase P4 — Systems and interventions (2026-09-26)
+- Built: migration 0020 (system_assessments, interventions); project Systems tab (11 categories; baseline →
+  dependencies → impacts → thresholds → risks → opportunities → future state; capacity; implications for durability,
+  development, operating, permitting, capital, cost; framework mapping TNFD/IFC PS/ISSB as reference only; review needs
+  sources); interventions with cost basis, outcome, linked risk, funding pathway, partner, and "Create capital need"
+  (capital requirement linked); /systems portfolio matrix; sidebar Intelligence → Atlas, Systems.
+- Verified: browser on Valle Solar: water assessment saved (constrained), intervention added, capital requirement
+  created and linked. Typecheck clean.
+- Status: **Done** §20, §21.
