@@ -1,0 +1,22 @@
+# CI (master build instruction §97): lint, typecheck, tests (real local D1 via wrangler, no provider keys: adapters use
+# fixtures) and production build. Deploy stays manual (npm run deploy) because it needs Cloudflare credentials.
+name: ci
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test

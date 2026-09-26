@@ -191,3 +191,54 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Verified: tests/integration/demo.test.ts (idempotent, labels, removal) passes; browser: loaded locally, the four
   DEMO projects list and Today ranks the DEMO grid constraint.
 - Status: **Done** §89, §90, §91.
+
+### Phase P12 — Documentation, CI, final verification (2026-09-26)
+- Built: README.md; docs/ARCHITECTURE, SECURITY (merged with the earlier security notes), OPERATIONS, DEPLOYMENT,
+  COMPLIANCE, DOCUMENTS, DATA_MODEL, DATA_SOURCES (+ PORTALS, PLAYBOOKS, API_INTEGRATIONS from earlier phases);
+  .github/workflows/ci.yml (install, lint, typecheck, build, test; no provider keys); `npm run verify`.
+- Verified (actual run): `npm run ci` → lint clean, typecheck clean, Vitest 46 files / 262 tests passed, map discovery
+  test 5/5, production build complete, exit 0.
+
+## Definition of Done (§104) — actual status
+| Item | Status | Evidence / note |
+|---|---|---|
+| Internal authenticated application | Done | Live at regenera.bio/os; route-guard test |
+| Command with seeded data | Done | Browser: strip + 13 ranked items with demo data |
+| Projects CRUD / Project Digital Record | Done | Existing + new Plan, Engineering, Materials, Procurement, Systems, Economics, Risk & E&S, claims panel |
+| Relationships graph / warm paths | Done | tests/unit/graph.test.ts; browser |
+| Capital profiles, mandates, explained matching | Done | Existing (phase 6 M2) |
+| Funding pathways | Partial | Funding radar, capital pathway report, intervention funding pathway; no dedicated FundingPathway object |
+| Capital stack builder | Partial | Requirements/tranches with shares in the capital pathway report; Economics scenarios; no interactive builder |
+| Deals and stage gates | Partial | Opportunities existing; evidence gates on project stages; deal (tracker) stages ungated |
+| Engagement / commercial records | Done | Contracts per engagement, fees, success-fee review flag |
+| Atlas renders, layers toggle, site polygon | Done | Browser |
+| Site Intelligence playbook runs | Done | Browser + test |
+| Systems assessment | Done | Browser |
+| Intelligence records / signals | Done | Existing Intelligence |
+| Trigger engine | Done | tests/integration/events.test.ts |
+| Evidence / provenance | Done | Claims + place-fact provenance; tests |
+| Documents upload / extract / version | Partial | Registry and versions Done; file upload waits for R2; automatic extraction not built |
+| Data rooms enforce access | Done | Portal tests |
+| PDF / DOCX / contract template generation | Done | Document tests; browser downloads |
+| Contract obligations | Done | Existing register |
+| Playbook engine, definition-of-done checks, human approval states | Done | Playbook tests; browser |
+| Compliance issues | Done | Regulatory, E&S, gates, distribution |
+| Sponsor portal | Built | View model tested; page shares components with the browser-verified portals |
+| Capital, broker, partner portals; referral registration; conflict checks; commissions | Done | Portal tests + browser |
+| Portal security tests (§93–94) | Done | Server-enforced (no RLS on D1); tests/integration/portal.test.ts |
+| Integration center; no-key integrations run; credential adapters show disconnected | Done | PVGIS and Copernicus STAC checked live; registry states |
+| Search | Done | Existing Cmd+K (new entity types not yet indexed) |
+| Notifications | Done | Events test; browser |
+| Ask Regenera with AI / without AI | External / Done | Needs ANTHROPIC_API_KEY in production; degrades to unavailable without it |
+| Audit logging | Done | Across approvals, access and changes |
+| Demo data identifies itself | Done | tests/integration/demo.test.ts |
+| No secrets committed | Done | .env.example names only |
+| lint / typecheck / test / build | Done | `npm run ci` exit 0 (npm, not pnpm) |
+| README, API_INTEGRATIONS, SECURITY, PORTALS, BUILD_CHECKLIST | Done | This commit |
+| E2E browser tests (Playwright) | Not built | Flows verified manually in the browser each phase |
+
+## Remaining external configuration (Prado)
+Workers Paid (CPU); secrets (setup-secrets, OS_PASSWORD); R2 (file uploads, signed URLs); ANTHROPIC_API_KEY; provider
+keys (EIA, NOAA, FIRMS, ENTSO-E, FRED, NREL, Companies House …); licences (Protected Planet, IBAT, PJM, Open-Meteo);
+e-signature account if wanted; counsel review of every legal template before first use; revoke the Cloudflare API key
+pasted earlier in chat.

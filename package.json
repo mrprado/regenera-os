@@ -18,6 +18,8 @@
     "db:migrate:local": "node scripts/db-local.mjs migrate",
     "db:seed:local": "node scripts/db-local.mjs seed",
     "ci": "npm run lint && npm run typecheck && npm test && npm run build",
+    "verify": "npm run ci",
+    "docs:integrations": "tsx scripts/gen-api-integrations.ts",
     "build:maplibre-worker": "esbuild node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs --bundle --format=esm --outfile=public/maplibre-gl-worker.js --minify",
     "deploy": "npm run build && node scripts/deploy.mjs"
   },

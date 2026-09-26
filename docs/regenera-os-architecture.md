@@ -14,7 +14,7 @@ constraints and planning workflows. Parcel databases, geometry tools and offline
 One Cloudflare Worker (`regenera-os`) serves regenera.bio/os: Next 16 (App Router, React 19) built with vinext,
 basePath `/os`, Worker routes in front of the public site. D1 (SQLite, Drizzle) holds all data; R2 is planned for
 file storage. A cron trigger (every 5 minutes) runs the job tick; jobs live in the D1 `jobs` table with cadences,
-retries and budgets. See docs/deployment.md.
+retries and budgets. See docs/DEPLOYMENT.md.
 
 ## The graph
 Everything is one relational model scoped by **entity** (Regenera, RA-ESG, GWCe; table `mandates`):
