@@ -31,6 +31,20 @@ declare namespace Cloudflare {
     SENDING_DOMAIN?: string;
     SENDING_WARMUP_STARTED?: string;
     PRIMARY_DAILY_CAP?: string;
+    PORTAL_STAKEHOLDER?: string;
+    EIA_API_KEY?: string;
+    NOAA_CDO_TOKEN?: string;
+    NASA_FIRMS_MAP_KEY?: string;
+    ENTSOE_TOKEN?: string;
+    FRED_API_KEY?: string;
+    PROTECTED_PLANET_TOKEN?: string;
+    PROTECTED_PLANET_COMMERCIAL_LICENSE?: string;
+    COPERNICUS_STAC_URL?: string;
+    IMF_SDMX_URL?: string;
+    NOMINATIM_URL?: string;
+    ESIGN_PROVIDER?: string;
+    DROPBOX_SIGN_API_KEY?: string;
+    DOCUSIGN_CLIENT_ID?: string;
     SENDING_DAILY_CAP?: string;
   }
 }

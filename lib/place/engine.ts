@@ -3,6 +3,7 @@
 import { and, asc, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { placeFacts, projects } from "@/db/schema";
+import { pvgis } from "@/lib/integrations/adapters";
 import { gbifBiodiversity, nasaPower, overpassInfrastructure, usgsSeismic, wbIndicators, type PlaceFact } from "./adapters";
 
 export type PlaceBuild = { written: number; failed: { source: string; error: string }[] };
@@ -15,6 +16,7 @@ export async function buildPlaceProfile(db: Db, projectId: string, fetchImpl?: t
   const tasks: [string, () => Promise<PlaceFact[]>][] = [
     ...(hasPoint ? [
       ["nasa_power", () => nasaPower(db, p.lat!, p.lng!, fetchImpl)],
+      ["pvgis", () => pvgis(db, p.lat!, p.lng!, fetchImpl)],
       ["overpass", () => overpassInfrastructure(db, p.lat!, p.lng!, fetchImpl)],
       ["usgs_quakes", () => usgsSeismic(db, p.lat!, p.lng!, fetchImpl)],
       ["gbif", () => gbifBiodiversity(db, p.lat!, p.lng!, fetchImpl)],

@@ -36,6 +36,7 @@ const fake = (routes: [RegExp, unknown | ((url: string) => Response)][]) => {
 };
 
 const POWER = { properties: { parameter: { ALLSKY_SFC_SW_DWN: { ANN: 5.87 }, T2M: { ANN: 26.1 }, PRECTOTCORR: { ANN: 3.2 }, WS10M: { ANN: 3.4 } } } };
+const PVGIS = { inputs: { location: { latitude: 20.97, longitude: -89.62 } }, outputs: { totals: { fixed: { E_y: 1712.4, "H(i)_y": 2210.2, SD_y: 41.3 } } } };
 const WB_COUNTRIES = [{}, [{ id: "MEX", iso2Code: "MX", name: "Mexico" }, { id: "PER", iso2Code: "PE", name: "Peru" }]];
 const WB_VALUE = [{}, [{ date: "2023", value: 99.4 }]];
 const OVERPASS = { elements: [
@@ -104,7 +105,7 @@ describe("place profile", () => {
   it("writes facts with provenance; a failing source keeps its old facts, marked stale", async () => {
     await ensureIntegrations(t.db);
     const p = await createProject(t.db, { mandateId: M, name: "Valle Solar", country: "Mexico", lat: 20.97, lng: -89.62 }, "alan");
-    const all = fake([[/power\.larc/, POWER], [/country\?format/, WB_COUNTRIES], [/indicator/, WB_VALUE], [/overpass-api/, OVERPASS], [/count\?/, { count: 0 }], [/occurrence/, { count: 10, facets: [{ counts: [] }] }]]);
+    const all = fake([[/power\.larc/, POWER], [/re\.jrc/, PVGIS], [/country\?format/, WB_COUNTRIES], [/indicator/, WB_VALUE], [/overpass-api/, OVERPASS], [/count\?/, { count: 0 }], [/occurrence/, { count: 10, facets: [{ counts: [] }] }]]);
     const first = await buildPlaceProfile(t.db, p.id, all.f, NOW);
     expect(first.failed).toEqual([]);
     expect(first.written).toBeGreaterThan(15);
@@ -112,7 +113,7 @@ describe("place profile", () => {
     expect(ghi).toMatchObject({ integrationKey: "nasa_power", tier: 2, state: "api_derived", retrievedAt: NOW.toISOString() });
 
     await t.db.delete(sourceCache); // force live calls
-    const nasaDown = fake([[/power\.larc/, () => new Response("down", { status: 503 })], [/country\?format/, WB_COUNTRIES], [/indicator/, WB_VALUE], [/overpass-api/, OVERPASS], [/count\?/, { count: 0 }], [/occurrence/, { count: 10, facets: [{ counts: [] }] }]]);
+    const nasaDown = fake([[/power\.larc/, () => new Response("down", { status: 503 })], [/re\.jrc/, PVGIS], [/country\?format/, WB_COUNTRIES], [/indicator/, WB_VALUE], [/overpass-api/, OVERPASS], [/count\?/, { count: 0 }], [/occurrence/, { count: 10, facets: [{ counts: [] }] }]]);
     const second = await buildPlaceProfile(t.db, p.id, nasaDown.f, new Date("2026-10-24T12:00:00Z"));
     expect(second.failed.map(f => f.source)).toEqual(["nasa_power"]);
     expect((await t.db.select().from(placeFacts).where(eq(placeFacts.key, "solar_ghi")))[0].state).toBe("stale");

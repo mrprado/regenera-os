@@ -65,7 +65,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-26.2";
+const REFERENCE_VERSION = "2026-09-26.3";
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {

@@ -1,5 +1,6 @@
 "use server";
 
+import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { clearIntegrationCache, ensureIntegrations } from "@/lib/integrations/engine";
 import { buildPlaceProfile } from "@/lib/place/engine";
+import { probe, PROBES } from "@/lib/integrations/adapters";
 
 const zId = z.string().uuid();
 const note = (path: string, text: string) => `${path}${path.includes("?") ? "&" : "?"}notice=${encodeURIComponent(text)}`;
@@ -41,4 +43,17 @@ export async function setIntegrationStateAction(formData: FormData) {
 export async function seedIntegrationsAction() {
   await withOsUser(async () => { await ensureIntegrations(appDb()); }, { owner: true });
   redirect(note("/settings/integrations", "Registry refreshed from the code catalog (owner changes kept)."));
+}
+
+/** Runs a real, cheap call against a provider (never fixtures) and reports the result. Owner only. */
+export async function testIntegrationAction(formData: FormData) {
+  const key = z.string().parse(formData.get("key"));
+  let msg = "";
+  await withOsUser(async () => {
+    if (!PROBES.includes(key)) throw new Error("No test for this provider");
+    clearIntegrationCache();
+    const r = await probe(appDb(), key, env as unknown as Record<string, string | undefined>);
+    msg = `${key}: ${r.ok ? "OK" : "not available"}: ${r.detail}`;
+  }, { owner: true });
+  redirect(note("/settings/integrations", msg));
 }

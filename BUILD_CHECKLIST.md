@@ -103,3 +103,20 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
   named; /notifications inbox, rules, gates and event log render.
 - Status: **Done** §09 (stage gates), §17, §62, §75. Deal (tracker) stages keep the live-site vocabulary; gates apply
   to project stages.
+
+### Phase P6 — Integrations (2026-09-26)
+- Built: adapters (lib/integrations/adapters.ts) for PVGIS (now in the place profile), Copernicus STAC (scene
+  metadata, no raster downloads), EIA v2, NOAA CDO, NASA FIRMS, ENTSO-E, FRED, IMF SDMX (configurable base), Protected
+  Planet (refuses unless PROTECTED_PLANET_COMMERCIAL_LICENSE=true and a token); fetchJson text mode for CSV/XML;
+  registry grown to 61 providers (public Nominatim → development only with the OSMF limits, self-hosted Nominatim,
+  SoilGrids disabled (REST paused), Google Places/Solar disabled (paid), ERCOT/CAISO/PJM, e-signature, accounting,
+  Stripe, Sentry registered off); Integration Center "Test" (one real call, owner); .env.example (names only);
+  docs/API_INTEGRATIONS.md generated from the registry (scripts/gen-api-integrations.ts).
+- Verified: tests/unit/adapters.test.ts (6) + place test with PVGIS fixture pass; live checks: PVGIS for Mérida returned
+  1,519 kWh/kWp/yr through the adapter's schema and normalizer; Copernicus STAC returned 20 real Sentinel-2 scenes
+  (base moved to stac.dataspace.copernicus.eu/v1; default updated).
+- External: keys for EIA, NOAA, FIRMS, ENTSO-E, FRED, Companies House, NREL …; commercial licences for Protected
+  Planet, IBAT, PJM, Open-Meteo; Google billing if ever wanted.
+- Status: **Done** §49–51 (framework, spatial/earth, ecology/land within licences), §52 (EIA, ENTSO-E; ERCOT/CAISO/PJM
+  registered), §53 (PVGIS + NASA POWER; Google Solar optional/off), §54 (World Bank, IMF, FRED), §55 (EDGAR, GDELT,
+  Companies House existing), §57–60 (registry, center, .env.example, licence fields).

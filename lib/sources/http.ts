@@ -76,6 +76,8 @@ export type FetchJsonOptions<T> = {
   now?: Date;
   /** When every attempt fails, return the last cached copy (even expired) instead of throwing. */
   staleOnError?: boolean;
+  /** "text" for CSV / XML sources (the schema then validates a string). */
+  as?: "json" | "text";
 };
 
 /** GET/POST JSON with identification, retries on 429/5xx, zod validation, cache and ledger. */
@@ -112,7 +114,7 @@ async function fetchJsonOnce<T>(db: Db, o: FetchJsonOptions<T>, now: Date): Prom
     try {
       res = await doFetch(o.url, {
         ...o.init,
-        headers: { "user-agent": USER_AGENT, accept: "application/json", ...(o.init?.headers ?? {}) },
+        headers: { "user-agent": USER_AGENT, accept: o.as === "text" ? "*/*" : "application/json", ...(o.init?.headers ?? {}) },
         signal: AbortSignal.timeout(o.timeoutMs ?? 20_000),
       });
     } catch (error) {
@@ -124,7 +126,7 @@ async function fetchJsonOnce<T>(db: Db, o: FetchJsonOptions<T>, now: Date): Prom
     if (res.ok) {
       let data: T;
       try {
-        data = o.schema.parse(await res.json());
+        data = o.schema.parse(o.as === "text" ? await res.text() : await res.json());
       } catch (error) {
         await logCall(db, { provider: o.provider, endpoint: o.endpoint, ok: false, httpStatus: res.status, detail: `invalid response: ${(error as Error).message}` });
         throw new SourceError(o.provider, "response did not match the expected shape", res.status);

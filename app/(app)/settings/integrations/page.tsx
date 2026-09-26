@@ -6,7 +6,8 @@ import { integrations } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { appDb, isOwner } from "@/lib/db/scoped";
 import { integrationHealth } from "@/lib/integrations/engine";
-import { seedIntegrationsAction, setIntegrationStateAction } from "../../place-actions";
+import { PROBES } from "@/lib/integrations/adapters";
+import { seedIntegrationsAction, setIntegrationStateAction, testIntegrationAction } from "../../place-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Integrations" };
@@ -23,7 +24,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   return (
     <>
       <Notice text={sp.notice} />
-      <p className={ui.notice}>Every external source, its licence and what we may do with its data. A public API is not an unrestricted commercial licence. Disabled and licence-required sources are never called. Health comes from the call ledger.</p>
+      <p className={ui.notice}>Every external source, its licence and what we may do with its data. A public API is not an unrestricted commercial licence. Disabled and licence-required sources are never called. Health comes from the call ledger. Test makes one real call; keys are read server-side and never shown.</p>
       {rows.length === 0 ? (
         <form action={seedIntegrationsAction}><button className="btn btn--primary" type="submit" disabled={!owner}>Load the integration registry</button></form>
       ) : (
@@ -39,7 +40,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   <td className={ui.wrap}>{i.licenseUrl ? <a href={i.licenseUrl} target="_blank" rel="noreferrer">{i.license}</a> : i.license}
                     <span className={ui.sub}>Commercial: {i.commercialUse} · Attribution: {i.attribution} · Caching: {i.caching} · Redistribution: {i.redistribution}</span></td>
                   <td>{i.auth === "none" ? "Open" : i.auth}{i.envVar && <span className={ui.sub}>{i.envVar}: {credential}</span>}<span className={ui.sub}>{i.rateLimit} · refresh {i.refresh}</span></td>
-                  <td>{h ? <>{h.calls24h} calls, {h.failures24h} failed<span className={ui.sub} style={{ color: h.failures24h ? "#b0432f" : undefined }}>Last success {h.lastSuccess?.slice(0, 16).replace("T", " ") ?? "never"}{h.lastError && h.failures24h ? ` · ${h.lastError.slice(0, 80)}` : ""}</span></> : <span className={ui.chipMuted}>No calls yet</span>}</td>
+                  <td>{h ? <>{h.calls24h} calls, {h.failures24h} failed<span className={ui.sub} style={{ color: h.failures24h ? "#b0432f" : undefined }}>Last success {h.lastSuccess?.slice(0, 16).replace("T", " ") ?? "never"}{h.lastError && h.failures24h ? ` · ${h.lastError.slice(0, 80)}` : ""}</span></> : <span className={ui.chipMuted}>No calls yet</span>}
+                    {owner && PROBES.includes(i.key) && i.featureState !== "disabled" && i.featureState !== "license_required" && <form action={testIntegrationAction} style={{ marginTop: 4 }}><input type="hidden" name="key" value={i.key} /><button className={ui.miniBtn} type="submit">Test</button></form>}</td>
                   <td>{owner ? (
                     <form action={setIntegrationStateAction} style={{ display: "flex", gap: 4 }}>
                       <input type="hidden" name="key" value={i.key} />
