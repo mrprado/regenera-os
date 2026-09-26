@@ -29,8 +29,12 @@ import EngineeringTab from "../engineering-tab";
 import EconomicsTab from "../economics-tab";
 import MaterialsTab from "../materials-tab";
 import ProcurementTab from "../procurement-tab";
+import ClaimsPanel from "../claims-panel";
+import { runPlaybookOnProjectAction } from "../../playbook-actions";
 
 export const dynamic = "force-dynamic";
+
+const PLAYBOOK_CHOICES = [["project-intake", "Project intake"], ["project-qualification", "Project qualification"], ["site-intelligence", "Site intelligence"], ["solar-project-screen", "Solar project screen"], ["capital-pathway-analysis", "Capital pathway analysis"], ["compliance-screen", "Compliance screen"], ["data-room-audit", "Data room audit"], ["system-capacity-assessment", "System capacity assessment"], ["project-update", "Monthly project update"]] as const;
 export const metadata = { title: "Project" };
 
 const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
@@ -100,6 +104,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 ))}</dl>
               )}
             </section>
+            <ClaimsPanel entityType="project" entityId={p.id} back={`/projects/${p.id}`} />
             <section className={r.panel}>
               <p className={r.panelTitle}>Identity and place</p>
               <form action={updateProjectAction}>
@@ -153,6 +158,14 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <ul className={r.timeline} style={{ marginTop: 10 }}>{data.history.slice(0, 6).map(h => (
                 <li key={h.id}><span className={r.when}>{h.at.slice(0, 10)}</span><span>{h.fromStage ? `${stageLabel(h.fromStage)} → ` : ""}{stageLabel(h.toStage)}{h.reason ? ` · ${h.reason}` : ""}</span></li>
               ))}</ul>
+            </section>
+            <section className={r.panel}>
+              <p className={r.panelTitle}>Run a playbook</p>
+              <form action={runPlaybookOnProjectAction} className={styles.stack}>
+                <input type="hidden" name="projectId" value={p.id} />
+                <select name="key" aria-label="Playbook" defaultValue="project-qualification">{PLAYBOOK_CHOICES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                <button className="btn" type="submit">Start</button>
+              </form>
             </section>
             <section className={r.panel}>
               <p className={r.panelTitle}>Add an action</p>

@@ -1,3 +1,4 @@
+import { ensurePlaybooks } from "@/lib/playbooks/engine";
 import type { Db } from "@/db";
 import { inArray } from "drizzle-orm";
 import { triggerQueries } from "@/db/schema";
@@ -63,7 +64,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-24.9";
+const REFERENCE_VERSION = "2026-09-26.1";
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {
@@ -76,6 +77,7 @@ export async function ensureReferenceData(db: Db): Promise<void> {
   await ensureInvestmentMandates(db);
   await ensureSequences(db, REGENERA_MANDATE_ID);
   await ensureSavedSearches(db, REGENERA_MANDATE_ID);
+  await ensurePlaybooks(db, REGENERA_MANDATE_ID);
   await ensureListSources(db);
   // Phase 5: EU TED and World Bank tenders now live in Funding, not Triggers.
   await db.update(triggerQueries).set({ enabled: false }).where(inArray(triggerQueries.source, ["ted", "worldbank"]));

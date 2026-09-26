@@ -71,3 +71,13 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
   capital and partner invites render every tab; cross-portal URLs redirect to the user's own portal.
 - Status: **Done** for §31–35, §37, §46 (portal scope), §69, §93, §94. §36 sponsor portal Built (view tested; page
   rendered through tests of its view, not a browser pass). §38 Built behind flag.
+
+### Phase P2 — Playbook engine + learning loop; P3 — claims and evidence (2026-09-26)
+- Built: migration 0019 (playbooks, playbook_versions, playbook_runs, playbook_corrections, claims, claim_evidence);
+  20-playbook library; runner with tools, governance, proof checks, approval; corrections → draft versions → owner
+  promotion; repeat detection; claims with evidence, verification rule, supersession and as-of queries; /playbooks,
+  /playbooks/[id], /playbooks/runs/[id]; project "What we know, and how" panel; "Run site intelligence".
+- Verified: tests/integration/playbooks.test.ts (5 tests) pass; browser: Run site intelligence on Valle Solar → run
+  with both autonomous tools done (place profile queued, study gaps listed), review steps open, definition of done
+  2/2 checks pass, run stays "needs review" until the review steps are done; project overview renders the claims panel.
+- Status: **Done** §22, §23, §24 (claims/evidence), §44 (step governance), §74 (claims as-of).

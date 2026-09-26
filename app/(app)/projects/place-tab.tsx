@@ -6,6 +6,7 @@ import { placeFacts } from "@/db/schema";
 import { appDb } from "@/lib/db/scoped";
 import { PLACE_DIMENSIONS, PLACE_GAPS } from "@/lib/place/engine";
 import { buildPlaceAction } from "../place-actions";
+import { runPlaybookOnProjectAction } from "../playbook-actions";
 
 const TIER: Record<number, string> = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Tier 4", 5: "Tier 5" };
 
@@ -18,7 +19,7 @@ export default async function PlaceTab({ project }: { project: { id: string; lat
     <>
       <section className={r.panel}>
         <p className={r.panelTitle}><span>Place profile</span>
-          <form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">{facts.length ? "Refresh" : "Build place profile"}</button></form></p>
+          <span style={{ display: "flex", gap: 6 }}><form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={project.id} /><input type="hidden" name="key" value="site-intelligence" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Run site intelligence</button></form><form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={ui.miniBtn} type="submit">{facts.length ? "Refresh facts" : "Build place profile"}</button></form></span></p>
         <p className={ui.sub} style={{ marginTop: 0 }}>
           {project.lat === null ? "Set the project coordinates on the Overview tab for site-level facts (solar, climate, infrastructure, seismic, biodiversity). " : `Site ${project.lat}, ${project.lng}. `}
           Facts come from NASA POWER, World Bank, OpenStreetMap, USGS and GBIF, each with its tier and licence. They describe context and are not a site assessment.
