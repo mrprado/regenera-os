@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
