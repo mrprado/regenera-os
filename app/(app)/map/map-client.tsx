@@ -11,6 +11,7 @@ import type { MapPayload } from "@/lib/map/features";
 import { coordinateLabel, discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, safeWebsite, type MapRecord } from "@/lib/map/discovery";
 import { SECTORS, TERRITORIAL_SYSTEMS } from "@/lib/vocab";
 import styles from "./map.module.css";
+import { DrawPanel, LibraryPanel, SiteContext, useAtlas } from "./atlas-tools";
 import { withBase } from "@/lib/base-path";
 
 maplibregl.setWorkerUrl(withBase("/maplibre-gl-worker.js"));
@@ -149,7 +150,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const [hazards, setHazards] = useState<FeatureCollection | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"layers" | "directory">("directory");
+  const [panel, setPanel] = useState<"layers" | "directory" | "library" | "draw">("directory");
   const [country, setCountry] = useState("");
   const [sector, setSector] = useState("");
   const [topic, setTopic] = useState("");
@@ -157,6 +158,9 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const records = useMemo(() => data ? mapRecords(data) : [], [data]);
   const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);
   const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const onSelectProject = useCallback((props: Record<string, unknown>, lngLat: [number, number]) => setSelected({ layer: "projects", props, lngLat }), []);
+  const atlas = useAtlas(mapRef, mapReady, onSelectProject);
+  const projectChoices = useMemo(() => (data?.projects.features ?? []).map(f => ({ id: String(f.properties.id), name: String(f.properties.name) })), [data]);
 
   // Load the accessible directory independently of WebGL and basemap availability.
   useEffect(() => {
@@ -320,7 +324,11 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
         <div className={styles.panelTabs}>
           <button type="button" aria-pressed={panel === "directory"} onClick={() => setPanel("directory")}>Directory</button>
           <button type="button" aria-pressed={panel === "layers"} onClick={() => setPanel("layers")}>Layers</button>
+          <button type="button" aria-pressed={panel === "library"} onClick={() => setPanel("library")}>Library</button>
+          <button type="button" aria-pressed={panel === "draw"} onClick={() => setPanel("draw")}>Draw</button>
         </div>
+        {panel === "library" && <LibraryPanel atlas={atlas} />}
+        {panel === "draw" && <DrawPanel atlas={atlas} projects={projectChoices} />}
         {panel === "directory" && <>
           <div className={styles.filters}>
             <label>Country<select value={country} onChange={e => { setCountry(e.target.value); setLimit(50); }}><option value="">All countries</option>{discoveryOptions(records, "country").map(v => <option key={v} value={v}>{v}</option>)}</select></label>
@@ -415,7 +423,9 @@ function Detail({ selected }: { selected: NonNullable<Selected> }) {
       <h3>{p.name}</h3>
       <p className={styles.meta}>{[p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}` : null, p.country].filter(Boolean).join(" · ")}</p>
       {p.description && <p className={styles.read}>{p.description}</p>}
+      {p.areaKm2 != null && <p className={styles.meta}>Boundary: {(Number(p.areaKm2) * 100).toLocaleString("en-US", { maximumFractionDigits: 1 })} ha</p>}
       <Link className={styles.open} href={`/projects/${p.id}`}>Open project</Link>
+      <SiteContext projectId={String(p.id)} />
       <div className={styles.links}>
         <Link className={styles.open} href={`/projects/${p.id}?tab=place`}>Place evidence</Link>
         <Link className={styles.open} href={`/projects/${p.id}?tab=partners`}>Partners</Link>

@@ -128,3 +128,4 @@ export * from "./playbooks";
 export * from "./evidence";
 export * from "./systems";
 export * from "./events";
+export * from "./spatial";

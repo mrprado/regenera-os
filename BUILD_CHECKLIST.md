@@ -120,3 +120,19 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Status: **Done** §49–51 (framework, spatial/earth, ecology/land within licences), §52 (EIA, ENTSO-E; ERCOT/CAISO/PJM
   registered), §53 (PVGIS + NASA POWER; Google Solar optional/off), §54 (World Bank, IMF, FRED), §55 (EDGAR, GDELT,
   Companies House existing), §57–60 (registry, center, .env.example, licence fields).
+
+### Phase P7 — Atlas and spatial engine (2026-09-26)
+- Built: migration 0022 (spatial_layers with provider, source/retrieval dates, licence, resolution, coverage,
+  confidence, bbox, is_demo); lib/geo/geo.ts (geodesic area/length, GeoJSON validation, KML placemarks, CSV points,
+  bbox, viewport clipping, 5 MB / 20k feature limits); /api/map/layers (library), /api/map/layers/[id]?bbox= (features
+  clipped server-side to the view), /api/map/areas (project boundaries with area), /api/map/site (site context grouped
+  Energy / Infrastructure / Water / Ecology / Climate / Community / Land / Permitting with source, tier, date);
+  Atlas panel tabs Library (toggle, provenance, import, remove) and Draw (draw site, measure, undo, clear, save as a
+  project boundary, create a project here, export GeoJSON); selected project shows site context and "Run site
+  intelligence"; Map renamed Atlas.
+- Verified: tests/unit/geo.test.ts (4) pass; browser: layer imported through the form (2 features), library lists it
+  with licence, bbox fetch returns 2 in view and 0 far away; four clicks on the globe drew a polygon with computed area
+  and the save/create forms appeared.
+- Pending: zipped shapefile, KMZ and GeoTIFF direct import (documented: convert to GeoJSON), PMTiles/vector tiles for
+  very large layers, compare and scenario selector, bookmarks, Cesium 3D (MapLibre globe + terrain already available).
+- Status: **Done** §18 core, §19 core; items above Pending.
