@@ -21,6 +21,8 @@ import { obligationAlerts } from "@/lib/contracts/register";
 import { regulatoryAlerts } from "@/lib/regulatory/engine";
 import { deliveryAlerts } from "@/lib/delivery/engine";
 import { procurementAlerts } from "@/lib/procurement/engine";
+import { changesSinceLastSession, needsAttention, operatingStrip } from "@/lib/command/attention";
+import { compactMoney } from "@/lib/projects/labels";
 import { ES_TOPICS, INSURANCE_TYPES, STUDY_TYPES } from "@/lib/delivery/vocab";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +37,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const user = await requireOsUser("/today");
   const sp = await searchParams;
   const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery, procurement] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds), deliveryAlerts(appDb(), user.scope.mandateIds), procurementAlerts(appDb(), user.scope.mandateIds)]);
+  const [attention, strip, changes] = await Promise.all([
+    needsAttention(appDb(), user.scope.mandateIds, user.email, new Date(), { pa: projectFlags, del: delivery, proc: procurement, reg: regFlags, obl: obligationFlags }),
+    operatingStrip(appDb(), user.scope.mandateIds),
+    changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
+  ]);
+  const showAll = sp.attention === "all";
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
   const [gateQueue] = await appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
@@ -49,8 +57,50 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const apollo = apolloConfig();
   return (
     <>
-      <PageHeader title={`Good to see you, ${first}`} />
+      <PageHeader title={`Good to see you, ${first}`} actions={<Link className="btn" href="/map">Atlas</Link>} />
       <Notice text={sp.notice} />
+      <div className={ui.stats}>
+        <Stat n={strip.projects} label="Projects" href="/projects" />
+        <Stat n={strip.deals} label="Active opportunities" href="/deals" />
+        <Stat n={strip.capital.length ? strip.capital.map(c => compactMoney(c.gap, c.currency)).join(" + ") : "0"} label="Capital still to raise (open requirements)" href="/capital" />
+        <Stat n={strip.investors} label="Capital partner profiles" href="/capital" />
+        <Stat n={strip.criticalRisks} label="High-impact open risks" href="/projects" warn />
+      </div>
+      <div className={r.grid}>
+        <section className={r.panel}>
+          <p className={r.panelTitle}><span>Needs attention</span><span className={ui.sub}>{attention.length} items · ranked by severity, then due date</span></p>
+          {attention.length === 0 ? <p className={r.empty}>Nothing needs attention across projects, capital, contracts, compliance, documents and playbooks.</p> : (
+            <table className={ui.table}>
+              <thead><tr><th>Severity</th><th>Issue</th><th>Why it matters</th><th>Owner</th><th>Due</th><th>Source</th><th /></tr></thead>
+              <tbody>{attention.slice(0, showAll ? 200 : 12).map(a => (
+                <tr key={a.key}>
+                  <td><span className={ui.chip} style={{ color: a.severity === "critical" || a.severity === "high" ? "#b0432f" : undefined }}>{a.severity}</span></td>
+                  <td><b>{a.entity}</b><span className={ui.sub} style={{ display: "block" }}>{a.issue}</span></td>
+                  <td className={ui.sub}>{a.why}</td>
+                  <td className={ui.sub}>{a.owner ?? "—"}</td>
+                  <td className={ui.sub}>{a.due ?? "—"}</td>
+                  <td className={ui.sub}>{a.source}</td>
+                  <td><Link className={ui.miniBtn} href={a.href}>Open</Link></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+          {attention.length > 12 && <p className={ui.sub}>{showAll ? <Link href="/today">Show the top 12</Link> : <Link href="/today?attention=all">Show all {attention.length}</Link>}</p>}
+        </section>
+        <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}>What changed since your last session</p>
+            <p className={ui.sub} style={{ marginTop: 0 }}>Since {changes.since.slice(0, 16).replace("T", " ")} UTC, from the event log (each links to its record).</p>
+            {changes.events.length === 0 ? <p className={r.empty}>No recorded changes by others.</p> : (
+              <ul className={r.timeline}>{changes.events.slice(0, 12).map(e => {
+                const href = e.entityType === "project" && e.entityId ? `/projects/${e.entityId}` : e.entityType === "playbook_run" && e.entityId ? `/playbooks/runs/${e.entityId}` : e.entityType === "referral" ? "/portals?tab=referrals" : e.entityType === "intake" ? "/portals?tab=intake" : "/notifications?tab=events";
+                const name = String(e.payload.name ?? "");
+                return <li key={e.id}><span className={r.when}>{e.at.slice(5, 16).replace("T", " ")}</span><span><Link href={href}>{e.type.replace(/_/g, " ").toLowerCase()}</Link>{name ? `: ${name}` : ""}{e.payload.to ? ` → ${String(e.payload.to).replace(/_/g, " ")}` : ""}</span></li>;
+              })}</ul>
+            )}
+          </section>
+        </aside>
+      </div>
       {alerts.length > 0 && <p className={ui.notice}><Link href="/settings/sending">Sending</Link>: {alerts.join(" · ")}</p>}
       {pending.length > 0 && (
         <section className={r.panel}>

@@ -136,3 +136,16 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Pending: zipped shapefile, KMZ and GeoTIFF direct import (documented: convert to GeoJSON), PMTiles/vector tiles for
   very large layers, compare and scenario selector, bookmarks, Cesium 3D (MapLibre globe + terrain already available).
 - Status: **Done** §18 core, §19 core; items above Pending.
+
+### Phase P8 — Command (2026-09-26)
+- Built: lib/command/attention.ts: Needs attention ranked across blockers, capital gaps, critical-path milestones,
+  decisions, missing studies, E&S, insurance, bids, awards, lead times, permits, re-verification, counsel, obligations,
+  expiring agreements, overdue actions, playbook runs needing review, document requests and action notifications (each
+  with entity, issue, severity, why, owner, due, source, action); operating strip (projects, active opportunities,
+  capital still to raise by currency, capital partner profiles, high-impact open risks); "What changed since your last
+  session" from the event log with links. Today reuses the alert results it already computes (no duplicate queries).
+- Verified: browser Today shows the strip and 6 ranked items (critical constraint → overdue obligation → critical-path
+  milestone → permit expiry → capital gap → playbook review), each linking to its record.
+- Pending: AI-written brief (works through Ask the OS when ANTHROPIC_API_KEY is set; not wired into Today), portfolio
+  map embedded on Today (Atlas link instead), Assign/Snooze on non-notification items.
+- Status: **Done** §07 core, §90.
