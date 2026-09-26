@@ -127,6 +127,13 @@
       "when": 1790319346833,
       "tag": "0017_complete_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790450811343,
+      "tag": "0018_wealthy_kat_farrell",
+      "breakpoints": true
     }
   ]
 }

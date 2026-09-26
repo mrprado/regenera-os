@@ -430,3 +430,14 @@ originate, understand, structure, fund, de-risk, develop or execute better proje
 - Lender requirements are separate from legal permission to build (IFC: 8 Performance Standards and EHS Guidelines;
   World Bank ESF: 10 Environmental and Social Standards).
 - Freeze the conceptual architecture; audit what exists before changing the sidebar or database again.
+
+## 2026-09-25 — focused reference additions
+
+`land-intelligence-addendum.md` extends Place/GIS with parcel identity and assembly, boundary measurements,
+layer inspection, buildable-area scenarios, survey/deed evidence, field/offline workflows and controlled parcel
+briefs. Reuse existing projects, parties, contracts, documents, sources, constraints and actions; do not create
+parallel landowner, project or document models. Provider coverage is jurisdiction-specific.
+
+`lucky-futures-gap-review.md` records the narrower discovery additions: linked map directory, existing-topic
+filters, richer place context and curated resource views. Neither reference replaces Regenera's OS architecture.
+See `architecture-audit-2026-09-25.md` for implementation status and remaining phases.

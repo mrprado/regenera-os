@@ -29,12 +29,22 @@ const ANONYMOUS_API: Record<string, RegExp> = {
   // Email + password sign-in (docs/DEPLOY.md): each checks Origin and does only its own step.
   "api/auth/signin/route.ts": /verifyPassword\(/,
   "api/auth/signout/route.ts": /endSession\(/,
+  // External portals and public intake (master build instruction §02, §69): own sessions, own checks.
+  "api/portal/signin/route.ts": /portalSignIn\(/,
+  "api/portal/signout/route.ts": /endPortalSession\(/,
+  "api/portal/invite/route.ts": /acceptInvite\(/,
+  "api/portal/doc/[id]/route.ts": /canOpenDocument\(/,
+  "api/intake/[kind]/route.ts": /submitIntake\(/,
 };
 // Pages reachable without an OS membership. Each is listed with why.
 const ANONYMOUS_PAGES: Record<string, string> = {
   "page.tsx": "redirects to /today, renders nothing",
   "(auth)/not-allowed/page.tsx": "the 403 page itself",
   "(auth)/signin/page.tsx": "the sign-in form",
+  "(portal)/portal/signin/page.tsx": "the portal sign-in form",
+  "(portal)/portal/invite/[token]/page.tsx": "sets a password from a one-time invite token (inviteUser)",
+  "(portal)/portal/page.tsx": "redirects to the portal home or sign-in, renders nothing",
+  "(public)/intake/[kind]/page.tsx": "public intake form; submits to api/intake with honeypot and rate limit",
 };
 
 describe("route guard", () => {
@@ -43,6 +53,11 @@ describe("route guard", () => {
     expect(pages.length).toBeGreaterThan(5);
     for (const page of pages) {
       if (ANONYMOUS_PAGES[page.path]) continue;
+      if (page.path.startsWith("(portal)/")) {
+        // External portals: their own session and kind check; never the OS session.
+        expect(/requirePortalUser\(/.test(page.src), `${page.path} does not call requirePortalUser`).toBe(true);
+        continue;
+      }
       expect(page.path.startsWith("(app)/"), `${page.path} is outside (app) and not on the anonymous list`).toBe(true);
       expect(/require(OsUser|OsOwner)\(/.test(page.src), `${page.path} does not call requireOsUser`).toBe(true);
     }
@@ -71,8 +86,15 @@ describe("route guard", () => {
         const start = file.src.indexOf(`export async function ${name}`);
         const next = file.src.indexOf("export async function", start + 1);
         const body = file.src.slice(start, next === -1 ? undefined : next);
-        expect(/withOsUser\(/.test(body), `${file.path}: ${name} is not wrapped in withOsUser`).toBe(true);
+        const guard = file.path.startsWith("(portal)/") ? /withPortalUser\(|anyUser\(\)/ : /withOsUser\(/;
+        expect(guard.test(body), `${file.path}: ${name} is not wrapped in its guard`).toBe(true);
       }
+    }
+  });
+
+  it("portal code never resolves the internal OS session", () => {
+    for (const f of files.filter(x => x.path.startsWith("(portal)/") || x.path.startsWith("(public)/") || x.path.startsWith("api/portal/") || x.path.startsWith("api/intake/"))) {
+      expect(/requireOsUser|withOsUser|getOsApiUser|currentEmail/.test(f.src), `${f.path} touches the OS session`).toBe(false);
     }
   });
 

@@ -123,3 +123,4 @@ export * from "./integrations";
 export * from "./delivery";
 export * from "./economics";
 export * from "./procurement";
+export * from "./portal";

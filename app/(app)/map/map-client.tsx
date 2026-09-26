@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Compass, Globe2, Layers, Mountain, Search, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
+import { coordinateLabel, discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, safeWebsite, type MapRecord } from "@/lib/map/discovery";
+import { SECTORS, TERRITORIAL_SYSTEMS } from "@/lib/vocab";
 import styles from "./map.module.css";
 import { withBase } from "@/lib/base-path";
 
@@ -30,7 +32,7 @@ const LAYER_META: Record<LayerKey, { label: string; swatch: string }> = {
   procurement: { label: "Funding, tenders and calls", swatch: C.sky },
   deals: { label: "Opportunities", swatch: C.pollen },
   organizations: { label: "Organizations", swatch: C.reed },
-  hazards: { label: "Live hazards (GDACS)", swatch: "#e0672f" },
+  hazards: { label: "Hazard alerts (GDACS)", swatch: "#e0672f" },
 };
 
 type Selected = { layer: LayerKey | "cluster"; props: Record<string, unknown>; lngLat: [number, number] } | null;
@@ -132,6 +134,7 @@ const LAYER_IDS: Record<LayerKey, string[]> = {
 export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const container = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const initialFit = useRef(false);
   const [data, setData] = useState<MapPayload | null>(null);
   const [hazardCount, setHazardCount] = useState(0);
   const [visible, setVisible] = useState<Record<LayerKey, boolean>>({ projects: true, triggers: true, procurement: true, deals: true, organizations: true, hazards: true });
@@ -142,11 +145,35 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   const [zoom, setZoom] = useState(2.15);
   const [query, setQuery] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hazardError, setHazardError] = useState<string | null>(null);
+  const [hazards, setHazards] = useState<FeatureCollection | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [panel, setPanel] = useState<"layers" | "directory">("directory");
+  const [country, setCountry] = useState("");
+  const [sector, setSector] = useState("");
+  const [topic, setTopic] = useState("");
+  const [limit, setLimit] = useState(50);
+  const records = useMemo(() => data ? mapRecords(data) : [], [data]);
+  const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);
+  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Load the accessible directory independently of WebGL and basemap availability.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(withBase("/api/map/features"), { signal: controller.signal }).then(r => r.ok ? r.json() as Promise<MapPayload> : Promise.reject(new Error(String(r.status))))
+      .then(setData).catch(e => { if (!controller.signal.aborted) setLoadError(`Map records could not load (${e.message}). Reload to retry.`); });
+    fetch(withBase("/api/map/hazards"), { signal: controller.signal }).then(r => r.ok ? r.json() as Promise<FeatureCollection> : Promise.reject(new Error(String(r.status))))
+      .then(d => { setHazards(d); setHazardCount(d.features.length); })
+      .catch(() => { if (!controller.signal.aborted) setHazardError("Hazard feed unavailable. This does not mean there are no hazards."); });
+    return () => controller.abort();
+  }, []);
 
   // Map lifecycle
   useEffect(() => {
     if (!container.current || mapRef.current) return;
-    const map = new maplibregl.Map({
+    let map: maplibregl.Map;
+    try { map = new maplibregl.Map({
       container: container.current,
       style: baseStyle(esriKey),
       center: [-30, 20],
@@ -155,14 +182,20 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
       maxPitch: 80,
       attributionControl: false,
       renderWorldCopies: false,
-    });
+    }); } catch {
+      // Keep directory usable when WebGL is unavailable.
+      queueMicrotask(() => setMapError("The map renderer is unavailable. You can still browse records in the directory."));
+      return;
+    }
     mapRef.current = map;
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    map.on("error", () => setMapError("Some map imagery or layers could not load. Record search and the directory remain available."));
 
     map.on("load", () => {
       addDataLayers(map);
       map.setTerrain(null);
+      setMapReady(true);
       for (const layer of ["projects", "organizations", "deals", "triggers", "procurement", "hazards"] as LayerKey[]) {
         const ids = layer === "organizations" ? ["organizations", "organizations-cluster"] : [layer];
         for (const id of ids) {
@@ -190,30 +223,31 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
         requestAnimationFrame(pulse);
       };
       t0 = performance.now();
-      requestAnimationFrame(pulse);
-
-      fetch(withBase("/api/map/features")).then(r => (r.ok ? r.json() as Promise<MapPayload> : Promise.reject(new Error(String(r.status))))).then((d: MapPayload) => {
-        setData(d);
-        (map.getSource("organizations") as GeoJSONSource).setData(d.organizations);
-        (map.getSource("deals") as GeoJSONSource).setData(d.deals);
-        (map.getSource("projects") as GeoJSONSource).setData(d.projects);
-        (map.getSource("triggers") as GeoJSONSource).setData(d.triggers);
-        (map.getSource("procurement") as GeoJSONSource).setData(d.procurement);
-        const all = [...d.projects.features, ...d.organizations.features, ...d.triggers.features, ...d.procurement.features].map(f => f.geometry.coordinates);
-        if (all.length > 0) {
-          const b = all.reduce((acc, c) => acc.extend(c as [number, number]), new maplibregl.LngLatBounds(all[0] as [number, number], all[0] as [number, number]));
-          map.fitBounds(b, { padding: 120, maxZoom: 5, duration: 2600, essential: true });
-        }
-      }).catch(e => setLoadError(`Map data could not load (${e.message}).`));
-      fetch(withBase("/api/map/hazards")).then(r => r.json() as Promise<FeatureCollection>).then(d => {
-        setHazardCount(d.features?.length ?? 0);
-        (map.getSource("hazards") as GeoJSONSource).setData(d);
-      }).catch(() => {});
+      if (!reducedMotion()) requestAnimationFrame(pulse);
     });
     map.on("mousemove", e => setCursor({ lng: e.lngLat.lng, lat: e.lngLat.lat }));
     map.on("zoomend", () => setZoom(map.getZoom()));
     return () => { map.remove(); mapRef.current = null; };
   }, [esriKey]);
+
+  // The map and directory always use the same filtered records, including opportunity records.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+    for (const layer of RECORD_LAYERS) {
+      (map.getSource(layer) as GeoJSONSource)?.setData({ type: "FeatureCollection", features: filtered.filter(r => r.layer === layer).map(r => r.feature) });
+    }
+    if (hazards) (map.getSource("hazards") as GeoJSONSource)?.setData(hazards);
+  }, [mapReady, filtered, hazards]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !records.length || initialFit.current) return;
+    initialFit.current = true;
+    const first = records[0].feature.geometry.coordinates;
+    const bounds = records.reduce((b, r) => b.extend(r.feature.geometry.coordinates), new maplibregl.LngLatBounds(first, first));
+    map.fitBounds(bounds, { padding: 100, maxZoom: 5, duration: reducedMotion() ? 0 : 1200 });
+  }, [mapReady, records]);
 
   // Layer visibility
   useEffect(() => {
@@ -222,7 +256,7 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
     for (const [key, ids] of Object.entries(LAYER_IDS) as [LayerKey, string[]][]) {
       for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible[key] ? "visible" : "none");
     }
-  }, [visible, data]);
+  }, [visible, data, mapReady]);
 
   const toggle3d = useCallback(() => {
     const map = mapRef.current;
@@ -248,22 +282,17 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
 
   const resetNorth = () => mapRef.current?.easeTo({ bearing: 0, pitch: terrain3d ? 62 : 0, duration: 800 });
 
-  const searchable = useMemo(() => {
-    if (!data) return [];
-    return [
-      ...data.projects.features.map(f => ({ label: String(f.properties.name), sub: String(f.properties.country ?? ""), layer: "projects" as LayerKey, f })),
-      ...data.organizations.features.map(f => ({ label: String(f.properties.name), sub: String(f.properties.location ?? f.properties.country ?? ""), layer: "organizations" as LayerKey, f })),
-      ...data.triggers.features.map(f => ({ label: String(f.properties.summary), sub: String(f.properties.orgName ?? ""), layer: "triggers" as LayerKey, f })),
-      ...data.procurement.features.map(f => ({ label: String(f.properties.summary), sub: String(f.properties.orgName ?? ""), layer: "procurement" as LayerKey, f })),
-    ];
-  }, [data]);
-  const matches = query.trim().length >= 2 ? searchable.filter(s => `${s.label} ${s.sub}`.toLowerCase().includes(query.toLowerCase())).slice(0, 8) : [];
+  const flyTo = (m: MapRecord) => {
+    const [lng, lat] = m.feature.geometry.coordinates;
+    mapRef.current?.flyTo({ center: [lng, lat], zoom: 8, pitch: terrain3d ? 62 : 0, duration: reducedMotion() ? 0 : 1200 });
+    setSelected({ layer: m.layer, props: m.feature.properties, lngLat: [lng, lat] });
+  };
 
-  const flyTo = (m: (typeof searchable)[number]) => {
-    const [lng, lat] = m.f.geometry.coordinates;
-    mapRef.current?.flyTo({ center: [lng, lat], zoom: 8, pitch: terrain3d ? 62 : 0, duration: 2800, essential: true });
-    setSelected({ layer: m.layer, props: m.f.properties, lngLat: [lng, lat] });
-    setQuery("");
+  const fitResults = () => {
+    if (!filtered.length) return;
+    const first = filtered[0].feature.geometry.coordinates;
+    const bounds = filtered.reduce((b, r) => b.extend(r.feature.geometry.coordinates), new maplibregl.LngLatBounds(first, first));
+    mapRef.current?.fitBounds(bounds, { padding: 80, maxZoom: 10, duration: reducedMotion() ? 0 : 900 });
   };
 
   const counts: Record<LayerKey, number> = {
@@ -276,25 +305,46 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
   };
 
   return (
-    <div className={styles.stage} data-fullbleed>
+    <div className={styles.stage} data-fullbleed data-selection={selected ? "true" : "false"}>
       <div ref={container} className={styles.map} />
 
       <div className={styles.searchWrap}>
         <div className={`${styles.glass} ${styles.search}`}>
           <Search size={16} aria-hidden />
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search organizations, triggers, tenders" aria-label="Search the map" />
+          <input value={query} onChange={e => { setQuery(e.target.value); setPanel("directory"); setLimit(50); }} placeholder="Search records, places and topics" aria-label="Search the map" />
           {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}
         </div>
-        {matches.length > 0 && (
-          <ul className={`${styles.glass} ${styles.results}`}>
-            {matches.map((m, i) => (
-              <li key={i}><button type="button" onClick={() => flyTo(m)}><span style={{ background: LAYER_META[m.layer].swatch }} />{m.label}<small>{m.sub}</small></button></li>
-            ))}
-          </ul>
-        )}
       </div>
 
-      <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map layers">
+      <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
+        <div className={styles.panelTabs}>
+          <button type="button" aria-pressed={panel === "directory"} onClick={() => setPanel("directory")}>Directory</button>
+          <button type="button" aria-pressed={panel === "layers"} onClick={() => setPanel("layers")}>Layers</button>
+        </div>
+        {panel === "directory" && <>
+          <div className={styles.filters}>
+            <label>Country<select value={country} onChange={e => { setCountry(e.target.value); setLimit(50); }}><option value="">All countries</option>{discoveryOptions(records, "country").map(v => <option key={v} value={v}>{v}</option>)}</select></label>
+            <label>Sector<select value={sector} onChange={e => { setSector(e.target.value); setLimit(50); }}><option value="">All sectors</option>{discoveryOptions(records, "sector").map(v => <option key={v} value={v}>{SECTORS[v as keyof typeof SECTORS] ?? v.replace(/_/g, " ")}</option>)}</select></label>
+            <label>Topic<select value={topic} onChange={e => { setTopic(e.target.value); setLimit(50); }}><option value="">All recorded topics</option>{discoveryOptions(records, "topic").map(v => <option key={v} value={v}>{TERRITORIAL_SYSTEMS[v as keyof typeof TERRITORIAL_SYSTEMS] ?? v.replace(/_/g, " ")}</option>)}</select></label>
+          </div>
+          <p className={styles.note}>Topics use recorded industries and project systems. Unclassified records remain visible with all filters cleared.</p>
+          <div className={styles.panelTabs}>
+            <button type="button" onClick={() => { setQuery(""); setCountry(""); setSector(""); setTopic(""); setLimit(50); }}>Clear filters</button>
+            <button type="button" disabled={!mapReady || !filtered.length} onClick={fitResults}>Fit results</button>
+          </div>
+          <p className={styles.note} role="status">{data ? `${filtered.length} of ${records.length} located records · enabled layers` : loadError ? "Records unavailable" : "Loading records…"}</p>
+          {data && filtered.length === 0 && <p className={styles.note}>No matching records. Clear filters or enable more layers.</p>}
+          <ul className={styles.directory} aria-label="Map records">
+            {filtered.slice(0, limit).map(m => <li key={m.key}>
+              <button type="button" onClick={() => flyTo(m)} aria-pressed={selected?.layer === m.layer && selected?.props.id === m.feature.properties.id}>
+                <span className={styles.swatch} style={{ background: LAYER_META[m.layer].swatch }} aria-hidden />
+                <span><strong>{m.label}</strong><small>{LAYER_META[m.layer].label}{m.location ? ` · ${m.location}` : ""}</small></span>
+              </button>
+            </li>)}
+          </ul>
+          {filtered.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(n => n + 50)}>Show 50 more</button>}
+        </>}
+        {panel === "layers" && <>
         <p className={styles.panelTitle}><Layers size={14} aria-hidden /> Layers</p>
         {(Object.keys(LAYER_META) as LayerKey[]).map(k => (
           <label key={k} className={styles.layerRow}>
@@ -304,9 +354,15 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
             <span className={styles.count}>{counts[k]}</span>
           </label>
         ))}
-        {data && data.counts.unmapped > 0 && <p className={styles.note}>{data.counts.unmapped} organizations still being located.</p>}
+        <p className={styles.note}>Search and filters apply to records. Hazards are an independent context layer.</p>
+        </>}
+        {data && (data.counts.unmapped > 0 || data.counts.unmappedProjects > 0) && <p className={styles.note}>{data.counts.unmapped} organizations and {data.counts.unmappedProjects} projects have missing or invalid coordinates. <Link href="/companies">Review organizations</Link> · <Link href="/projects">Review projects</Link></p>}
         <p className={styles.note}>Showing events from {data?.since ?? "this year"} onward.</p>
-        {loadError && <p className={styles.error}>{loadError}</p>}
+        {data && <p className={styles.note}>Snapshot {data.generatedAt.slice(0, 16).replace("T", " ")} UTC. Record updates do not imply verification.</p>}
+        {!hazards && !hazardError && <p className={styles.note}>Loading hazard context…</p>}
+        {loadError && <p className={styles.error} role="alert">{loadError}</p>}
+        {hazardError && <p className={styles.error} role="alert">{hazardError}</p>}
+        {mapError && <p className={styles.error} role="alert">{mapError}</p>}
       </aside>
 
       <div className={styles.controls}>
@@ -321,6 +377,10 @@ export default function MapClient({ esriKey }: { esriKey: string | null }) {
         <aside className={`${styles.glass} ${styles.detail}`} aria-label="Selected item">
           <button type="button" className={styles.close} onClick={() => setSelected(null)} aria-label="Close"><X size={16} /></button>
           <Detail selected={selected} />
+          <p className={styles.coords}>{coordinateLabel(selected.lngLat)}</p>
+          {Boolean(selected.props.locationBasis) && <p className={styles.note}>{String(selected.props.locationBasis)}</p>}
+          {Boolean(selected.props.source) && <p className={styles.note}>Source: {String(selected.props.source)}</p>}
+          {Boolean(selected.props.updatedAt) && <p className={styles.note}>Record updated {String(selected.props.updatedAt).slice(0, 10)} · verification is recorded separately.</p>}
         </aside>
       )}
 
@@ -343,7 +403,10 @@ function Detail({ selected }: { selected: NonNullable<Selected> }) {
       <h3>{p.name}</h3>
       <p className={styles.meta}>{[p.location, p.country].filter(Boolean).join(" · ")}</p>
       {p.sector && <p className={styles.chip}>{String(p.sector).replace(/_/g, " ")}</p>}
+      {p.description && <p className={styles.read}>{p.description}</p>}
+      {p.topics && <p className={styles.meta}>{String(p.topics).replace(/\|/g, " · ")}</p>}
       <Link className={styles.open} href={`/companies/${p.id}`}>Open record</Link>
+      {safeWebsite(p.website) && <a className={styles.open} href={safeWebsite(p.website)!} target="_blank" rel="noreferrer">Website</a>}
     </>
   );
   if (selected.layer === "projects") return (
@@ -351,7 +414,13 @@ function Detail({ selected }: { selected: NonNullable<Selected> }) {
       <p className={styles.kicker}>Project · {String(p.stage).replace(/_/g, " ")}</p>
       <h3>{p.name}</h3>
       <p className={styles.meta}>{[p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}` : null, p.country].filter(Boolean).join(" · ")}</p>
+      {p.description && <p className={styles.read}>{p.description}</p>}
       <Link className={styles.open} href={`/projects/${p.id}`}>Open project</Link>
+      <div className={styles.links}>
+        <Link className={styles.open} href={`/projects/${p.id}?tab=place`}>Place evidence</Link>
+        <Link className={styles.open} href={`/projects/${p.id}?tab=partners`}>Partners</Link>
+        <Link className={styles.open} href={`/projects/${p.id}?tab=funding`}>Funding</Link>
+      </div>
     </>
   );
   if (selected.layer === "deals") return (

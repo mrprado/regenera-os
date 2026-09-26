@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { placeFacts } from "@/db/schema";
@@ -47,6 +48,16 @@ export default async function PlaceTab({ project }: { project: { id: string; lat
           })}
         </div>
         <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}>Land evidence to collect</p>
+            <p className={ui.sub}>A project can span several parcels. Record the registry identifier and jurisdiction for each, then link dated ownership, boundary and access evidence. A map point or nearby utility does not establish title, permission or available capacity.</p>
+            <ul className={ui.sub}>
+              <li><Link href={`/projects/${project.id}?tab=contracts`}>Contracts</Link>: purchase, lease, option, easement and access obligations.</li>
+              <li><Link href={`/projects/${project.id}?tab=engineering`}>Engineering</Link>: surveys, soil/geotechnical studies and design evidence.</li>
+              <li><Link href={`/projects/${project.id}?tab=constraints`}>Constraints</Link>: unresolved rights, coverage gaps and site limitations.</li>
+              <li><Link href={`/projects/${project.id}?tab=plan`}>Plan</Link>: owners, decisions and next evidence-gathering actions.</li>
+            </ul>
+          </section>
           <section className={r.panel}>
             <p className={r.panelTitle}>Attribution</p>
             <p className={ui.sub} style={{ marginTop: 0 }}>© OpenStreetMap contributors (ODbL). Data: NASA POWER; World Bank (CC BY 4.0); USGS; GBIF-mediated occurrence data (aggregate counts only). Licensed layers (Protected Planet, IBAT) are off until licences exist; see Settings → Integrations.</p>

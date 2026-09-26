@@ -2,6 +2,14 @@
 
 Canonical spec: docs/master-spec.md. Audit: docs/audit-2026-09.md. Plan and build reports: docs/plans/phase-6.md.
 
+2026-09-25 addendum: `architecture-audit-2026-09-25.md` maps the latest conversation requirements onto existing models;
+`plans/phase-7.md` sequences the remaining work. Map discovery now reuses canonical scoped records with a synchronized
+directory, existing country/sector/topic filters, richer context and explicit location basis. See `lucky-futures-gap-review.md`.
+This additive map phase creates no database models or migrations. Broader workflow/control phases remain pending.
+The Land id review adds parcel-level requirements in `land-intelligence-addendum.md`, linked from the canonical spec.
+The Place screen now exposes a deeper land-evidence checklist and links to the existing contracts, engineering,
+constraints and planning workflows. Parcel databases, geometry tools and offline sync are specified, not yet built.
+
 ## Runtime
 One Cloudflare Worker (`regenera-os`) serves regenera.bio/os: Next 16 (App Router, React 19) built with vinext,
 basePath `/os`, Worker routes in front of the public site. D1 (SQLite, Drizzle) holds all data; R2 is planned for

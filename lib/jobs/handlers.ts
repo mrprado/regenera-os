@@ -1,3 +1,4 @@
+import { expireBrokerRecords } from "@/lib/portal/broker";
 import { env } from "cloudflare:workers";
 import type { Db } from "@/db";
 import { processImportChunk, r2Store } from "@/lib/import/process";
@@ -247,6 +248,10 @@ export const handlers: Record<string, JobHandler> = {
   "regulatory.expire": async ({ db, now }) => {
     await expirePermits(db, now);
   },
+  "portal.expire": async ({ db, now }) => {
+    // Introducer agreements past their date expire (removing portal access); approved registrations lapse.
+    await expireBrokerRecords(db, now);
+  },
   "capital.rematch": async ({ db, now }) => {
     // Daily: partner mandates, profiles and qualifications change; matches (and eligibility) follow.
     for (const o of await db.select({ id: capitalOpportunities.id }).from(capitalOpportunities).where(ne(capitalOpportunities.status, "closed")).limit(200)) {
@@ -308,5 +313,6 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "capital.expire": "daily:05:30",
   "capital.rematch": "daily:05:45",
   "regulatory.expire": "daily:05:35",
+  "portal.expire": "daily:05:40",
   "place.refresh": "daily:04:10",
 };

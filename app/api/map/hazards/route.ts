@@ -1,6 +1,7 @@
 import { getOsApiUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { gdacsSignals } from "@/lib/sources/signals";
+import { validCoordinates } from "@/lib/map/discovery";
 
 // Guarded proxy: current GDACS red/orange alerts (via regenera.bio's intelligence API), cached 1h.
 export async function GET() {
@@ -10,13 +11,13 @@ export async function GET() {
     const events = await gdacsSignals(appDb());
     return Response.json({
       type: "FeatureCollection",
-      features: events.filter(e => e.lat != null && e.lng != null).map(e => ({
+      features: events.filter(e => validCoordinates(e.lng, e.lat)).map(e => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [e.lng, e.lat] },
         properties: { id: e.externalId, title: e.title, url: e.url, date: e.publishedAt, country: e.country, level: e.title.startsWith("Red") ? "Red" : "Orange", kind: e.summary },
       })),
     }, { headers: { "cache-control": "private, max-age=900" } });
   } catch {
-    return Response.json({ type: "FeatureCollection", features: [] });
+    return Response.json({ error: "Hazard source unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
   }
 }

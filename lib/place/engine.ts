@@ -48,12 +48,12 @@ export const PLACE_DIMENSIONS = { land: "Land", water: "Water", climate: "Climat
 
 /** What the automated sources cannot tell: shown as open questions, never guessed. */
 export const PLACE_GAPS: Record<keyof typeof PLACE_DIMENSIONS, string[]> = {
-  land: ["Ownership and tenure", "Zoning and current use", "Soils, slope and geotechnical conditions", "Contamination"],
-  water: ["Watershed and aquifer", "Floodplain", "Water rights and quality"],
+  land: ["Parcel identifiers, registry authority and dated boundary/survey evidence", "Ownership, tenure and land assembly across parcels", "Lease/option, easements, rights of way and legal access", "Planning zoning, assessed land use and actual use (record separately)", "Soil classes and area coverage, slope and geotechnical conditions", "Contamination and recorded title restrictions", "Indicative developable area after sourced exclusions and setbacks"],
+  water: ["Watershed and aquifer", "Floodplain and wetlands with source dates and coverage", "Water rights, wells and quality"],
   climate: ["Flood, drought, wildfire, cyclone and heat exposure at site level"],
   ecology: ["Protected areas and critical habitat (licensed data: Protected Planet, IBAT)", "Land cover and connectivity"],
   human: ["Communities and settlements", "Indigenous and cultural heritage considerations"],
-  infrastructure: ["Grid capacity and interconnection queue (utility)", "Ports, rail and logistics routes"],
+  infrastructure: ["Grid capacity and interconnection queue (utility)", "Legal road access, utility servicing and easement corridors", "Ports, rail and logistics routes"],
 };
 
 export async function staleFacts(db: Db, projectId: string) {
