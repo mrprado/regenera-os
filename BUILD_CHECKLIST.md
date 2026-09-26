@@ -179,3 +179,15 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Verified: tests/unit/graph.test.ts (2) pass; browser: warm path to Valle Solar found with its reason; network view
   renders.
 - Status: **Done** §14 (graph, warm paths). Gmail/Calendar outreach (§15) already existed (approved one-to-one sends).
+
+### Phase P11 — Demo data (2026-09-26)
+- Built: lib/demo/seed.ts: separate entity "DEMO — Regenera sample data" (mass sending off), 4 projects (Mexico Solar
+  100 MW with a Yucatán site polygon, Yucatán Eco Park, New Zealand Solar, Africa Energy Project), family office, DFI,
+  EPC, introducer, advisor, developer, people (@example.test), readiness, constraints, risks, capital requirements,
+  tranche, capital profiles and mandate, milestones with a dependency, tasks, documents, open data room, document
+  request, published update, introducer portal user (is_demo) with a conflict-review referral, three Atlas layers
+  labelled "DEMO / SAMPLE DATA (illustrative, not an official source)", playbooks and rules; Settings → Demo data
+  (owner) loads or removes it. No place facts or third-party figures are fabricated.
+- Verified: tests/integration/demo.test.ts (idempotent, labels, removal) passes; browser: loaded locally, the four
+  DEMO projects list and Today ranks the DEMO grid constraint.
+- Status: **Done** §89, §90, §91.

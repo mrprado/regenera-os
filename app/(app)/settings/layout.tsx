@@ -17,6 +17,7 @@ export default async function SettingsLayout({ children }: Readonly<{ children: 
         <Link href="/settings/jobs">Jobs</Link>
         <Link href="/settings/integrations">Integrations</Link>
         <Link href="/settings/members">Members</Link>
+        <Link href="/settings/demo">Demo data</Link>
       </nav>
       {children}
     </section>
