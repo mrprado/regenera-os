@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import vinext from "vinext";
 import { defineConfig } from "vite";
 import hostingConfig from "./.openai/hosting.json";
@@ -38,6 +39,8 @@ export default defineConfig(async () => {
     // lucide-react is used from client components; pre-bundling it separately for the RSC and client
     // environments made vite warn "inconsistently optimized" and broke client navigation in dev.
     optimizeDeps: { exclude: ["lucide-react"] },
+    // satellite.js ships optional WASM runtimes (one needs a pthreads worker bundle); the Atlas uses its pure-JS SGP4.
+    resolve: { alias: [{ find: /^#wasm-(single|multi)-thread$/, replacement: fileURLToPath(new URL("./lib/map/vendor/satellite-wasm-stub.ts", import.meta.url)) }] },
     server: {
       ...(managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {}),
       ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),

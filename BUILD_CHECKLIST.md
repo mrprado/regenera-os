@@ -199,6 +199,34 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Verified (actual run): `npm run ci` → lint clean, typecheck clean, Vitest 46 files / 262 tests passed, map discovery
   test 5/5, production build complete, exit 0.
 
+### Phase P13 — Atlas intelligence globe (2026-09-27)
+- Asked for: maps "top level, like spatialintelligence.ai" (Bilawal Sidhu's God's Eye View: photorealistic globe, live
+  public feeds, sensor looks, click-to-track) with all APIs integrated. Built on the existing MapLibre globe (no stack
+  change; Cesium + Google 3D Tiles would need a metered key or a non-commercial token: see docs/ATLAS.md).
+- Built: layer catalogue (lib/map/catalog.ts, 26 layers, each tied to a registry key; /api/map/catalog filters by
+  registry state and configured keys); 11 new registry entries (NASA GIBS, NASA EONET, NOAA NHC, FIRMS public files,
+  adsb.lol, CelesTrak, EOX Sentinel-2 cloudless 2016, GFW tiles, OpenFreeMap, Open Infrastructure Map, AWS terrain);
+  live feeds through fetchJson (lib/map/live.ts, /api/map/live/[feed]: USGS quakes, EONET events with tracks, NHC
+  cyclones, FIRMS fires (keyless MODIS global or VIIRS for the view with a key), adsb.lol aircraft for the view and
+  military worldwide, CelesTrak elements); basemaps (Esri HD with key, Sentinel-2 cloudless, yesterday's VIIRS, Black
+  Marble, Blue Marble, tactical vector); overlays (NDVI, land surface temperature, night lights, IMERG precipitation,
+  aerosol, tree cover loss, OSM protected areas, power grid by voltage and plant source, 3D buildings); browser SGP4
+  satellites (satellite.js; WASM runtimes aliased to a stub); sensor looks (CRT, NVG, FLIR, Thermal ironbow, Noir);
+  tactical HUD (UTC, DMS, altitude, heading/tilt, compass tape, live counts, target telemetry); detection boxes;
+  click-to-track with trails, chase cam, satellite ground tracks; missions (Portfolio, Site scout, Hazard watch,
+  Energy transition, Forest and land, Live traffic, Orbital watch); orbit and project tour; share links (camera,
+  layers, look, tracked target in the URL hash); keyboard control; coordinate and place search (/api/map/geocode);
+  imagery date slider; per-layer provenance, licence, caveats and status ("unavailable", never "none").
+- Verified: tests/unit/atlas.test.ts (11) and tests/integration/atlas-live.test.ts (4: compact cache and ledger,
+  disabled registry never called, FIRMS keyless vs key, ISS propagation 300–500 km) pass; route guard passes; lint,
+  typecheck, build clean. Browser (local): Sentinel-2 globe with cyclones, quakes and GDACS; Live traffic mission in
+  NVG over London (live aircraft); Orbital watch (satellites) with ISS-class tracking, ground track and HUD
+  telemetry; Hazard watch in Thermal (334 quakes, 16,208 fires, 74 events, 5 cyclones); 3D buildings over Mexico City;
+  FLIR with detection boxes on 155 aircraft over New York.
+- Pending: photorealistic 3D tiles (needs a metered Google key or Cesium ion licence and a CesiumJS decision), vessels
+  (AISStream key + websocket), animated wind, time scrubbing for point feeds.
+- Status: **Done** §18–19 visual/live layer scope within licences.
+
 ## Definition of Done (§104) — actual status
 | Item | Status | Evidence / note |
 |---|---|---|
@@ -211,7 +239,7 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 | Capital stack builder | Partial | Requirements/tranches with shares in the capital pathway report; Economics scenarios; no interactive builder |
 | Deals and stage gates | Partial | Opportunities existing; evidence gates on project stages; deal (tracker) stages ungated |
 | Engagement / commercial records | Done | Contracts per engagement, fees, success-fee review flag |
-| Atlas renders, layers toggle, site polygon | Done | Browser |
+| Atlas renders, layers toggle, site polygon | Done | Browser; P13 intelligence globe (docs/ATLAS.md) |
 | Site Intelligence playbook runs | Done | Browser + test |
 | Systems assessment | Done | Browser |
 | Intelligence records / signals | Done | Existing Intelligence |
