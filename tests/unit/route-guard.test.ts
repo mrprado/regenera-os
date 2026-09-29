@@ -116,6 +116,13 @@ describe("route guard", () => {
     }
   });
 
+  it("heavy ATLAS libraries load only inside the map route (the rest of the OS never ships them)", () => {
+    for (const f of files) {
+      if (f.path.startsWith("(app)/map/")) continue;
+      expect(/from ["'](maplibre-gl|satellite\.js|d3-contour|cesium|deck\.gl|@deck\.gl\/[\w-]+)["']/.test(f.src), `${f.path} imports an ATLAS-only library`).toBe(false);
+    }
+  });
+
   it("culturally governed knowledge and community records never reach Ask the OS, the MCP server or global search", () => {
     const lib = join(__dirname, "..", "..", "lib");
     const re = /knowledgeRecords|knowledgeHolders|knowledgePermissions|knowledgeUses|consentRecords|communityEngagements|communityGrievances|knowledge_records|knowledge_holders|consent_records|community_engagements|community_grievances/;

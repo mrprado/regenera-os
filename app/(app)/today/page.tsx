@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import Loading from "../loading";
 import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
@@ -38,30 +40,43 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
+  const first = user.displayName.split(/[\s@]/)[0];
+  // The header renders at once; the body streams in behind a structural skeleton as its queries resolve.
+  return (
+    <>
+      <PageHeader title={`Good to see you, ${first}`} actions={<Link className="btn" href="/map">Atlas</Link>} />
+      <Notice text={sp.notice} />
+      <Suspense fallback={<Loading />}>
+        <TodayBody user={user} sp={sp} />
+      </Suspense>
+    </>
+  );
+}
+
+async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof requireOsUser>>; sp: Record<string, string | undefined> }) {
   const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery, procurement] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds), deliveryAlerts(appDb(), user.scope.mandateIds), procurementAlerts(appDb(), user.scope.mandateIds)]);
   const [attention, strip, changes] = await Promise.all([
     needsAttention(appDb(), user.scope.mandateIds, user.email, new Date(), { pa: projectFlags, del: delivery, proc: procurement, reg: regFlags, obl: obligationFlags }),
     operatingStrip(appDb(), user.scope.mandateIds),
     changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
   ]);
-  const align = await capitalAlignment(appDb(), user.scope.mandateIds);
   const showAll = sp.attention === "all";
-  const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
-    .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
-  const [gateQueue] = await appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
-    .where(and(mandateCondition(user.scope, capitalOpportunities.mandateId), inArray(capitalOpportunities.gateState, ["review_required", "hold"]), sql`${capitalOpportunities.status} != 'closed'`));
+  const [align, pending, [gateQueue]] = await Promise.all([
+    capitalAlignment(appDb(), user.scope.mandateIds),
+    appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
+      .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10),
+    appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
+      .where(and(mandateCondition(user.scope, capitalOpportunities.mandateId), inArray(capitalOpportunities.gateState, ["review_required", "hold"]), sql`${capitalOpportunities.status} != 'closed'`)),
+  ]);
   const now = new Date().toISOString();
   const alerts = [
     ...sending.checks.flatMap(c => deliverabilityIssues(c)),
     ...sending.state.filter(s => s.pausedUntil && s.pausedUntil > now).map(s => `${s.role === "primary" ? "regenera.bio" : "Sending"} mailbox paused: ${s.pauseReason ?? ""}`),
   ];
-  const first = user.displayName.split(/[\s@]/)[0];
   const ai = aiConfig();
   const apollo = apolloConfig();
   return (
     <>
-      <PageHeader title={`Good to see you, ${first}`} actions={<Link className="btn" href="/map">Atlas</Link>} />
-      <Notice text={sp.notice} />
       <div className={ui.stats}>
         <Stat n={strip.projects} label="Projects" href="/projects" />
         <Stat n={strip.deals} label="Active opportunities" href="/deals" />
