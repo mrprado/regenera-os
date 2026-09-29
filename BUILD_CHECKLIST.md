@@ -300,6 +300,51 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 - Status: **Done** workbench core (draw, measure, terrain, contours, hydrology, visibility, constraints,
   envelope, design quantities, exports, audit log, observations).
 
+### Phase P16 — Financial modeling and underwriting engine (2026-09-29)
+- Built:
+  - Migration 0027: fin_models (versioned, case type, status, financeability, definition, summary, health, prepared,
+    reviewed and approved by) and fin_changes (input path, from, to, reason, actor, time).
+  - lib/finance/calc.ts, a deterministic annual engine:
+    - capex lines with contingency; development budget (remaining in uses)
+    - generation (capacity × CF × availability × curtailment × losses × degradation; P50/P75/P90)
+    - revenue streams tagged contracted / forecast / merchant / speculative, with merchant tails; speculative
+      excluded unless the case includes it
+    - opex (fixed, per MWh, % of revenue), escalation
+    - tax with depreciation, loss carry-forward and interest shield
+    - CFADS kept distinct from EBITDA
+    - debt sized at the lower of DSCR capacity and gearing cap; sculpted, annuity, straight-line or bullet
+    - IDC, fees and DSRA in uses, with the circularity solved iteratively
+    - sources = uses; waterfall with DSRA and lock-up; residual and decommissioning
+    - project and equity IRR, NPV, MOIC, payback, LLCR, PLCR; compensated sums
+  - lib/finance/analysis.ts: ranked one-way tornado, two-way grid, stress cases, bisection breakevens, model health
+    (sources ≠ uses, circularity, missing debt terms, debt beyond life, FX mismatch, placeholders, unsourced inputs,
+    volume over generation, revenue before COD), version diff with IRR attribution by block, value bridge from
+    user-set stage rates, and templates that are structure only, with every value a labelled PLACEHOLDER.
+  - lib/finance/engine.ts: create, save with change log, version reason rule, approve and lock (refused on ERROR),
+    financeability set by a person with a basis, ATLAS quantities into CAPEX (units, never unit costs).
+  - lib/finance/xlsx.ts and /api/finance/export: 8-sheet workbook of values with provenance (audited).
+  - Project → Financials tab:
+    - institutional output strip, with ≈ and reduced precision while inputs are preliminary
+    - health, revenue-certainty bar, sources and uses, value bridge
+    - assumption register with source, date, confidence and status on every line
+    - cash flow, debt schedule, tornado, two-way grid, stress and breakevens
+    - version comparison with attribution
+    - governance: new version, ATLAS import, approve and lock, financeability; change log
+- Verified:
+  - tests/unit/finance.test.ts (12): IRR/NPV; generation, escalation and tail; tax loss carry-forward; sculpted
+    DSCR constant at 1.30x with LLCR 1.30; gearing cap; annuity DSCR; lock-up; tornado; two-way; stress; breakeven
+    recovering the hurdle; health; diff attribution summing to the total; value bridge.
+  - tests/integration/finance.test.ts (2).
+  - Browser: DEMO project model created (100 MW from the project record); health ERROR with placeholders shown;
+    all tabs render; XLSX export valid (PK zip).
+- Pending:
+  - monthly and quarterly periods
+  - multiple debt tranches and mezzanine, and tiered promote waterfalls
+  - FX translation
+  - Monte Carlo (the spec requires defined distributions)
+  - benchmark library, sponsor-model ingestion, portfolio aggregation, and Regenera corporate P&L (see §8C)
+- Status: **Done** financial engine core.
+
 ## Definition of Done (§104) — actual status
 | Item | Status | Evidence / note |
 |---|---|---|
