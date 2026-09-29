@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, Play, Scan, Search, Share2, Square, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
 import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, type MapRecord } from "@/lib/map/discovery";
+import SavedViews from "./saved-views";
 import { decodeView, encodeView, parseCoordinates, productDate, type OfferedLayer } from "@/lib/map/catalog";
 import type { Omm } from "@/lib/map/live";
 import { SECTORS, TERRITORIAL_SYSTEMS } from "@/lib/vocab";
@@ -612,6 +613,7 @@ function MapClient() {
         </form>
         {searchNote && <p className={`${styles.glass} ${styles.searchNote}`} role="status">{searchNote}</p>}
       </div>
+      <SavedViews />
 
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">

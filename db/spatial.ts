@@ -90,3 +90,14 @@ export const fieldObservations = sqliteTable("field_observations", {
   convertedTo: text("converted_to"),                        // task:<id> / risk:<id> / constraint:<id>
   createdAt: text("created_at").notNull().default(now),
 }, t => [index("field_observations_project").on(t.projectId, t.observedAt)]);
+
+// Named ATLAS views (position, basemap, layers, mode) shared within the entity, e.g. "Yucatán ecological constraints".
+export const atlasViews = sqliteTable("atlas_views", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  mandateId: text("mandate_id").notNull(),
+  name: text("name").notNull(),
+  view: text("view").notNull(),                              // encodeView() string
+  projectId: text("project_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});

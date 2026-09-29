@@ -253,6 +253,13 @@
       "when": 1790723074822,
       "tag": "0035_aspiring_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790723551384,
+      "tag": "0036_ancient_sway",
+      "breakpoints": true
     }
   ]
 }
