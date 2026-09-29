@@ -14,8 +14,9 @@ describe("Atlas catalogue", () => {
 
   it("offers only registry-allowed layers and injects browser keys server-side", () => {
     const none = offerCatalog(new Map(), {});
-    expect(none.some(l => l.id === "esri")).toBe(false);
-    expect(none.every(l => !("needsEnv" in l))).toBe(true);
+    expect(none.find(l => l.id === "esri")?.tiles).toContain("server.arcgisonline.com");   // keyless public imagery
+    expect(none.some(l => l.id === "street_imagery")).toBe(false);                          // needs MAPILLARY_TOKEN
+    expect(none.every(l => !("needsEnv" in l) && !("keyEnv" in l) && !("keyedTiles" in l))).toBe(true);
     const withKey = offerCatalog(new Map(), { ESRI_API_KEY: "k&y" });
     expect(withKey.find(l => l.id === "esri")?.tiles).toContain("token=k%26y");
     const gated = offerCatalog(new Map([["adsb_lol", "disabled"], ["nasa_gibs", "license_required"]]), {});
