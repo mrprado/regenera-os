@@ -1,0 +1,20 @@
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 12px 0 6px; }
+.strip div { padding: 9px 12px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
+.strip div:last-child { border-right: 0; }
+.strip span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--eyebrow); }
+.strip b { font-size: 16px; color: var(--heading); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.services { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: grid; gap: 2px; max-height: 260px; overflow: auto; }
+.services legend { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.services label { display: flex !important; gap: 6px; align-items: center; font-weight: 400 !important; font-size: 12.5px !important; }
+.services label input { width: auto !important; }
+.priceForm { display: grid; grid-template-columns: repeat(5, 76px) auto auto; gap: 4px; align-items: center; }
+.priceForm input:not([type="checkbox"]) { width: 100%; min-height: 26px; border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; font: inherit; font-size: 12px; text-align: right; }
+.inactive { opacity: .5; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.kv { display: grid; grid-template-columns: 170px 1fr; gap: 4px 10px; font-size: 13px; margin: 0; }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+.inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+.inline input, .inline select { min-height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font: inherit; font-size: 12.5px; }
+.inline input[type="number"], .inline .amt { width: 110px; }
+@media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } .priceForm { grid-template-columns: repeat(3, 1fr); } }

@@ -3,6 +3,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { pathwayAlerts } from "@/lib/capital/pathways";
+import { commercialAttention } from "@/lib/commercial/engine";
 import { authSessions, capitalProfiles, capitalRequirements, deals, documentRequests, events, playbookRuns, playbooks, projects, risks, tasks } from "@/db/schema";
 import { obligationAlerts } from "@/lib/contracts/register";
 import { deliveryAlerts } from "@/lib/delivery/engine";
@@ -31,6 +32,7 @@ export async function needsAttention(db: Db, mandateIds: string[], email: string
     pre?.reg ?? regulatoryAlerts(db, mandateIds, now), pre?.obl ?? obligationAlerts(db, mandateIds, now), openNotifications(db, mandateIds, email, now, 50),
   ]);
   const pathways = await pathwayAlerts(db, mandateIds, today);
+  const commercial = await commercialAttention(db, mandateIds, today);
   const [overdueTasks, failedRuns, openRequests] = await Promise.all([
     db.select({ t: tasks, project: projects.name }).from(tasks).leftJoin(projects, eq(projects.id, tasks.projectId)).where(and(scope(tasks.mandateId), eq(tasks.status, "open"), lte(tasks.dueAt, today))).orderBy(asc(tasks.dueAt)).limit(15),
     db.select({ r: playbookRuns, name: playbooks.name }).from(playbookRuns).innerJoin(playbooks, eq(playbooks.id, playbookRuns.playbookId)).where(and(scope(playbookRuns.mandateId), inArray(playbookRuns.status, ["needs_review", "failed", "awaiting_approval"]))).orderBy(desc(playbookRuns.updatedAt)).limit(10),
@@ -56,6 +58,7 @@ export async function needsAttention(db: Db, mandateIds: string[], email: string
   for (const t of overdueTasks) items.push({ key: `tsk:${t.t.id}`, entity: t.project ?? "Action", issue: `Overdue: ${t.t.title}`, severity: "medium", why: "Follow-up past due", owner: null, due: t.t.dueAt.slice(0, 10), source: "Actions", href: t.t.projectId ? `/projects/${t.t.projectId}` : "/tasks", category: "Relationship" });
   for (const r of failedRuns) items.push({ key: `run:${r.r.id}`, entity: r.r.entityLabel || r.name, issue: `${r.name}: ${r.r.status.replace(/_/g, " ")}`, severity: r.r.status === "failed" ? "high" : "medium", why: "Playbook definition of done not met or approval pending", owner: r.r.startedBy, due: null, source: "Playbooks", href: `/playbooks/runs/${r.r.id}`, category: "Playbook" });
   for (const q of openRequests) items.push({ key: `req:${q.q.id}`, entity: q.project ?? "Request", issue: `${q.q.status === "submitted" ? "Document submitted, review it" : "Missing document"}: ${q.q.title}`, severity: q.q.dueDate && q.q.dueDate < today ? "high" : "medium", why: q.q.status === "submitted" ? "Portal response waiting" : "Requested information not received", owner: null, due: q.q.dueDate, source: "Document requests", href: "/portals?tab=requests", category: "Document" });
+  for (const x of commercial) items.push({ key: `com:${x.key}`, entity: x.entity, issue: x.issue, severity: x.severity, why: "Commercial operations", owner: null, due: x.due, source: "Commercial", href: x.href, category: "Commercial" });
   for (const x of pathways) items.push({ key: `fp:${x.id}`, entity: x.detail.split(":")[0].split(" · ").pop() ?? "Funding pathway", issue: x.title, severity: x.severity, why: x.detail, owner: x.owner, due: x.due, source: "Funding pathways", href: `/projects/${x.projectId}?tab=pathways`, category: "Capital" });
   for (const n of notes.filter(x => x.priority !== "information")) items.push({ key: `ntf:${n.id}`, entity: n.category, issue: n.title, severity: n.priority === "critical" ? "critical" : "medium", why: n.body || "Notification", owner: n.assignedTo, due: null, source: "Notifications", href: n.link ?? "/notifications", category: n.category });
 
