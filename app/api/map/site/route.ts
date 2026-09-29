@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const user = await getOsApiUser();
   if (!user) return Response.json({ error: "Not authorized" }, { status: 401 });
   const id = new URL(request.url).searchParams.get("projectId") ?? "";
-  const [p] = await appDb().select({ id: projects.id, name: projects.name, lat: projects.lat, lng: projects.lng, country: projects.country, subdivision: projects.subdivision }).from(projects)
+  const [p] = await appDb().select({ id: projects.id, name: projects.name, lat: projects.lat, lng: projects.lng, country: projects.country, subdivision: projects.subdivision, geometry: projects.geometry }).from(projects)
     .where(and(eq(projects.id, id), mandateCondition(user.scope, projects.mandateId)));
   if (!p) return Response.json({ error: "Not found" }, { status: 404 });
   const facts = await appDb().select({ key: placeFacts.key, label: placeFacts.label, value: placeFacts.value, source: placeFacts.integrationKey, tier: placeFacts.tier, state: placeFacts.state, retrievedAt: placeFacts.retrievedAt, dimension: placeFacts.dimension })

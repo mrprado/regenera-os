@@ -67,7 +67,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   return (
     <>
-      <PageHeader title={p.name} actions={<><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a><Link className="btn" href="/projects">All projects</Link></>} />
+      <PageHeader title={p.name} actions={<><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link>}<Link className="btn" href="/projects">All projects</Link></>} />
       <Notice text={sp.notice} />
       <p className={ui.sub} style={{ marginTop: -6, marginBottom: 12 }}>
         <span className={ui.chip}>{stageLabel(p.stage)}</span> {PROJECT_STATUSES[p.status]}

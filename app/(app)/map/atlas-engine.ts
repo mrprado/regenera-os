@@ -37,6 +37,20 @@ export function baseStyle(): StyleSpecification {
       { id: "tac-waterway", type: "line", source: "ofm", "source-layer": "waterway", layout: { visibility: "none" }, paint: { "line-color": "#0e2a3a", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 2] } },
       { id: "tac-roads", type: "line", source: "ofm", "source-layer": "transportation", layout: { visibility: "none", "line-cap": "round" }, paint: { "line-color": ["match", ["get", "class"], "motorway", "#6b8f76", "trunk", "#5b7b66", "primary", "#4d6a58", "#2c3d33"], "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 5, 0.3, 10, 1, 16, 6] } },
       { id: "tac-buildings", type: "line", source: "ofm", "source-layer": "building", minzoom: 13, layout: { visibility: "none" }, paint: { "line-color": "#3e5a48", "line-width": 0.6 } },
+      // Light street / analytical map (hidden unless chosen)
+      { id: "lt-land", type: "background", layout: { visibility: "none" }, paint: { "background-color": "#f2efe7" } },
+      { id: "lt-landcover", type: "fill", source: "ofm", "source-layer": "landcover", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#d6e3c8", "grass", "#e1ead3", "wetland", "#d4e6de", "sand", "#efe6cf", "ice", "#f4f8fa", "#e6ecd9"], "fill-opacity": 0.8 } },
+      { id: "lt-landuse", type: "fill", source: "ofm", "source-layer": "landuse", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "class"], "residential", "#ebe6dc", "industrial", "#e5dfd7", "commercial", "#efe4dc", ["cemetery", "park"], "#d9e7cc", "farmland", "#ecefd9", "#ece8df"], "fill-opacity": 0.7 } },
+      { id: "lt-park", type: "fill", source: "ofm", "source-layer": "park", layout: { visibility: "none" }, paint: { "fill-color": "#cfe3bf", "fill-opacity": 0.6 } },
+      { id: "lt-water", type: "fill", source: "ofm", "source-layer": "water", layout: { visibility: "none" }, paint: { "fill-color": "#b9d6e8" } },
+      { id: "lt-waterway", type: "line", source: "ofm", "source-layer": "waterway", layout: { visibility: "none" }, paint: { "line-color": "#a9cbe0", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 16, 3] } },
+      { id: "lt-buildings", type: "fill", source: "ofm", "source-layer": "building", minzoom: 14, layout: { visibility: "none" }, paint: { "fill-color": "#dcd6cb", "fill-outline-color": "#c8c0b3", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0.4, 16, 0.9] } },
+      { id: "lt-road-casing", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 9, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service"]]],
+        paint: { "line-color": "#cfc6b6", "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0.8, 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 20, ["service"], 6, 14]] } },
+      { id: "lt-roads", type: "line", source: "ofm", "source-layer": "transportation", layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service", "track", "path"]]],
+        paint: { "line-color": ["match", ["get", "class"], ["motorway", "trunk"], "#f4c77d", "primary", "#f8dea5", ["path", "track"], "#d8cfbd", "#ffffff"], "line-dasharray": ["match", ["get", "class"], ["path", "track"], ["literal", [2, 1]], ["literal", [1, 0]]],
+          "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 5, ["match", ["get", "class"], ["motorway", "trunk"], 0.8, 0.2], 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 17, ["service"], 4.5, ["path", "track"], 1.5, 11]] } },
+      { id: "lt-rail", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 8, filter: ["==", ["get", "class"], "rail"], layout: { visibility: "none" }, paint: { "line-color": "#b9b2a6", "line-width": 1.2, "line-dasharray": [3, 2] } },
       { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#efe9dc", "hillshade-accent-color": "#131b13" } },
       anchor(A_RASTER),
       anchor(A_VECTOR),
@@ -78,14 +92,34 @@ export function baseStyle(): StyleSpecification {
 }
 
 const TAC = ["tac-land", "tac-landcover", "tac-landuse", "tac-water", "tac-waterway", "tac-roads", "tac-buildings"];
+const LT = ["lt-land", "lt-landcover", "lt-landuse", "lt-park", "lt-water", "lt-waterway", "lt-buildings", "lt-road-casing", "lt-roads", "lt-rail"];
+const HY_LINES = ["hy-roads", "hy-buildings"];
+const HY_TEXT = ["hy-water-labels", "hy-road-labels", "hy-place-minor", "hy-poi", "hy-housenumbers", "country-labels", "city-labels"];
 
-/** Swaps the basemap raster (or shows the tactical vector map). */
+/** Swaps the basemap: raster imagery / topo, the light street map or the dark analytical map, and sets the OSM
+ *  reference layers (roads, names, POIs, buildings) on or off and light or dark to suit it. */
 export function setBasemap(map: maplibregl.Map, layer: OfferedLayer | undefined, date: string) {
   if (map.getLayer("basemap")) map.removeLayer("basemap");
   if (map.getSource("basemap")) map.removeSource("basemap");
   const tactical = !layer || layer.kind === "osm";
-  for (const id of TAC) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", tactical ? "visible" : "none");
-  if (tactical || !layer?.tiles) return;
+  const light = layer?.kind === "streets";
+  const vis = (ids: string[], on: boolean) => { for (const id of ids) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); };
+  vis(TAC, tactical);
+  vis(LT, light);
+  // Imagery hybrid draws road lines over photos; the vector maps draw their own roads, so only labels are added.
+  const labels = layer?.labels ?? (tactical ? "on-dark" : undefined);
+  vis(HY_LINES, labels === "on-dark" && !tactical);
+  vis(HY_TEXT, !!labels);
+  // Global imagery (NASA, Sentinel-2) keeps country and city names for orientation; plain satellite and topo stay clean.
+  if (!labels && layer?.kind === "raster" && layer.id !== "terrain" && layer.id !== "esri_plain") vis(["country-labels", "city-labels"], true);
+  if (layer?.muted && map.getLayer("hy-poi")) map.setLayoutProperty("hy-poi", "visibility", "none");
+  const dark = labels !== "on-light";
+  for (const id of HY_TEXT) if (map.getLayer(id)) {
+    map.setPaintProperty(id, "text-color", dark ? (id === "hy-water-labels" ? "#bfe3ff" : id === "hy-poi" ? "#ffe9b0" : "#ffffff") : (id === "hy-water-labels" ? "#3e6f8e" : id === "hy-poi" ? "#6b5a3a" : "#2b2f2c"));
+    map.setPaintProperty(id, "text-halo-color", dark ? "rgba(3,6,8,0.9)" : "rgba(255,255,255,0.92)");
+  }
+  if (map.getLayer("hillshade")) map.setPaintProperty("hillshade", "hillshade-exaggeration", light ? 0.18 : 0.3);
+  if (tactical || light || !layer?.tiles) return;
   map.addSource("basemap", { type: "raster", tiles: [tileUrl(layer, date)], tileSize: 256, maxzoom: layer.maxzoom ?? 18, attribution: layer.attribution });
   map.addLayer({ id: "basemap", type: "raster", source: "basemap", paint: { "raster-fade-duration": 200, "raster-contrast": 0.06, "raster-saturation": -0.05 } }, "hillshade");
 }

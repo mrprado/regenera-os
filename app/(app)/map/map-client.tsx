@@ -7,12 +7,13 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, MapGeoJSONFeature, RasterTileSource } from "maplibre-gl";
-import type { Feature, FeatureCollection, Point as GeoPoint } from "geojson";
+import type { Feature, FeatureCollection, Geometry, Point as GeoPoint } from "geojson";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, Play, Scan, Search, Share2, Square, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
 import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, type MapRecord } from "@/lib/map/discovery";
+import { fitGeometry, flyToCoordinates } from "./camera";
 import SavedViews from "./saved-views";
 import { decodeView, encodeView, parseCoordinates, productDate, type OfferedLayer } from "@/lib/map/catalog";
 import type { Omm } from "@/lib/map/live";
@@ -96,7 +97,9 @@ function MapClient() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [init] = useState(() => decodeView(window.location.hash));
-  const initialFit = useRef(init.lat != null);
+  // Deep link: /map?project=<id> fits the project's site, selects it and opens its intelligence panel.
+  const [deepProject] = useState(() => new URLSearchParams(window.location.search).get("project"));
+  const initialFit = useRef(init.lat != null || new URLSearchParams(window.location.search).has("project"));
   const [mapObj, setMapObj] = useState<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [data, setData] = useState<MapPayload | null>(null);
@@ -142,6 +145,23 @@ function MapClient() {
   const trailRef = useRef<[number, number][]>([]);
   const trackedRef = useRef(tracked);
   useEffect(() => { trackedRef.current = tracked; trailRef.current = []; }, [tracked]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !deepProject || !data) return;
+    let live = true;
+    const f = data.projects.features.find(x => String(x.properties.id) === deepProject);
+    fetch(withBase(`/api/map/site?projectId=${encodeURIComponent(deepProject)}`)).then(r => (r.ok ? r.json() as Promise<{ project?: { lat: number | null; lng: number | null; geometry: string | null } }> : null)).then(s => {
+      if (!live || !s?.project) return;
+      let g: Geometry | null = null;
+      try { const j = s.project.geometry ? JSON.parse(s.project.geometry) : null; g = j?.type === "Feature" ? j.geometry : j; } catch { g = null; }
+      const at: [number, number] | null = f?.geometry ? (f.geometry.coordinates as [number, number]) : s.project.lng != null && s.project.lat != null ? [s.project.lng, s.project.lat] : null;
+      if (f && at) setSelected({ layer: "projects", props: f.properties, lngLat: at });
+      if (g) fitGeometry(map, g);
+      else if (s.project.lat != null && s.project.lng != null) flyToCoordinates(map, s.project.lat, s.project.lng, 15.5);
+    }).catch(() => { /* the map stays usable; the record link still works */ });
+    return () => { live = false; };
+  }, [mapReady, deepProject, data]);
 
   const records = useMemo(() => data ? mapRecords(data) : [], [data]);
   const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);

@@ -3,7 +3,7 @@
 // by configured keys before the browser sees it, so a disabled or licence-required source never loads.
 
 export type LayerGroup = "basemap" | "earth" | "hazards" | "movement" | "space" | "nature" | "infrastructure" | "weather";
-export type LayerKind = "raster" | "feed" | "osm" | "power" | "buildings" | "satellites" | "street";
+export type LayerKind = "raster" | "feed" | "osm" | "power" | "buildings" | "satellites" | "street" | "streets";
 
 export type CatalogLayer = {
   id: string;
@@ -33,6 +33,10 @@ export type CatalogLayer = {
   /** Server-only: when this env var is set, `keyedTiles` (with {key}) replaces the keyless `tiles`. */
   keyEnv?: string;
   keyedTiles?: string;
+  /** Basemaps: draw the OSM reference layers (roads, street names, places, POIs, buildings) over it, in this contrast. */
+  labels?: "on-dark" | "on-light";
+  /** Basemaps: a quieter analytical variant (no points of interest, muted roads). */
+  muted?: boolean;
   swatch: string;
   legend?: { color: string; label: string }[];
   caveat?: string;
@@ -54,12 +58,16 @@ const GIBS_ATTR = "Imagery: NASA EOSDIS GIBS";
 
 export const CATALOG: CatalogLayer[] = [
   // Basemaps (one at a time)
-  { id: "esri", group: "basemap", label: "Satellite HD", description: "Esri World Imagery (Maxar, Airbus, national programmes): 0.3–0.5 m in most cities, building-level at close zoom. Street names and buildings are drawn over it.", registry: "esri", attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community", license: "Esri terms of use (set ESRI_API_KEY from a free ArcGIS Location Platform account for production use)", refresh: "Periodic (dates vary by area)", kind: "raster", tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", keyEnv: "ESRI_API_KEY", keyedTiles: "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}", maxzoom: 19, swatch: "#4b6b4f" },
+  { id: "esri", group: "basemap", label: "Satellite hybrid", labels: "on-dark", description: "Esri World Imagery (Maxar, Airbus, national programmes): 0.3–0.5 m in most cities, building-level at close zoom. Street names and buildings are drawn over it.", registry: "esri", attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community", license: "Esri terms of use (set ESRI_API_KEY from a free ArcGIS Location Platform account for production use)", refresh: "Periodic (dates vary by area)", kind: "raster", tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", keyEnv: "ESRI_API_KEY", keyedTiles: "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}", maxzoom: 19, swatch: "#4b6b4f" },
+  { id: "esri_plain", group: "basemap", label: "Satellite", description: "Esri World Imagery without labels: the ground as photographed.", registry: "esri", attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community", license: "Esri terms of use", refresh: "Periodic (dates vary by area)", kind: "raster", tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", keyEnv: "ESRI_API_KEY", keyedTiles: "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}", maxzoom: 19, swatch: "#3f5c43" },
+  { id: "streets", group: "basemap", label: "Streets", description: "Light street map from OpenStreetMap: roads, names, buildings, points of interest and house numbers to building level.", registry: "openfreemap", attribution: "© OpenStreetMap contributors, OpenFreeMap", license: "ODbL", refresh: "Weekly", kind: "streets", labels: "on-light", swatch: "#e9e4d8" },
+  { id: "terrain", group: "basemap", label: "Terrain", description: "Esri World Topographic map: relief, contours, land cover and place names.", registry: "esri", attribution: "Esri, HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors, and the GIS User Community", license: "Esri terms of use", refresh: "Periodic", kind: "raster", tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", maxzoom: 19, swatch: "#c9c3a6" },
+  { id: "light", group: "basemap", label: "Analytical light", description: "Quiet light vector map for reading analytical overlays.", registry: "openfreemap", attribution: "© OpenStreetMap contributors, OpenFreeMap", license: "ODbL", refresh: "Weekly", kind: "streets", labels: "on-light", muted: true, swatch: "#f4f1ea" },
   { id: "s2cloudless", group: "basemap", label: "Sentinel-2 cloudless", description: "Cloud-free 10 m mosaic of the whole Earth (2016).", registry: "eox_s2cloudless", attribution: "Sentinel-2 cloudless by EOX (Copernicus Sentinel data 2016)", license: "CC BY 4.0", refresh: "Static (2016)", kind: "raster", tiles: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg", maxzoom: 15, swatch: "#5b7a52" },
   { id: "viirs_today", group: "basemap", label: "Yesterday from orbit", description: "VIIRS true colour: the planet as it looked yesterday, clouds and smoke included.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "Daily", kind: "raster", tiles: `${GIBS}/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, daily: true, lagDays: 1, maxzoom: 9, swatch: "#7fa3c4" },
   { id: "blackmarble", group: "basemap", label: "Earth at night", description: "VIIRS Black Marble night lights: settlement, industry and energy use.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "Static (2016)", kind: "raster", tiles: `${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`, maxzoom: 8, swatch: "#d9b45a" },
   { id: "bluemarble", group: "basemap", label: "Blue Marble relief", description: "NASA Blue Marble with shaded relief and bathymetry.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "Static", kind: "raster", tiles: `${GIBS}/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg`, maxzoom: 8, swatch: "#3d6f94" },
-  { id: "tactical", group: "basemap", label: "Tactical vector", description: "Dark OpenStreetMap vector map: water, land cover, roads and buildings.", registry: "openfreemap", attribution: "© OpenStreetMap contributors, OpenFreeMap", license: "ODbL", refresh: "Weekly", kind: "osm", swatch: "#1d2a22" },
+  { id: "tactical", group: "basemap", label: "Analytical dark", labels: "on-dark", muted: true, description: "Dark OpenStreetMap vector map: water, land cover, roads and buildings.", registry: "openfreemap", attribution: "© OpenStreetMap contributors, OpenFreeMap", license: "ODbL", refresh: "Weekly", kind: "osm", swatch: "#1d2a22" },
 
   // Earth observation overlays
   { id: "ndvi", group: "earth", label: "Vegetation (NDVI, 8-day)", description: "MODIS vegetation index: green is dense, healthy vegetation; brown is bare or stressed land.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "8-day composite", kind: "raster", tiles: `${GIBS}/MODIS_Terra_NDVI_8Day/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`, daily: true, lagDays: 2, maxzoom: 9, opacity: 0.75, swatch: "#6fbf4a", legend: [{ color: "#8c510a", label: "Bare" }, { color: "#d9ef8b", label: "Sparse" }, { color: "#1a9850", label: "Dense" }] },
