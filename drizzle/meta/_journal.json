@@ -225,6 +225,13 @@
       "when": 1790719076891,
       "tag": "0031_freezing_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790720349776,
+      "tag": "0032_wild_klaw",
+      "breakpoints": true
     }
   ]
 }
