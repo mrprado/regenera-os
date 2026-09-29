@@ -103,7 +103,7 @@ function MapClient() {
   const [hazards, setHazards] = useState<FeatureCollection | null>(null);
   const [catalog, setCatalog] = useState<OfferedLayer[]>([]);
   const [firmsKey, setFirmsKey] = useState(false);
-  const [base, setBase] = useState<string>(init.base ?? "s2cloudless");
+  const [base, setBase] = useState<string>(init.base ?? "esri");
   const [overlays, setOverlays] = useState<Set<string>>(() => new Set(init.layers?.filter(l => !RECORD_KEYS.includes(l as LayerKey)) ?? ["quakes", "events", "cyclones"]));
   const [visible, setVisible] = useState<Record<LayerKey, boolean>>(() => {
     const fromHash = init.layers?.filter(l => RECORD_KEYS.includes(l as LayerKey));

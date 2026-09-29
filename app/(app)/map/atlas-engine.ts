@@ -40,6 +40,28 @@ export function baseStyle(): StyleSpecification {
       { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#efe9dc", "hillshade-accent-color": "#131b13" } },
       anchor(A_RASTER),
       anchor(A_VECTOR),
+      // Hybrid reference layers over imagery (OpenStreetMap via OpenFreeMap): roads, buildings, street names, places,
+      // points of interest and house numbers, revealed progressively by zoom so detail appears only where it is legible.
+      { id: "hy-roads", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 11, filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service", "track"]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ["match", ["get", "class"], ["motorway", "trunk"], "#f7c85c", "primary", "#f3dc8e", "#ffffff"], "line-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0.25, 15, 0.45, 18, 0.35],
+          "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 11, ["match", ["get", "class"], ["motorway", "trunk"], 1.2, 0.4], 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 10, ["service", "track"], 2.5, 6]] } },
+      { id: "hy-buildings", type: "line", source: "ofm", "source-layer": "building", minzoom: 16, paint: { "line-color": "rgba(255,255,255,0.45)", "line-width": ["interpolate", ["linear"], ["zoom"], 16, 0.4, 19, 1.2] } },
+      { id: "hy-water-labels", type: "symbol", source: "ofm", "source-layer": "water_name", minzoom: 8,
+        layout: { "text-field": NAME, "text-font": ["Noto Sans Italic"], "text-size": 12 },
+        paint: { "text-color": "#bfe3ff", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.2 } },
+      { id: "hy-road-labels", type: "symbol", source: "ofm", "source-layer": "transportation_name", minzoom: 13,
+        layout: { "symbol-placement": "line", "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14], "text-max-angle": 30, "text-padding": 2 },
+        paint: { "text-color": "#ffffff", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1.5 } },
+      { id: "hy-place-minor", type: "symbol", source: "ofm", "source-layer": "place", minzoom: 10, filter: ["in", ["get", "class"], ["literal", ["village", "suburb", "neighbourhood", "hamlet", "quarter"]]],
+        layout: { "text-field": NAME, "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 16, 14], "text-transform": "uppercase", "text-letter-spacing": 0.08, "text-max-width": 8 },
+        paint: { "text-color": "#fbf6e8", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.3 } },
+      { id: "hy-poi", type: "symbol", source: "ofm", "source-layer": "poi", minzoom: 15, filter: ["<=", ["coalesce", ["get", "rank"], 99], ["step", ["zoom"], 5, 16, 15, 17, 60]],
+        layout: { "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": 11, "text-max-width": 9, "text-optional": true, "text-padding": 4 },
+        paint: { "text-color": "#ffe9b0", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1.2 } },
+      { id: "hy-housenumbers", type: "symbol", source: "ofm", "source-layer": "housenumber", minzoom: 18,
+        layout: { "text-field": ["get", "housenumber"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-padding": 2 },
+        paint: { "text-color": "#dfe7e2", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1 } },
       { id: "admin-1", type: "line", source: "ofm", "source-layer": "boundary", minzoom: 3.5, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]],
         paint: { "line-color": "rgba(239,233,220,0.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.4, 10, 1.2], "line-dasharray": [2, 2] } },
       { id: "admin-0", type: "line", source: "ofm", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
@@ -114,6 +136,7 @@ export function overlayLayerIds(l: OfferedLayer): string[] {
   const p = `ov-${l.id}`;
   if (l.kind === "raster") return [p];
   if (l.kind === "buildings") return [p];
+  if (l.kind === "street") return [`${p}-seq`, `${p}-img`];
   if (l.kind === "power") return [`${p}-lines`, `${p}-plants`, `${p}-subs`];
   if (l.kind === "osm") return [`${p}-fill`, `${p}-line`];
   if (l.kind === "satellites") return [`${p}-pt`, `${p}-label`];
@@ -144,6 +167,19 @@ export function addOverlay(map: maplibregl.Map, l: OfferedLayer, date: string) {
       "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8], "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
       "fill-extrusion-opacity": 0.85, "fill-extrusion-vertical-gradient": true,
     } }, A_FEED);
+    return;
+  }
+  if (l.kind === "street") {
+    // Mapillary coverage: sequences as lines, images as points from z14; clicking an image opens the street-level viewer.
+    map.addSource(p, { type: "vector", tiles: [tileUrl(l, date)], minzoom: 6, maxzoom: 14, attribution: l.attribution });
+    map.addLayer({ id: `${p}-seq`, type: "line", source: p, "source-layer": "sequence", paint: { "line-color": "#35af6d", "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 14, 2.4], "line-opacity": 0.85 } }, A_FEED);
+    map.addLayer({ id: `${p}-img`, type: "circle", source: p, "source-layer": "image", minzoom: 15, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 2.5, 19, 6], "circle-color": "#35af6d", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } }, A_FEED);
+    map.on("click", `${p}-img`, e => {
+      const id = e.features?.[0]?.properties?.id;
+      if (id) window.open(`https://www.mapillary.com/app/?pKey=${encodeURIComponent(String(id))}&focus=photo`, "_blank", "noopener,noreferrer");
+    });
+    map.on("mouseenter", `${p}-img`, () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", `${p}-img`, () => { map.getCanvas().style.cursor = ""; });
     return;
   }
   if (l.kind === "osm") {

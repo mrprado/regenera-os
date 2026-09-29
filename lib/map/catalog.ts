@@ -3,7 +3,7 @@
 // by configured keys before the browser sees it, so a disabled or licence-required source never loads.
 
 export type LayerGroup = "basemap" | "earth" | "hazards" | "movement" | "space" | "nature" | "infrastructure" | "weather";
-export type LayerKind = "raster" | "feed" | "osm" | "power" | "buildings" | "satellites";
+export type LayerKind = "raster" | "feed" | "osm" | "power" | "buildings" | "satellites" | "street";
 
 export type CatalogLayer = {
   id: string;
@@ -30,6 +30,9 @@ export type CatalogLayer = {
   pollMs?: number;
   /** Server-only: env var that must be set for the layer to be offered. */
   needsEnv?: string;
+  /** Server-only: when this env var is set, `keyedTiles` (with {key}) replaces the keyless `tiles`. */
+  keyEnv?: string;
+  keyedTiles?: string;
   swatch: string;
   legend?: { color: string; label: string }[];
   caveat?: string;
@@ -51,7 +54,7 @@ const GIBS_ATTR = "Imagery: NASA EOSDIS GIBS";
 
 export const CATALOG: CatalogLayer[] = [
   // Basemaps (one at a time)
-  { id: "esri", group: "basemap", label: "Satellite HD", description: "Esri World Imagery, sub-metre in many cities.", registry: "esri", attribution: "Imagery © Esri, Maxar, Earthstar Geographics", license: "ArcGIS Location Platform terms", refresh: "Periodic", kind: "raster", tiles: "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}", maxzoom: 19, needsEnv: "ESRI_API_KEY", swatch: "#4b6b4f" },
+  { id: "esri", group: "basemap", label: "Satellite HD", description: "Esri World Imagery (Maxar, Airbus, national programmes): 0.3–0.5 m in most cities, building-level at close zoom. Street names and buildings are drawn over it.", registry: "esri", attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community", license: "Esri terms of use (set ESRI_API_KEY from a free ArcGIS Location Platform account for production use)", refresh: "Periodic (dates vary by area)", kind: "raster", tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", keyEnv: "ESRI_API_KEY", keyedTiles: "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}", maxzoom: 19, swatch: "#4b6b4f" },
   { id: "s2cloudless", group: "basemap", label: "Sentinel-2 cloudless", description: "Cloud-free 10 m mosaic of the whole Earth (2016).", registry: "eox_s2cloudless", attribution: "Sentinel-2 cloudless by EOX (Copernicus Sentinel data 2016)", license: "CC BY 4.0", refresh: "Static (2016)", kind: "raster", tiles: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg", maxzoom: 15, swatch: "#5b7a52" },
   { id: "viirs_today", group: "basemap", label: "Yesterday from orbit", description: "VIIRS true colour: the planet as it looked yesterday, clouds and smoke included.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "Daily", kind: "raster", tiles: `${GIBS}/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, daily: true, lagDays: 1, maxzoom: 9, swatch: "#7fa3c4" },
   { id: "blackmarble", group: "basemap", label: "Earth at night", description: "VIIRS Black Marble night lights: settlement, industry and energy use.", registry: "nasa_gibs", attribution: GIBS_ATTR, license: "NASA open data", refresh: "Static (2016)", kind: "raster", tiles: `${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`, maxzoom: 8, swatch: "#d9b45a" },
@@ -86,6 +89,7 @@ export const CATALOG: CatalogLayer[] = [
 
   // Infrastructure
   { id: "power", group: "infrastructure", label: "Power grid", description: "Transmission lines, substations and power plants from OpenStreetMap.", registry: "openinframap", attribution: "Open Infrastructure Map, © OpenStreetMap contributors", license: "ODbL", refresh: "Daily", kind: "power", swatch: "#f2b35a", caveat: "Community-mapped: incomplete by nature." },
+  { id: "street_imagery", group: "infrastructure", label: "Street-level imagery (Mapillary)", description: "Crowd-sourced street-level photos (Meta Mapillary): green lines show where imagery exists; click one to open the street view.", registry: "mapillary", attribution: "Street imagery © Mapillary contributors (CC BY-SA)", license: "CC BY-SA 4.0 imagery; free API token", refresh: "Continuous", kind: "street", tiles: "https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token={key}", needsEnv: "MAPILLARY_TOKEN", maxzoom: 14, swatch: "#35af6d", caveat: "Coverage depends on contributors; strongest in cities and along main roads." },
   { id: "buildings", group: "infrastructure", label: "3D buildings", description: "Extruded OpenStreetMap buildings from zoom 14.", registry: "openfreemap", attribution: "© OpenStreetMap contributors, OpenFreeMap", license: "ODbL", refresh: "Weekly", kind: "buildings", swatch: "#cfd8d2" },
 
   // Weather and air
@@ -107,14 +111,17 @@ export function tileUrl(layer: Pick<CatalogLayer, "tiles">, date: string, key = 
 }
 
 /** Catalogue as offered to the browser: registry-allowed, key present, key injected server-side. */
-export type OfferedLayer = Omit<CatalogLayer, "needsEnv">;
+export type OfferedLayer = Omit<CatalogLayer, "needsEnv" | "keyEnv" | "keyedTiles">;
 export function offerCatalog(states: Map<string, string>, env: Record<string, string | undefined>): OfferedLayer[] {
   return CATALOG.filter(l => {
     const state = states.get(l.registry);
     if (state === "disabled" || state === "license_required") return false;
     if (l.needsEnv && !env[l.needsEnv]) return false;
     return true;
-  }).map(({ needsEnv, ...l }) => (needsEnv && l.tiles ? { ...l, tiles: l.tiles.replace("{key}", encodeURIComponent(env[needsEnv] ?? "")) } : l));
+  }).map(({ needsEnv, keyEnv, keyedTiles, ...l }) => {
+    if (keyEnv && keyedTiles && env[keyEnv]) return { ...l, tiles: keyedTiles.replace("{key}", encodeURIComponent(env[keyEnv]!)) };
+    return needsEnv && l.tiles ? { ...l, tiles: l.tiles.replace("{key}", encodeURIComponent(env[needsEnv] ?? "")) } : l;
+  });
 }
 
 /** Share state: camera, basemap, overlays, sensor mode and tracked target, serialised in the URL hash. */
