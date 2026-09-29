@@ -39,6 +39,7 @@ import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
 import { expireQualifications, runMatches } from "@/lib/capital/engine";
+import { expirePermissions } from "@/lib/community/engine";
 import { expirePermits } from "@/lib/regulatory/engine";
 import { buildPlaceProfile, projectsNeedingPlace } from "@/lib/place/engine";
 
@@ -265,6 +266,8 @@ export const handlers: Record<string, JobHandler> = {
   },
   "capital.expire": async ({ db, now }) => {
     await expireQualifications(db, now);
+    // Knowledge permissions past their expiry stop working and flag every output that used them.
+    await expirePermissions(db, now);
   },
   "funding.place": async ({ db, now }) => {
     const { more } = await placeFunding(db, 15);

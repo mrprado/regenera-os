@@ -11,6 +11,8 @@ import { CAPITAL_TYPES, COMMITMENT_STAGES, ELIGIBILITY, MATCH_STATUSES, QUALIFIC
 import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { compactMoney } from "@/lib/projects/labels";
 import { addCapitalMandateAction, addQualificationAction, updateCapitalProfileAction } from "../../../capital-actions";
+import { saveCommunityAlignmentAction } from "../../../community-actions";
+import { ALIGNMENT_FLAGS, CP_PREFERENCE, SUPPORTED_STRUCTURES } from "@/lib/community/vocab";
 import styles from "../../../projects/projects.module.css";
 import CriteriaFields from "../../criteria-fields";
 
@@ -120,6 +122,18 @@ export default async function CapitalPartnerPage({ params, searchParams }: { par
               )}
             </section>
           )}
+          <section className={r.panel}>
+            <p className={r.panelTitle}>Community alignment</p>
+            <p className={ui.sub}>Used for explainable community-structure fit on projects (never a score). Record only what the mandate states or what observed deals show, with the source.</p>
+            <form action={saveCommunityAlignmentAction} className={r.form}>
+              <input type="hidden" name="profileId" value={p.id} /><input type="hidden" name="back" value={`/capital/partners/${p.id}`} />
+              <label>Community participation<select name="preference" defaultValue={p.communityAlignment.preference}>{Object.entries(CP_PREFERENCE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <fieldset style={{ border: 0, padding: 0 }}><legend className={ui.sub}>Mandate flags</legend>{Object.entries(ALIGNMENT_FLAGS).map(([k, v]) => <label key={k} style={{ display: "flex", gap: 6, fontWeight: 400 }}><input type="checkbox" name="flags" value={k} defaultChecked={p.communityAlignment.flags.includes(k)} style={{ width: "auto" }} />{v}</label>)}</fieldset>
+              <fieldset style={{ border: 0, padding: 0 }}><legend className={ui.sub}>Supported structures</legend>{Object.entries(SUPPORTED_STRUCTURES).map(([k, v]) => <label key={k} style={{ display: "flex", gap: 6, fontWeight: 400 }}><input type="checkbox" name="supported" value={k} defaultChecked={p.communityAlignment.supported.includes(k)} style={{ width: "auto" }} />{v}</label>)}</fieldset>
+              <label>Source<input name="source" defaultValue={p.communityAlignment.source} placeholder="Mandate document, public policy, observed transactions" /></label>
+              <button className="btn" type="submit">Save</button>
+            </form>
+          </section>
         </aside>
       </div>
     </>

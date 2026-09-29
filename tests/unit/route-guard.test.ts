@@ -115,4 +115,11 @@ describe("route guard", () => {
       }
     }
   });
+
+  it("culturally governed knowledge and community records never reach Ask the OS, the MCP server or global search", () => {
+    const lib = join(__dirname, "..", "..", "lib");
+    const re = /knowledgeRecords|knowledgeHolders|knowledgePermissions|knowledgeUses|consentRecords|communityEngagements|communityGrievances|knowledge_records|knowledge_holders|consent_records|community_engagements|community_grievances/;
+    const targets = [...["ask", "mcp"].flatMap(dir => readdirSync(join(lib, dir)).map(f => join(lib, dir, f))), join(lib, "search.ts")];
+    for (const p of targets) expect(re.test(readFileSync(p, "utf8")), `${p} touches governed knowledge or community records`).toBe(false);
+  });
 });

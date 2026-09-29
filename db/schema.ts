@@ -136,3 +136,4 @@ export * from "./finance";
 export * from "./commercial";
 export * from "./alignment";
 export * from "./natural";
+export * from "./community";

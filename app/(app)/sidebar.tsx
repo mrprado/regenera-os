@@ -23,7 +23,7 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/inbox", label: "Inbox", icon: Inbox },
     ],
   },
-  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }, { href: "/land", label: "Land pipeline", icon: MapPinned }, { href: "/network", label: "Ecosystem network", icon: HardHat }] },
+  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }, { href: "/land", label: "Land pipeline", icon: MapPinned }, { href: "/community", label: "Community & rights", icon: Users }, { href: "/network", label: "Ecosystem network", icon: HardHat }] },
   { label: "Capital", items: [{ href: "/funding", label: "Funding", icon: HandCoins }, { href: "/capital", label: "Capital partners", icon: Banknote }, { href: "/capital/alignment", label: "Capital alignment", icon: Scale }] },
   {
     label: "Intelligence",

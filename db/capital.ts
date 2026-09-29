@@ -39,6 +39,8 @@ export const capitalProfiles = sqliteTable("capital_profiles", {
   impact: text("impact").notNull().default(""),
   esRequirements: text("es_requirements").notNull().default(""),   // lender/investor standards (IFC PS, Equator …)
   localContent: text("local_content").notNull().default(""),
+  // Community alignment (phase 9): flags (ALIGNMENT_FLAGS), participation preference (CP_PREFERENCE), supported structures.
+  communityAlignment: text("community_alignment", { mode: "json" }).$type<{ flags: string[]; preference: string; supported: string[]; source: string }>().notNull().default(sql`'{"flags":[],"preference":"unknown","supported":[],"source":""}'`),
   relationshipOwner: text("relationship_owner"),
   relationshipStrength: text("relationship_strength", { enum: keys(RELATIONSHIP_STRENGTH) }).notNull().default("unknown"),
   nextAction: text("next_action"),

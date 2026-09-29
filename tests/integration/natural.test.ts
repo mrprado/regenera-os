@@ -24,7 +24,7 @@ describe("land pipeline", () => {
     await expect(moveLand(t.db, c.id, "identified", "alan")).rejects.toThrow(/forward/);
     await moveLand(t.db, c.id, "diligence", "alan");
     await expect(moveLand(t.db, c.id, "option", "alan")).rejects.toThrow(/Start diligence/);
-    const d = defaultDiligence().map(x => ({ ...x, status: "clear" as const }));
+    const d = defaultDiligence().map(x => ({ ...x, status: "clear" as "clear" | "issue" }));
     d[0].status = "issue";
     await t.db.update(landCandidates).set({ diligence: d }).where(eq(landCandidates.id, c.id));
     await moveLand(t.db, c.id, "option", "alan");

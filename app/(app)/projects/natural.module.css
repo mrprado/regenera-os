@@ -33,3 +33,5 @@
 .check { display: flex !important; gap: 6px; align-items: center; }
 .check input { width: auto !important; }
 @media (max-width: 900px) { .kv { grid-template-columns: 1fr; } .permRow { grid-template-columns: 1fr 70px; } }
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 1100px) { .cols3 { grid-template-columns: 1fr; } }
