@@ -21,13 +21,13 @@ export default async function Assessment({ triggerId }: { triggerId: string }) {
     a.related.projectIds.length ? appDb().select({ id: projects.id, name: projects.name }).from(projects).where(inArray(projects.id, a.related.projectIds)) : [],
     a.related.profileIds.length ? appDb().select({ id: capitalProfiles.id, name: capitalProfiles.name }).from(capitalProfiles).where(inArray(capitalProfiles.id, a.related.profileIds)) : [],
   ]);
-  const H = ({ t }: { t: string }) => <input type="hidden" name={t === "a" ? "assessmentId" : "triggerId"} value={t === "a" ? a.id : triggerId} />;
+  const ids = () => <><input type="hidden" name="assessmentId" value={a.id} /><input type="hidden" name="triggerId" value={triggerId} /></>;
   return <section className={r.panel}>
     <p className={r.panelTitle}><span>Regenera relevance</span><span className={ui.chip}>{SIGNAL_TYPES[a.signalType]}</span></p>
     <table className={ui.table}><tbody>{(Object.keys(RELEVANCE_DIMENSIONS) as (keyof typeof RELEVANCE_DIMENSIONS)[]).map(k => { const x = a.relevance.find(v => v.dimension === k); return <tr key={k}>
       <td>{RELEVANCE_DIMENSIONS[k]}</td><td><b style={{ color: COLORS[x?.rating ?? "unknown"] }}>{RATINGS[(x?.rating ?? "unknown") as keyof typeof RATINGS]}</b></td>
       <td className={ui.sub}>{x?.reason}{x?.evidence ? ` · ${x.evidence}` : ""}{x ? ` · ${x.confidence} confidence · ${x.by}` : ""}</td>
-      <td><details><summary className={ui.sub}>rate</summary><form action={rateDimensionAction} className={s.mini}><H t="a" /><H t="t" /><input type="hidden" name="dimension" value={k} />
+      <td><details><summary className={ui.sub}>rate</summary><form action={rateDimensionAction} className={s.mini}>{ids()}<input type="hidden" name="dimension" value={k} />
         <select name="rating" defaultValue={x?.rating ?? "unknown"} aria-label="Rating">{Object.entries(RATINGS).map(([rk, v]) => <option key={rk} value={rk}>{v}</option>)}</select><input name="reason" placeholder="reason" required aria-label="Reason" /><input name="evidence" placeholder="evidence" aria-label="Evidence" /><button className={ui.miniBtn} type="submit">Save</button></form></details></td></tr>; })}</tbody></table>
     <form action={assessSignalAction}><input type="hidden" name="triggerId" value={triggerId} /><button className={ui.miniBtn} type="submit">Re-derive from records (keeps your ratings)</button></form>
 
@@ -35,7 +35,7 @@ export default async function Assessment({ triggerId }: { triggerId: string }) {
     <p className={ui.sub}>Projects: {projs.map(p => <Link key={p.id} href={`/projects/${p.id}`} style={{ marginRight: 8 }}>{p.name}</Link>)}{projs.length ? null : "—"} · Capital profiles: {profs.map(p => <Link key={p.id} href={`/capital/partners/${p.id}`} style={{ marginRight: 8 }}>{p.name}</Link>)}{profs.length ? null : "—"} · Services: {a.related.services.join(", ") || "—"}</p>
 
     <details><summary className={r.panelTitle}>Interpretation</summary>
-      <form action={saveInterpretationAction} className={s.inline}><H t="a" /><H t="t" />
+      <form action={saveInterpretationAction} className={s.inline}>{ids()}
         <label>Signal type<select name="signalType" defaultValue={a.signalType}>{Object.entries(SIGNAL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
         <label>Sector<input name="sector" defaultValue={a.classification.sector ?? ""} /></label><label>Technology<input name="technology" defaultValue={a.classification.technology ?? ""} /></label><label>Transaction type<input name="transactionType" defaultValue={a.classification.transactionType ?? ""} /></label>
         <label>Capital type<input name="capitalType" defaultValue={a.classification.capitalType ?? ""} /></label><label>Project stage<input name="projectStage" defaultValue={a.classification.projectStage ?? ""} /></label><label>Geography<input name="geography" defaultValue={a.classification.geography ?? ""} /></label>
@@ -46,8 +46,8 @@ export default async function Assessment({ triggerId }: { triggerId: string }) {
 
     <p className={r.panelTitle} style={{ marginTop: 12 }}>Actions → outcomes</p>
     {a.actions.length === 0 ? <p className={r.empty}>No actions yet.</p> : <table className={ui.table}><tbody>{a.actions.map(x => <tr key={x.id}><td>{SIGNAL_ACTIONS[x.action as keyof typeof SIGNAL_ACTIONS] ?? x.action}<span className={ui.sub}>{x.note}{x.owner ? ` · ${x.owner}` : ""}</span></td>
-      <td><form action={updateSignalActionAction} className={s.mini}><H t="a" /><H t="t" /><input type="hidden" name="actionId" value={x.id} /><select name="status" defaultValue={x.status} aria-label="Status">{Object.entries(ACTION_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><input name="outcome" defaultValue={x.outcome} placeholder="outcome" aria-label="Outcome" /><button className={ui.miniBtn} type="submit">Save</button></form></td></tr>)}</tbody></table>}
-    <form action={addSignalActionAction} className={s.inline}><H t="a" /><H t="t" /><label>Action<select name="action">{Object.entries(SIGNAL_ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label><label>Owner<input name="owner" /></label><label className={s.wide}>Note<input name="note" /></label><button className={ui.miniBtn} type="submit">Add action</button></form>
-    <form action={updateSignalActionAction} className={s.inline}><H t="a" /><H t="t" /><input type="hidden" name="actionId" value="" /><input type="hidden" name="status" value="proposed" /><label className={s.wide}>Learning (what this changed in Regenera&apos;s knowledge)<input name="learning" defaultValue={a.learning} /></label><button className={ui.miniBtn} type="submit">Save learning</button></form>
+      <td><form action={updateSignalActionAction} className={s.mini}>{ids()}<input type="hidden" name="actionId" value={x.id} /><select name="status" defaultValue={x.status} aria-label="Status">{Object.entries(ACTION_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><input name="outcome" defaultValue={x.outcome} placeholder="outcome" aria-label="Outcome" /><button className={ui.miniBtn} type="submit">Save</button></form></td></tr>)}</tbody></table>}
+    <form action={addSignalActionAction} className={s.inline}>{ids()}<label>Action<select name="action">{Object.entries(SIGNAL_ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label><label>Owner<input name="owner" /></label><label className={s.wide}>Note<input name="note" /></label><button className={ui.miniBtn} type="submit">Add action</button></form>
+    <form action={updateSignalActionAction} className={s.inline}>{ids()}<input type="hidden" name="actionId" value="" /><input type="hidden" name="status" value="proposed" /><label className={s.wide}>Learning (what this changed in Regenera&apos;s knowledge)<input name="learning" defaultValue={a.learning} /></label><button className={ui.miniBtn} type="submit">Save learning</button></form>
   </section>;
 }
