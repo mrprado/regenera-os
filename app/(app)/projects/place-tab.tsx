@@ -22,8 +22,8 @@ export default async function PlaceTab({ project }: { project: { id: string; lat
     <>
       <SiteIntelPanel projectId={project.id} initial={run ? { id: run.id, status: run.status, stages: run.stages, createdAt: run.createdAt } : null} stale={!!run && run.geometryHash !== geometryHash(project)} />
       <section className={r.panel}>
-        <p className={r.panelTitle}><span>Place profile</span>
-          <span style={{ display: "flex", gap: 6 }}><form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={project.id} /><input type="hidden" name="key" value="site-intelligence" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Site-intelligence playbook</button></form><form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={ui.miniBtn} type="submit">{facts.length ? "Refresh facts" : "Build place profile"}</button></form></span></p>
+        <div className={r.panelTitle}><span>Place profile</span>
+          <span style={{ display: "flex", gap: 6 }}><form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={project.id} /><input type="hidden" name="key" value="site-intelligence" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Site-intelligence playbook</button></form><form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={ui.miniBtn} type="submit">{facts.length ? "Refresh facts" : "Build place profile"}</button></form></span></div>
         <p className={ui.sub} style={{ marginTop: 0 }}>
           {project.lat === null ? "Set the project coordinates on the Overview tab for site-level facts (solar, climate, infrastructure, seismic, biodiversity). " : `Site ${project.lat}, ${project.lng}. `}
           Facts come from NASA POWER, World Bank, OpenStreetMap, USGS and GBIF, each with its tier and licence. They describe context and are not a site assessment.

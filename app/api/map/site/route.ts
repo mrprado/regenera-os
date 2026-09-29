@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
-import { placeFacts, projects } from "@/db/schema";
+import { and, desc, eq } from "drizzle-orm";
+import { placeFacts, projects, siteIntelRuns } from "@/db/schema";
+import { STAGES } from "@/lib/site-intel/engine";
 import { getOsApiUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 
@@ -28,5 +29,12 @@ export async function GET(request: Request) {
   });
   const other = facts.filter(f => !used.has(f.key));
   if (other.length) sections.push({ name: "Other context", facts: other });
+  // The latest staged site-intelligence run, when there is one, supersedes the older place-profile grouping.
+  const [run] = await appDb().select().from(siteIntelRuns).where(eq(siteIntelRuns.projectId, p.id)).orderBy(desc(siteIntelRuns.createdAt)).limit(1);
+  if (run) {
+    const label = new Map<string, string>(STAGES.map(([k, l]) => [k, l]));
+    const staged = run.stages.map(st => ({ name: label.get(st.key) ?? st.key, facts: st.status === "done" ? (st.facts ?? []).map((f, i) => ({ key: `${st.key}-${i}`, label: f.label, value: f.value, source: f.source, tier: 2, state: "fresh", retrievedAt: st.finishedAt ?? run.createdAt, dimension: st.key })) : st.status === "failed" ? [{ key: `${st.key}-err`, label: "Unavailable", value: st.error ?? "", source: "site intelligence", tier: 3, state: "stale", retrievedAt: st.finishedAt ?? run.createdAt, dimension: st.key }] : [] }));
+    return Response.json({ project: p, sections: staged, run: { id: run.id, status: run.status, createdAt: run.createdAt } }, { headers: { "cache-control": "private, max-age=30" } });
+  }
   return Response.json({ project: p, sections }, { headers: { "cache-control": "private, max-age=30" } });
 }
