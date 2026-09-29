@@ -261,6 +261,45 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
     - Moving an opportunity to Proposal was blocked, with the failing conditions listed.
 - Status: **Done** §10 FundingPathway, §11 Capital Stack Builder, §12 stage gates and deal detail, §42 search.
 
+### Phase P15 — ATLAS geospatial workbench (2026-09-29)
+- Built:
+  - Migration 0026: site_features, spatial_analyses, field_observations.
+  - lib/geo:
+    - dem.ts: terrarium decode; slope, aspect, TRI/TPI; contours (d3-contour); mask polygons; profile; depression
+      fill; D8; accumulation; watershed; viewshed; line of sight; cut/fill; polygon mask.
+    - ops.ts (Turf): measures, buffers, boolean ops, split, nearest, quantities, vector envelope.
+    - raster-envelope.ts: bounded raster envelope with an exact Euclidean distance transform.
+    - crs.ts (proj4): UTM zones and round trip; decimal, DMS and UTM parsing.
+    - osm.ts: Overpass nearest infrastructure and constraints, with mirror fallback and a 30-day cache.
+    - export.ts: GeoJSON, KML, CSV (formula-safe), DXF R12 in WGS84 or UTM.
+    - workbench.ts: records.
+  - /api/spatial/[op]: measure, buffer, intersect, difference, union, nearest, constraints, developable-area,
+    features, analyses, observations, observations-convert, export.
+  - Atlas Workbench tab:
+    - modes, drawing tools, coordinate and bearing entry
+    - every analysis with its grade and limitation
+    - operation history with hide, undo, save and export
+    - profile tray, design quantities and user cost inputs
+    - compare saved analyses, monitoring and observations
+- Fixed during verification:
+  - Overpass rejects requests without an identifying User-Agent (sent by fetchJson).
+  - The combined query was trimmed, and mirrors are tried when the main instance times out.
+  - Style mutations now wait for the style to load.
+  - The vector envelope ran out of memory on dense city data (3,000+ polygons), so it was replaced server-side by
+    the raster method.
+- Verified:
+  - Tests: terrain (15), atlas (11), workbench (4), route guard. Lint and typecheck clean.
+  - Browser:
+    - A 1,440 ha rectangle over the Desierto de los Leones gave elevation 2,465–3,102 m and 5 m contours with
+      labels; recorded.
+    - UTM readout 14N 474996 E 2134537 N; watershed recorded.
+    - Envelope for a 348 ha site in Mérida: 1,116 OSM road features, 176.5 ha hard exclusions, 171.4 ha net,
+      3.7 m cells, about 10 s.
+    - Nearest infrastructure returned in 36 s on the first call (cached afterwards).
+- Pending: see docs/plans/phase-8.md §8A (planned items).
+- Status: **Done** workbench core (draw, measure, terrain, contours, hydrology, visibility, constraints,
+  envelope, design quantities, exports, audit log, observations).
+
 ## Definition of Done (§104) — actual status
 | Item | Status | Evidence / note |
 |---|---|---|

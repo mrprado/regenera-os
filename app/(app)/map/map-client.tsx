@@ -18,7 +18,8 @@ import type { Omm } from "@/lib/map/live";
 import { SECTORS, TERRITORIAL_SYSTEMS } from "@/lib/vocab";
 import { withBase } from "@/lib/base-path";
 import styles from "./map.module.css";
-import { DrawPanel, LibraryPanel, useAtlas } from "./atlas-tools";
+import { LibraryPanel, useAtlas } from "./atlas-tools";
+import { AnalysisTray, useWorkbench, WorkbenchPanel, type WbMode } from "./workbench";
 import { addIcons, addOverlay, addTrackLayers, baseStyle, clickableIds, removeOverlay, setBasemap } from "./atlas-engine";
 import { Detection, Hud, MODES, SensorFilters, type Mode, type Target } from "./hud";
 import { IntelPanel, MISSIONS, type FeedStatus } from "./intel-panel";
@@ -71,6 +72,15 @@ const haversineKm = (a: [number, number], b: [number, number]) => {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) ** 2;
   return 12_742 * Math.asin(Math.sqrt(h));
 };
+/** Runs a style mutation now, or once the style has (re)loaded; returns a cleanup that cancels a pending run. */
+function whenStyleReady(map: maplibregl.Map, fn: () => void) {
+  try { fn(); return undefined; } catch (e) {
+    if (!/not done loading/i.test(String((e as Error).message))) throw e;
+    const retry = () => { try { fn(); } catch { /* next styledata retries */ return; } map.off("styledata", retry); };
+    map.on("styledata", retry);
+    return () => { map.off("styledata", retry); };
+  }
+}
 const TRACKABLE = new Set(["flights", "military", "sat_eo", "sat_weather", "sat_stations", "sat_gnss"]);
 
 /** The Atlas depends on the URL hash, the clock and WebGL: render it on the client only (no hydration mismatch). */
@@ -117,7 +127,9 @@ function MapClient() {
   const [searchNote, setSearchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"intel" | "directory" | "library" | "draw" | "none">("intel");
+  const [panel, setPanel] = useState<"intel" | "directory" | "library" | "workbench" | "none">("intel");
+  const [wbMode, setWbMode] = useState<WbMode>("analysis");
+  const [wbProject, setWbProject] = useState("");
   const [showKeys, setShowKeys] = useState(false);
   const [copied, setCopied] = useState(false);
   const [country, setCountry] = useState("");
@@ -134,6 +146,9 @@ function MapClient() {
   const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);
   const onSelectProject = useCallback((props: Record<string, unknown>, lngLat: [number, number]) => setSelected({ layer: "projects", props, lngLat }), []);
   const atlas = useAtlas(mapRef, mapReady, onSelectProject);
+  const wb = useWorkbench(mapObj, wbProject);
+  const wbToolRef = useRef(wb.tool);
+  useEffect(() => { wbToolRef.current = wb.tool; }, [wb.tool]);
   const projectChoices = useMemo(() => (data?.projects.features ?? []).map(f => ({ id: String(f.properties.id), name: String(f.properties.name) })), [data]);
   const byId = useMemo(() => new Map(catalog.map(l => [l.id, l])), [catalog]);
   const activeOverlays = useMemo(() => catalog.filter(l => l.group !== "basemap" && overlays.has(l.id)), [catalog, overlays]);
@@ -190,6 +205,7 @@ function MapClient() {
               (map.getSource("organizations") as GeoJSONSource).getClusterExpansionZoom(f.properties.cluster_id as number).then(z => map.easeTo({ center: (f.geometry as GeoPoint).coordinates as [number, number], zoom: z + 0.5 }));
               return;
             }
+            if (wbToolRef.current !== "none") return;
             setSelected({ layer, props: f.properties ?? {}, lngLat: (f.geometry as GeoPoint).coordinates as [number, number] });
           });
           map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
@@ -253,20 +269,22 @@ function MapClient() {
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map || !catalog.length) return;
-    setBasemap(map, baseLayer, productDate(new Date(), (baseLayer?.lagDays ?? 1) + dayOffset));
+    return whenStyleReady(map, () => setBasemap(map, baseLayer, productDate(new Date(), (baseLayer?.lagDays ?? 1) + dayOffset)));
   }, [mapReady, catalog.length, baseLayer, dayOffset]);
 
   // Overlays: add / remove; daily rasters follow the imagery date.
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
-    for (const l of catalog) {
-      if (l.group === "basemap") continue;
-      const on = overlays.has(l.id);
-      if (on && !map.getSource(`ov-${l.id}`)) addOverlay(map, l, productDate(new Date(), (l.lagDays ?? 1) + dayOffset));
-      else if (!on && map.getSource(`ov-${l.id}`)) removeOverlay(map, l);
-      else if (on && l.daily && l.tiles) (map.getSource(`ov-${l.id}`) as RasterTileSource).setTiles([l.tiles.replace("{date}", productDate(new Date(), (l.lagDays ?? 1) + dayOffset))]);
-    }
+    return whenStyleReady(map, () => {
+      for (const l of catalog) {
+        if (l.group === "basemap") continue;
+        const on = overlays.has(l.id);
+        if (on && !map.getSource(`ov-${l.id}`)) addOverlay(map, l, productDate(new Date(), (l.lagDays ?? 1) + dayOffset));
+        else if (!on && map.getSource(`ov-${l.id}`)) removeOverlay(map, l);
+        else if (on && l.daily && l.tiles) (map.getSource(`ov-${l.id}`) as RasterTileSource).setTiles([l.tiles.replace("{date}", productDate(new Date(), (l.lagDays ?? 1) + dayOffset))]);
+      }
+    });
   }, [mapReady, catalog, overlays, dayOffset]);
 
   // Tracked flight: trail, ring, HUD target, camera lock.
@@ -385,7 +403,7 @@ function MapClient() {
       return f ? { f, layer: ids.find(x => x.id === f.layer.id)!.layer } : null;
     };
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      if (atlas.draw !== "none") return;
+      if (atlas.draw !== "none" || wbToolRef.current !== "none") return;
       const recordHit = map.queryRenderedFeatures(e.point, { layers: ["projects", "organizations", "organizations-cluster", "deals", "triggers", "procurement", "hazards"].filter(id => map.getLayer(id)) });
       if (recordHit.length) return;
       const hit = pick(e.point);
@@ -584,6 +602,7 @@ function MapClient() {
       <div className={styles.fx} aria-hidden />
       {hudOn && <Hud map={mapObj} mode={mode} summary={summary} target={target} basemap={baseLabel} live={live} />}
       <Detection map={mapObj} layers={detectLayers} on={detectOn} />
+      <AnalysisTray wb={wb} map={mapObj} />
 
       <div className={styles.searchWrap}>
         <form className={`${styles.glass} ${styles.search}`} onSubmit={e => { e.preventDefault(); void search(); }}>
@@ -597,7 +616,7 @@ function MapClient() {
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
           <div className={styles.panelTabs}>
-            {(["intel", "directory", "library", "draw"] as const).map(p => <button key={p} type="button" aria-pressed={panel === p} onClick={() => setPanel(p)}>{p === "intel" ? "Layers" : p[0].toUpperCase() + p.slice(1)}</button>)}
+            {(["intel", "workbench", "directory", "library"] as const).map(p => <button key={p} type="button" aria-pressed={panel === p} onClick={() => setPanel(p)}>{p === "intel" ? "Layers" : p === "workbench" ? "Workbench" : p[0].toUpperCase() + p.slice(1)}</button>)}
           </div>
           {panel === "intel" && (
             <IntelPanel catalog={catalog} base={base} setBase={setBase} overlays={overlays} toggle={toggleOverlay} status={status} firmsKey={firmsKey}
@@ -605,7 +624,7 @@ function MapClient() {
               toggleRecord={k => setVisible(v => ({ ...v, [k]: !v[k as LayerKey] }))} dayOffset={dayOffset} setDayOffset={setDayOffset} runMission={runMission} />
           )}
           {panel === "library" && <LibraryPanel atlas={atlas} />}
-          {panel === "draw" && <DrawPanel atlas={atlas} projects={projectChoices} />}
+          {panel === "workbench" && <WorkbenchPanel wb={wb} mode={wbMode} setMode={setWbMode} projects={projectChoices} projectId={wbProject} setProjectId={setWbProject} />}
           {panel === "directory" && <>
             <div className={styles.filters}>
               <label>Country<select value={country} onChange={e => { setCountry(e.target.value); setLimit(50); }}><option value="">All countries</option>{discoveryOptions(records, "country").map(v => <option key={v} value={v}>{v}</option>)}</select></label>

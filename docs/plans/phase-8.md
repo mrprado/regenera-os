@@ -72,3 +72,90 @@ Portals (§46–49); evidence and claims (§37); documents, generator and data r
 
 Validation: unit and integration tests per engine, route guard, lint, typecheck, build, browser verification.
 BUILD_CHECKLIST.md records actual status.
+
+## Extensions received 2026-09-29 (same conversation)
+
+### 8A: ATLAS geospatial workbench (advanced geospatial, site analysis and map workbench)
+
+Built in P15:
+- Modes: Site analysis, Design, Compare, Monitor, beside Explore (Layers).
+- Drawing:
+  - Tools: point, line, polygon, rectangle, circle.
+  - Coordinate entry in decimal, DMS or UTM, and bearing + distance entry.
+  - Measures in metric and imperial units: area, perimeter, length, bearing, and WGS84/UTM readout.
+- Terrain engine on the ~30 m terrain tiles, in the browser (`lib/geo/dem.ts`):
+  - elevation and slope statistics
+  - contours at 0.5–50 m with major and minor lines and labels; export to GeoJSON/KML/CSV/DXF in WGS84 or UTM
+  - slope and elevation threshold areas
+  - cut/fill screening
+  - elevation profile, with a bottom tray chart and CSV export
+  - watershed delineation (depression fill, D8, accumulation) with a truncation warning
+  - site hydrology (drainage lines, ponding areas)
+  - viewshed and line of sight
+- Server:
+  - nearest infrastructure from OSM, never inferring grid capacity (known or unknown)
+  - OSM constraint screening
+  - development envelope on a bounded raster with a distance-transform buffer (site − hard = net, plus soft overlap)
+  - buffers and boolean operations
+  - exports
+- Records:
+  - Saved typed features (project boundary, envelope, solar array …) with visibility and grade.
+  - An auditable analysis log (datasets, parameters, grade, limitation, model version).
+  - Field observations that convert to a task or risk.
+- Design objects: screening quantities and a cost table filled only with unit costs you enter and their sources.
+- Grades are visible on every result: SCREENING / PRELIMINARY / VALIDATED / ENGINEERING / CLIENT-PROVIDED.
+
+Planned or requiring data:
+- Wind and hydro resource screening.
+- Water balance, flood depth, soils and erosion (need climate and soil datasets).
+- Weighted suitability surfaces.
+- Route and corridor optimisation.
+- Parcels and cadastre (country sources).
+- Land assembly.
+- Shapefile/GeoPackage/GeoTIFF import.
+- Map composer and site report map pack (PDF).
+- Swipe comparison between imagery years, and Earth Engine change detection (D3).
+- Present mode.
+- Spatial comments and permissions.
+- Natural-language spatial queries translated into visible operations.
+
+### 8B: Financial modeling, underwriting and project finance
+
+Build on `lib/economics/model.ts`:
+- assumption register (value, unit, source, date, owner, confidence, verification)
+- model versions and locked cases
+- development budget and capex line items linked to workbench quantities
+- revenue streams tagged contracted / forecast / merchant / speculative
+- CFADS, DSCR sizing and sculpting, LLCR/PLCR
+- sources = uses
+- waterfall
+- sensitivities, tornado, breakevens, stress cases
+- value bridge
+- model health checks
+- lender, equity and IC outputs; XLSX export
+
+Decimal-safe arithmetic, with unit tests for IRR, NPV, debt sizing, DSCR, waterfall, escalation, FX and tax.
+
+### 8C: Commercial operations
+
+Service catalogue:
+- The spec's families, each at SCREEN / ASSESS / EXECUTE depth.
+- Billing types.
+- Internal default price bands, marked as internal defaults, not market facts.
+
+Also:
+- scope builder
+- proposals (existing generator) and engagements (lifecycle, deliverables, change orders, time, expenses, margin)
+- MSA + SOW
+- vendors and partners
+- billing and invoice states, with reminders as notifications
+- profitability by service
+- a Settings → Accounts registry (the existing integration registry extended with owner, entity, environment, cost and renewal)
+- corporate entities
+
+External systems stay adapters, each NOT CONNECTED until a credential is supplied:
+- Stripe
+- QuickBooks / Xero
+- DocuSign
+- banking
+- KYC
