@@ -29,6 +29,7 @@ const GROUPS: { label?: string; items: Item[] }[] = [
     label: "Intelligence",
     items: [
       { href: "/triggers", label: "Intelligence", icon: Radar },
+      { href: "/intelligence", label: "Watch & theses", icon: Telescope },
       { href: "/relationships", label: "Relationships", icon: Network },
       { href: "/people", label: "People", icon: Users },
       { href: "/companies", label: "Companies", icon: Building2 },

@@ -12,6 +12,10 @@ import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { compactMoney } from "@/lib/projects/labels";
 import { addCapitalMandateAction, addQualificationAction, updateCapitalProfileAction } from "../../../capital-actions";
 import { saveCommunityAlignmentAction } from "../../../community-actions";
+import { addEvidenceAction, addThesisAction } from "../../../intelligence-actions";
+import { mandateEvidence } from "@/db/schema";
+import { thesisGaps } from "@/lib/intelligence/engine";
+import { EVIDENCE_LAYERS, MANDATE_FIELDS, THESIS_THEMES } from "@/lib/intelligence/vocab";
 import { ALIGNMENT_FLAGS, CP_PREFERENCE, SUPPORTED_STRUCTURES } from "@/lib/community/vocab";
 import styles from "../../../projects/projects.module.css";
 import CriteriaFields from "../../criteria-fields";
@@ -82,6 +86,7 @@ export default async function CapitalPartnerPage({ params, searchParams }: { par
               <button className="btn btn--primary" type="submit" style={{ marginTop: 10 }}>Save</button>
             </form>
           </section>
+          <MandateLayers profileId={p.id} orgId={p.orgId} />
         </div>
         <aside>
           <section className={r.panel}>
@@ -138,4 +143,37 @@ export default async function CapitalPartnerPage({ params, searchParams }: { par
       </div>
     </>
   );
+}
+
+/** Mandate evidence in layers: what they say, what is public, what they actually finance, and Regenera's inference. */
+async function MandateLayers({ profileId, orgId }: { profileId: string; orgId: string | null }) {
+  const ev = await appDb().select().from(mandateEvidence).where(eq(mandateEvidence.profileId, profileId)).orderBy(desc(mandateEvidence.date));
+  const gaps = orgId ? await thesisGaps(appDb(), orgId) : [];
+  return <section className={r.panel}>
+    <p className={r.panelTitle}>Mandate intelligence</p>
+    <p className={ui.sub}>Four separate layers. The inferred layer is Regenera&apos;s reading and is never presented as verified.</p>
+    {(Object.keys(EVIDENCE_LAYERS) as (keyof typeof EVIDENCE_LAYERS)[]).map(layer => { const xs = ev.filter(e => e.layer === layer); return <div key={layer} style={{ margin: "8px 0" }}>
+      <b>{EVIDENCE_LAYERS[layer]}</b>{layer === "inferred" ? <span className={ui.chip}> INFERRED · not verified</span> : null}
+      {xs.length === 0 ? <p className={r.empty}>None recorded.</p> : <table className={ui.table}><tbody>{xs.map(e => <tr key={e.id}><td>{MANDATE_FIELDS[e.field as keyof typeof MANDATE_FIELDS] ?? e.field}</td><td>{e.statement}{e.transactionRef ? <span className={ui.sub}>{e.transactionRef}</span> : null}</td><td className={ui.sub}>{e.sourceUrl ? <a href={e.sourceUrl} target="_blank" rel="noreferrer">{e.source || "source"}</a> : e.source || "—"}{e.date ? ` · ${e.date}` : ""} · {e.confidence}</td></tr>)}</tbody></table>}
+    </div>; })}
+    <details><summary className={ui.sub}>Add evidence</summary>
+      <form action={addEvidenceAction} className={r.form}><input type="hidden" name="profileId" value={profileId} />
+        <label>Layer<select name="layer">{Object.entries(EVIDENCE_LAYERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>Field<select name="field">{Object.entries(MANDATE_FIELDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>Statement<textarea name="statement" rows={2} required placeholder="e.g. Senior debt, 10–18 yrs, USD 50–250M, contracted revenue required" /></label>
+        <label>Transaction (for observed)<input name="transactionRef" placeholder="Deal, date, size" /></label>
+        <label>Source<input name="source" /></label><label>Source URL<input name="sourceUrl" type="url" /></label><label>Date<input name="date" type="date" /></label>
+        <label>Confidence<select name="confidence" defaultValue="moderate"><option value="high">High</option><option value="moderate">Moderate</option><option value="low">Low</option></select></label>
+        <button className="btn" type="submit">Add</button></form></details>
+    <p className={r.panelTitle} style={{ marginTop: 12 }}>Thesis vs what they finance</p>
+    {!orgId ? <p className={r.empty}>Link the profile to an organization to record theses.</p> : gaps.length === 0 ? <p className={r.empty}>No theses recorded for this institution.</p> :
+      <table className={ui.table}><tbody>{gaps.map(g => <tr key={g.thesisId}><td>{THESIS_THEMES[g.theme as keyof typeof THESIS_THEMES]}<span className={ui.sub}>{g.thesis}</span></td><td style={{ color: g.gap === "aligned" ? "#2f7d4f" : "#b0432f" }}>{g.gap === "aligned" ? "Observed transactions match" : g.gap === "contradicted" ? "Contradiction recorded" : "No observed transaction evidence"}</td><td className={ui.sub}>{g.observed.map(o => o.statement).join("; ") || "—"}</td></tr>)}</tbody></table>}
+    {orgId && <details><summary className={ui.sub}>Add thesis</summary>
+      <form action={addThesisAction} className={r.form}><input type="hidden" name="orgId" value={orgId} /><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="back" value={`/capital/partners/${profileId}`} />
+        <label>Theme<select name="theme">{Object.entries(THESIS_THEMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label>Thesis (as stated)<textarea name="thesis" rows={2} required /></label><label>Sectors<input name="sectors" placeholder="energy, grid, storage" /></label><label>Geography<input name="geography" /></label>
+        <label>Evidence<input name="evidence" placeholder="Letter, interview, report" /></label><label>Source URL<input name="sourceUrl" type="url" /></label><label>Date<input name="date" type="date" /></label>
+        <label>Contradictions<input name="contradictions" /></label><label>Regenera interpretation<input name="interpretation" /></label>
+        <button className="btn" type="submit">Add</button></form></details>}
+  </section>;
 }

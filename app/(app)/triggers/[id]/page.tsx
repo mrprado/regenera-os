@@ -14,6 +14,7 @@ import { activeSequencesForPicker } from "@/lib/outreach/queries";
 import { SourceError } from "@/lib/sources/http";
 import { findPeopleForTrigger, suggestedTitles, type TriggerPeople } from "@/lib/triggers/pursue";
 import { pursueAction } from "../actions";
+import Assessment from "./assessment";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pursue trigger" };
@@ -61,6 +62,8 @@ export default async function PursuePage({ params, searchParams }: { params: Pro
             <p className={ui.sub}>{t.eventDate} · {t.source}{t.sourceUrl ? <> · <a href={t.sourceUrl} target="_blank" rel="noreferrer">source</a></> : null}</p>
             {t.decisionRead && <p className={ui.read}>{t.decisionRead}</p>}
           </section>
+
+          <Assessment triggerId={t.id} />
 
           <section className={r.panel}>
             <p className={r.panelTitle}><span>People at {org?.name}</span><span className={ui.sub} style={{ margin: 0 }}>Apollo search, 0 credits</span></p>
