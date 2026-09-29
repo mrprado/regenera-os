@@ -232,6 +232,13 @@
       "when": 1790720349776,
       "tag": "0032_wild_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790721307249,
+      "tag": "0033_rapid_wendigo",
+      "breakpoints": true
     }
   ]
 }

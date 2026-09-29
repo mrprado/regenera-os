@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote, Building2, ChartColumn, FileSignature, Files, HandCoins, ClipboardCheck, Earth, Handshake, House, Inbox, Landmark, ListChecks,
-  Radar, Telescope, Send, Settings, BriefcaseBusiness, SquareCheckBig, SquareKanban, Users, HardHat, DoorOpen, BookCheck, Sprout, Network, MapPinned, Scale, Zap, type LucideIcon } from "lucide-react";
+  Radar, Telescope, Send, Settings, BriefcaseBusiness, SquareCheckBig, SquareKanban, Users, HardHat, DoorOpen, BookCheck, Sprout, Network, MapPinned, Scale, Zap, Gauge, type LucideIcon } from "lucide-react";
 import styles from "./shell.module.css";
 
 type Item = { href: string; label: string; icon: LucideIcon };
@@ -35,6 +35,7 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/partners", label: "Partner network", icon: Handshake },
       { href: "/map", label: "Atlas", icon: Earth },
       { href: "/systems", label: "Systems", icon: Sprout },
+      { href: "/benchmarks", label: "Tech & cost benchmarks", icon: Gauge },
     ],
   },
   {

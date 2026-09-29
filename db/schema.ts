@@ -138,3 +138,4 @@ export * from "./alignment";
 export * from "./natural";
 export * from "./community";
 export * from "./power";
+export * from "./benchmarks";

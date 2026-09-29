@@ -1,0 +1,58 @@
+CREATE TABLE `cost_benchmarks` (
+	`id` text PRIMARY KEY NOT NULL,
+	`mandate_id` text NOT NULL,
+	`technology` text NOT NULL,
+	`metric` text NOT NULL,
+	`value` real NOT NULL,
+	`currency` text,
+	`base_year` integer,
+	`price_basis` text DEFAULT 'nominal' NOT NULL,
+	`country` text,
+	`region` text DEFAULT '' NOT NULL,
+	`scale_value` real,
+	`scale_unit` text DEFAULT '' NOT NULL,
+	`project` text DEFAULT '' NOT NULL,
+	`project_id` text,
+	`included` text DEFAULT '' NOT NULL,
+	`excluded` text DEFAULT '' NOT NULL,
+	`source` text NOT NULL,
+	`source_url` text,
+	`source_date` text,
+	`source_quality` text DEFAULT 'secondary' NOT NULL,
+	`confidence` text DEFAULT 'moderate' NOT NULL,
+	`notes` text DEFAULT '' NOT NULL,
+	`created_by` text NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`deleted_at` text
+);
+--> statement-breakpoint
+CREATE INDEX `cost_benchmarks_tech` ON `cost_benchmarks` (`technology`,`metric`);--> statement-breakpoint
+CREATE TABLE `technologies` (
+	`id` text PRIMARY KEY NOT NULL,
+	`mandate_id` text NOT NULL,
+	`key` text NOT NULL,
+	`name` text NOT NULL,
+	`category` text NOT NULL,
+	`description` text DEFAULT '' NOT NULL,
+	`maturity` text DEFAULT 'mature' NOT NULL,
+	`trl` integer,
+	`typical_scale` text DEFAULT '' NOT NULL,
+	`useful_life_years` real,
+	`efficiency` text DEFAULT '' NOT NULL,
+	`inputs` text DEFAULT '[]' NOT NULL,
+	`outputs` text DEFAULT '[]' NOT NULL,
+	`water_intensity` text DEFAULT '' NOT NULL,
+	`land_intensity` text DEFAULT '' NOT NULL,
+	`energy_intensity` text DEFAULT '' NOT NULL,
+	`technical_risks` text DEFAULT '' NOT NULL,
+	`financing_availability` text DEFAULT '' NOT NULL,
+	`geographic_constraints` text DEFAULT '' NOT NULL,
+	`certifications` text DEFAULT '' NOT NULL,
+	`suppliers` text DEFAULT '' NOT NULL,
+	`source` text DEFAULT '' NOT NULL,
+	`created_by` text NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `technologies_key` ON `technologies` (`mandate_id`,`key`);
