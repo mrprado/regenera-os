@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote, Building2, ChartColumn, FileSignature, Files, HandCoins, ClipboardCheck, Earth, Handshake, House, Inbox, Landmark, ListChecks,
-  Radar, Telescope, Send, Settings, BriefcaseBusiness, SquareCheckBig, SquareKanban, Users, HardHat, DoorOpen, BookCheck, Sprout, Network, type LucideIcon } from "lucide-react";
+  Radar, Telescope, Send, Settings, BriefcaseBusiness, SquareCheckBig, SquareKanban, Users, HardHat, DoorOpen, BookCheck, Sprout, Network, MapPinned, Scale, type LucideIcon } from "lucide-react";
 import styles from "./shell.module.css";
 
 type Item = { href: string; label: string; icon: LucideIcon };
@@ -23,8 +23,8 @@ const GROUPS: { label?: string; items: Item[] }[] = [
       { href: "/inbox", label: "Inbox", icon: Inbox },
     ],
   },
-  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }, { href: "/network", label: "Builders & suppliers", icon: HardHat }] },
-  { label: "Capital", items: [{ href: "/funding", label: "Funding", icon: HandCoins }, { href: "/capital", label: "Capital partners", icon: Banknote }] },
+  { label: "Projects", items: [{ href: "/projects", label: "Projects", icon: Landmark }, { href: "/land", label: "Land pipeline", icon: MapPinned }, { href: "/network", label: "Ecosystem network", icon: HardHat }] },
+  { label: "Capital", items: [{ href: "/funding", label: "Funding", icon: HandCoins }, { href: "/capital", label: "Capital partners", icon: Banknote }, { href: "/capital/alignment", label: "Capital alignment", icon: Scale }] },
   {
     label: "Intelligence",
     items: [

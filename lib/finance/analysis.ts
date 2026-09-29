@@ -1,8 +1,8 @@
 // Analyses over a model definition: sensitivities (one- and two-way, ranked tornado), stress cases, breakevens,
 // model health, version diff with return attribution, value bridge, and starter templates. All derived from the
 // same deterministic calculation; scenarios are copies with explicit changes, never silent edits.
-import { calculate, capexTotal } from "./calc";
-import type { ModelDefinition, ModelOutputs, Provenance } from "./types";
+import { calculate, capexTotal, revenueFor } from "./calc";
+import type { ModelDefinition, ModelOutputs, Provenance, RevenueClass } from "./types";
 
 const clone = (m: ModelDefinition): ModelDefinition => JSON.parse(JSON.stringify(m));
 export type Driver = { key: string; label: string; apply: (m: ModelDefinition, f: number) => void };
@@ -65,6 +65,17 @@ export function breakeven(m: ModelDefinition, driver: string, target: { metric: 
   return (lo + hi) / 2;
 }
 
+/** Revenue by class in one operating year (streams without a class count as primary operating revenue). */
+export function revenueMix(m: ModelDefinition, year: number) {
+  const byClass: Record<RevenueClass, number> = { primary_operating: 0, contracted_environmental: 0, variable_environmental: 0 };
+  for (const s of m.revenue) {
+    const v = revenueFor({ ...m, revenue: [s] }, year).total;
+    byClass[s.revenueClass ?? "primary_operating"] += v;
+  }
+  const total = byClass.primary_operating + byClass.contracted_environmental + byClass.variable_environmental;
+  return { year, byClass, total, environmentalPct: total ? Math.round(((byClass.contracted_environmental + byClass.variable_environmental) / total) * 100) : 0 };
+}
+
 export type HealthIssue = { level: "error" | "review"; code: string; message: string };
 export function modelHealth(m: ModelDefinition, o: ModelOutputs = calculate(m)): { status: "PASS" | "REVIEW" | "ERROR"; issues: HealthIssue[] } {
   const issues: HealthIssue[] = [];
@@ -88,6 +99,8 @@ export function modelHealth(m: ModelDefinition, o: ModelOutputs = calculate(m)):
     if (m.generation.capacityFactorPct > 70) add("review", "capacity_factor", `Capacity factor ${m.generation.capacityFactorPct}% is unusually high`);
   }
   if (m.revenue.some(s => s.startYear < 1)) add("error", "revenue_before_cod", "Revenue starts before COD");
+  const mix = revenueMix(m, Math.min(3, Math.max(1, m.operatingYears)));
+  if (mix.total > 0 && mix.environmentalPct > 50) add("review", "environmental_dependence", `Environmental attributes are ${mix.environmentalPct}% of year-${mix.year} revenue: confirm the project is viable on primary operating revenue`);
   if (o.periods.some(p => p.phase === "operations" && p.dscr !== null && p.dscr < 1)) add("review", "dscr_below_1", "DSCR below 1.00x in at least one year (DSRA may be drawn)");
   return { status: issues.some(i => i.level === "error") ? "ERROR" : issues.length ? "REVIEW" : "PASS", issues };
 }

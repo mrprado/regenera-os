@@ -7,14 +7,14 @@ import ui from "@/components/ui.module.css";
 import { epds, networkProfiles, organizations } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
-import { LCA_STAGES, MATERIAL_CATEGORIES, NETWORK_ROLES } from "@/lib/procurement/vocab";
+import { ECOSYSTEM_GROUPS, LCA_STAGES, MATERIAL_CATEGORIES, NETWORK_ROLES } from "@/lib/procurement/vocab";
 import { ASSET_CLASSES } from "@/lib/projects/vocab";
 import { compactMoney } from "@/lib/projects/labels";
 import { addEpdAction, saveNetworkProfileAction } from "../procurement-actions";
 import styles from "../projects/projects.module.css";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Builders and suppliers" };
+export const metadata = { title: "Ecosystem network" };
 
 export default async function NetworkPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/network");
@@ -28,11 +28,12 @@ export default async function NetworkPage({ searchParams }: { searchParams: Prom
     appDb().select().from(epds).where(mandateCondition(user.scope, epds.mandateId)).orderBy(asc(epds.category), asc(epds.product)),
   ]);
   const role = sp.role && sp.role in NETWORK_ROLES ? sp.role : null;
-  const shown = profiles.filter(x => !role || x.p.roles.includes(role));
+  const group = sp.group && sp.group in ECOSYSTEM_GROUPS ? ECOSYSTEM_GROUPS[sp.group] : null;
+  const shown = profiles.filter(x => (!role || x.p.roles.includes(role)) && (!group || x.p.roles.some(r => (group.roles as string[]).includes(r))));
 
   return (
     <>
-      <PageHeader title="Builders and suppliers" count={tab === "epds" ? library.length : shown.length} />
+      <PageHeader title="Ecosystem network" count={tab === "epds" ? library.length : shown.length} />
       <Notice text={sp.notice} />
       <nav className={ui.tabs} aria-label="Network sections">
         <Link className={`${ui.tab} ${tab === "profiles" ? ui.tabActive : ""}`} href="/network">EPC, OEM and supplier network</Link>
@@ -43,7 +44,8 @@ export default async function NetworkPage({ searchParams }: { searchParams: Prom
         <div className={r.grid}>
           <section className={r.panel}>
             <p className={r.panelTitle}>What they can build or supply</p>
-            <p className={ui.sub} style={{ marginTop: 0 }}>Profiles feed the &quot;Who could bid&quot; list on each procurement package: asset class, countries, project size, bankability and track record. <Link href="/network">All</Link>{Object.entries(NETWORK_ROLES).map(([k, v]) => <span key={k}> · <Link href={`/network?role=${k}`}>{v}</Link></span>)}</p>
+            <p className={ui.sub} style={{ marginTop: 0 }}>Profiles feed the &quot;Who could bid&quot; list on each procurement package: asset class, countries, project size, bankability and track record. <Link href="/network">All</Link>{Object.entries(ECOSYSTEM_GROUPS).map(([k, g]) => <span key={k}> · <Link href={`/network?group=${k}`} style={{ fontWeight: sp.group === k ? 600 : 400 }}>{g.label}</Link></span>)}</p>
+            {group && <p className={ui.sub}>{group.label}: {group.roles.map(k => <span key={k}> · <Link href={`/network?group=${sp.group}&role=${k}`}>{NETWORK_ROLES[k]}</Link></span>)}</p>}
             {shown.length === 0 ? <p className={r.empty}>No profiles yet. Add one for each EPC, OEM, supplier or engineering firm you would put in front of a project.</p> : (
               <table className={ui.table}><tbody>{shown.map(({ p, name }) => (
                 <tr key={p.id}>
@@ -61,7 +63,7 @@ export default async function NetworkPage({ searchParams }: { searchParams: Prom
               <p className={r.panelTitle}>Add or update a profile</p>
               <form action={saveNetworkProfileAction} className={styles.stack}>
                 <label>Organization<select name="orgId" required defaultValue=""><option value="" disabled>Choose</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
-                <fieldset style={{ border: 0, padding: 0, margin: 0 }}><legend className={ui.sub}>Roles</legend><div className={styles.checks}>{Object.entries(NETWORK_ROLES).map(([k, v]) => <label key={k}><input type="checkbox" name="roles" value={k} />{v}</label>)}</div></fieldset>
+                <fieldset style={{ border: 0, padding: 0, margin: 0 }}><legend className={ui.sub}>Roles</legend>{Object.entries(ECOSYSTEM_GROUPS).map(([gk, g]) => <div key={gk}><span className={ui.sub}>{g.label}</span><div className={styles.checks}>{g.roles.map(k => <label key={k}><input type="checkbox" name="roles" value={k} />{NETWORK_ROLES[k]}</label>)}</div></div>)}</fieldset>
                 <fieldset style={{ border: 0, padding: 0, margin: 0 }}><legend className={ui.sub}>Asset classes</legend><div className={styles.checks}>{Object.entries(ASSET_CLASSES).map(([k, v]) => <label key={k}><input type="checkbox" name="assetClasses" value={k} />{v}</label>)}</div></fieldset>
                 <label>Technologies<input name="technologies" placeholder="e.g. single-axis trackers, LFP BESS" /></label>
                 <label>Countries (present or licensed)<input name="jurisdictions" placeholder="MEX, USA, COL" /></label>

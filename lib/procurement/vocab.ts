@@ -53,4 +53,26 @@ export const AWARD_CONTRACT: Record<PackageCategory, { category: string; type: s
 };
 
 // Builders and suppliers network (part LVI).
-export const NETWORK_ROLES = { epc: "EPC contractor", oem: "OEM / manufacturer", supplier: "Supplier / distributor", engineer: "Engineering firm", contractor: "Contractor", om: "O&M provider", logistics: "Logistics" } as const;
+export const NETWORK_ROLES = {
+  epc: "EPC contractor", oem: "OEM / manufacturer", supplier: "Supplier / distributor", engineer: "Engineering firm", contractor: "Contractor", om: "O&M provider", logistics: "Logistics",
+  // Ecosystem network (natural assets)
+  investor: "Investor", bank: "Bank", dfi: "DFI", family_office: "Family office", foundation: "Foundation",
+  forestry: "Forestry", ecology: "Ecology", hydrology: "Hydrology", energy: "Energy specialist", gis: "GIS / remote sensing",
+  university: "University", institute: "Research institute", lab: "Laboratory",
+  nursery: "Nursery", operator: "Operator / asset manager",
+  ngo: "NGO", conservation: "Conservation organisation", community_org: "Community organisation",
+  registry: "Registry", validator: "Validator (VVB)", verifier: "Verifier (VVB)", buyer: "Environmental buyer", broker: "Broker", insurer: "Insurer", mrv: "MRV provider",
+  regulator: "Regulator", municipality: "Municipality", ministry: "Ministry", utility: "Utility",
+  local_group: "Local group", indigenous: "Indigenous organisation", landholder: "Landholder", steward: "Steward",
+} as const;
+/** Ecosystem network grouping: how Regenera organises relationships around natural assets (not a generic CRM taxonomy). */
+export const ECOSYSTEM_GROUPS: Record<string, { label: string; roles: (keyof typeof NETWORK_ROLES)[] }> = {
+  capital: { label: "Capital", roles: ["investor", "bank", "dfi", "family_office", "foundation"] },
+  technical: { label: "Technical", roles: ["engineer", "forestry", "ecology", "hydrology", "energy", "gis"] },
+  research: { label: "Research", roles: ["university", "institute", "lab"] },
+  implementation: { label: "Implementation", roles: ["epc", "nursery", "contractor", "operator", "om", "oem", "supplier", "logistics"] },
+  conservation: { label: "Nature / conservation", roles: ["ngo", "conservation", "community_org"] },
+  markets: { label: "Environmental markets", roles: ["registry", "validator", "verifier", "buyer", "broker", "insurer", "mrv"] },
+  government: { label: "Government", roles: ["regulator", "municipality", "ministry", "utility"] },
+  community: { label: "Community", roles: ["local_group", "indigenous", "landholder", "steward"] },
+};

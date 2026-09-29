@@ -12,8 +12,13 @@ export const NO_PROVENANCE: Provenance = { source: "", date: null, owner: null, 
 export type CapexLine = { id: string; category: string; label: string; quantity: number; unit: string; unitCost: number; contingencyPct: number; fromSite?: string | null } & Provenance;
 export type DevCostLine = { id: string; category: string; label: string; budget: number; committed: number; spent: number; gate?: string | null } & Provenance;
 export type OpexLine = { id: string; label: string; kind: "fixed" | "per_mwh" | "pct_revenue"; amount: number; escalationPct: number } & Provenance;
+/** Environmental value should enhance a viable project, not be the whole model: revenues are classed so underwriting
+ *  can see what share rests on primary operations versus contracted or variable environmental attributes.
+ *  Non-cash environmental value (habitat, resilience, recharge) never enters the cash flow; see nature scenarios. */
+export type RevenueClass = "primary_operating" | "contracted_environmental" | "variable_environmental";
+export const REVENUE_CLASSES: Record<RevenueClass, string> = { primary_operating: "Primary operating revenue", contracted_environmental: "Contracted environmental revenue", variable_environmental: "Variable environmental revenue" };
 export type RevenueStream = {
-  id: string; label: string; type: string; certainty: Certainty;
+  id: string; label: string; type: string; certainty: Certainty; revenueClass?: RevenueClass;
   basis: "energy" | "fixed";             // energy: volume from the generation block; fixed: annual volume
   annualVolume: number; unit: string;    // for fixed basis (e.g. t CO2e, m³, units)
   price: number; escalationPct: number;

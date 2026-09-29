@@ -35,6 +35,7 @@ import StackTab from "../stack-tab";
 import { createPathwayAction } from "../../structure-actions";
 import PathwaysTab from "../pathways-tab";
 import FinancialsTab from "../financials-tab";
+import NaturalTab from "../natural-tab";
 import { runPlaybookOnProjectAction } from "../../playbook-actions";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export const dynamic = "force-dynamic";
 const PLAYBOOK_CHOICES = [["project-intake", "Project intake"], ["project-qualification", "Project qualification"], ["site-intelligence", "Site intelligence"], ["solar-project-screen", "Solar project screen"], ["capital-pathway-analysis", "Capital pathway analysis"], ["compliance-screen", "Compliance screen"], ["data-room-audit", "Data room audit"], ["system-capacity-assessment", "System capacity assessment"], ["project-update", "Monthly project update"]] as const;
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["natural", "Natural asset"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -343,6 +344,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "stack" && <StackTab project={p} scope={user.scope} structureId={sp.structure} />}
       {tab === "pathways" && <PathwaysTab project={p} scope={user.scope} />}
       {tab === "financials" && <FinancialsTab project={p} scope={user.scope} modelId={sp.model} />}
+      {tab === "natural" && <NaturalTab project={p} scope={user.scope} sec={sp.sec} />}
       {tab === "systems" && <SystemsTab project={p} scope={user.scope} category={sp.cat} />}
       {tab === "materials" && <MaterialsTab project={p} scope={user.scope} />}
       {tab === "procurement" && <ProcurementTab project={p} scope={user.scope} pkgId={sp.pkg} />}

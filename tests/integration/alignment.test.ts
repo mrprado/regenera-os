@@ -54,7 +54,7 @@ describe("nature transition", () => {
 describe("incentives and flows", () => {
   it("blocks classification without the evidence chain", async () => {
     const base = { mandateId: M, country: "MEX", name: "Tariff 9-CU", sector: "agriculture" as const, mechanism: "input_subsidy" as const };
-    expect(incentiveEvidenceGaps({ policyRef: "", mechanism: "x", beneficiary: "", economicEffect: "", environmentalEvidence: "" })).toEqual(["policyRef", "beneficiary", "economicEffect", "environmentalEvidence"]);
+    expect(incentiveEvidenceGaps({ policyRef: "", mechanism: "other", beneficiary: "", economicEffect: "", environmentalEvidence: "" })).toEqual(["policyRef", "beneficiary", "economicEffect", "environmentalEvidence"]);
     await expect(saveIncentive(t.db, { ...base, classification: "potentially_negative" }, "alan")).rejects.toThrow(/needs evidence/);
     const ok = await saveIncentive(t.db, { ...base, classification: "potentially_negative", policyRef: "Tarifa 9-CU", beneficiary: "Irrigators", economicEffect: "Subsidised pumping", environmentalEvidence: "Aquifer drawdown studies" }, "alan");
     expect(ok.classifiedBy).toBe("alan");

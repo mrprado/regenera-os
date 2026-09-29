@@ -135,3 +135,4 @@ export * from "./structures";
 export * from "./finance";
 export * from "./commercial";
 export * from "./alignment";
+export * from "./natural";

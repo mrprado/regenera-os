@@ -1,0 +1,35 @@
+.graph { width: 100%; height: auto; background: var(--paper-2, #f7f5ef); border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; }
+.node { fill: #fff; stroke: #2f4a3a; stroke-width: 1.2; }
+.node[data-kind="asset"] { fill: #e7f1e4; stroke: #2f7d4f; }
+.node[data-kind="investor"], .node[data-kind="lender"], .node[data-kind="insurer"], .node[data-kind="client"] { fill: #f2efe4; stroke: #8a7a3a; }
+.node[data-kind="holdco"], .node[data-kind="manager"] { fill: #eef2f5; stroke: #4c6b84; }
+.node[data-kind="offtaker"], .node[data-kind="community"] { fill: #f6ece8; stroke: #9a5a45; }
+.nodeName { font-size: 12px; font-weight: 600; fill: var(--heading, #1d2a22); }
+.nodeKind { font-size: 10px; fill: #6b7068; }
+.edgeLabel { font-size: 10px; fill: #5b6058; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--text-muted); margin: 4px 0 10px; }
+.legend i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; }
+.strip, .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 8px 0; }
+.strip div, .flow div { padding: 8px 10px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
+.strip div:last-child, .flow div:last-child { border-right: 0; }
+.strip span, .flow span { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--eyebrow); }
+.strip b, .flow b { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--heading); }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; display: grid; gap: 6px; }
+.card header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.kv { display: grid; grid-template-columns: 200px 1fr; gap: 3px 10px; font-size: 12.5px; margin: 0; }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; }
+.inline { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; align-items: end; }
+.inline label { display: grid; gap: 2px; font-size: 11.5px; color: var(--text-muted); }
+.inline input, .inline select, .mini input, .mini select, .permRow input { min-height: 26px; border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; font: inherit; font-size: 12px; color: var(--text); background: var(--paper, #fff); }
+.wide { grid-column: 1 / -1; }
+.mini { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.mini input { width: 78px; }
+.perm fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; padding: 6px 8px; }
+.perm legend { font-size: 12px; font-weight: 600; }
+.permRow { display: grid; grid-template-columns: 190px 70px 1fr 1fr; gap: 4px; align-items: center; font-size: 12px; margin: 2px 0; }
+.plants { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
+.plants small { color: var(--text-muted); }
+.check { display: flex !important; gap: 6px; align-items: center; }
+.check input { width: auto !important; }
+@media (max-width: 900px) { .kv { grid-template-columns: 1fr; } .permRow { grid-template-columns: 1fr 70px; } }
