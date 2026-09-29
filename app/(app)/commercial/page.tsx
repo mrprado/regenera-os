@@ -23,8 +23,10 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   const sp = await searchParams;
   const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : "overview";
   const db = appDb();
-  for (const m of user.scope.mandateIds.slice(0, 3)) await ensureServices(db, m);
-  const [o, svc] = await Promise.all([commercialOverview(db, user.scope.mandateIds), db.select().from(services).where(mandateCondition(user.scope, services.mandateId)).orderBy(asc(services.phase), asc(services.name))]);
+  // The catalogue is the firm's own (primary entity); other entities keep theirs but are not listed twice here.
+  const primary = user.scope.mandateIds.find(m => m !== "mandate_demo") ?? user.scope.mandateIds[0];
+  await ensureServices(db, primary);
+  const [o, svc] = await Promise.all([commercialOverview(db, user.scope.mandateIds), db.select().from(services).where(and(mandateCondition(user.scope, services.mandateId), eq(services.mandateId, primary))).orderBy(asc(services.phase), asc(services.name))]);
   const svcName = new Map(svc.map(s => [s.key, `${s.name}${s.depth !== "standard" ? ` · ${DEPTHS[s.depth]}` : ""}`]));
   const today = new Date().toISOString().slice(0, 10);
 

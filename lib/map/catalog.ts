@@ -81,6 +81,7 @@ export const CATALOG: CatalogLayer[] = [
 
   // Nature and land
   { id: "forest_loss", group: "nature", label: "Tree cover loss (2001–latest)", description: "Hansen/UMD annual forest loss at 30 m. Pink is loss.", registry: "gfw_tiles", attribution: "Hansen/UMD/Google/USGS/NASA via Global Forest Watch", license: "CC BY 4.0", refresh: "Annual", kind: "raster", tiles: "https://tiles.globalforestwatch.org/umd_tree_cover_loss/v1.12/dynamic/{z}/{x}/{y}.png", maxzoom: 12, opacity: 0.9, swatch: "#ff4f9a" },
+  { id: "surface_water", group: "nature", label: "Surface water occurrence (1984–2021)", description: "JRC Global Surface Water: how often each 30 m pixel was water over 38 years. Floodplains, reservoirs, lost wetlands.", registry: "jrc_gsw", attribution: "EC JRC/Google", license: "Free and open", refresh: "Static (2021)", kind: "raster", tiles: "https://storage.googleapis.com/global-surface-water/tiles2021/occurrence/{z}/{x}/{y}.png", maxzoom: 13, opacity: 0.85, swatch: "#4f7cff", legend: [{ color: "#ffb3b3", label: "Rarely" }, { color: "#0000ff", label: "Permanent" }] },
   { id: "protected", group: "nature", label: "Protected areas (OSM)", description: "National parks, nature reserves and protected areas mapped in OpenStreetMap.", registry: "openfreemap", attribution: "© OpenStreetMap contributors", license: "ODbL", refresh: "Weekly", kind: "osm", swatch: "#6fbf73", caveat: "Community-mapped. The WDPA needs a commercial licence (registry: wdpa)." },
 
   // Infrastructure

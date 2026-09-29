@@ -23,6 +23,8 @@ import { deliveryAlerts } from "@/lib/delivery/engine";
 import { procurementAlerts } from "@/lib/procurement/engine";
 import { changesSinceLastSession, needsAttention, operatingStrip } from "@/lib/command/attention";
 import { compactMoney } from "@/lib/projects/labels";
+import { capitalAlignment } from "@/lib/alignment/engine";
+import { ALIGNMENT } from "@/lib/alignment/vocab";
 import { ES_TOPICS, INSURANCE_TYPES, STUDY_TYPES } from "@/lib/delivery/vocab";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     operatingStrip(appDb(), user.scope.mandateIds),
     changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
   ]);
+  const align = await capitalAlignment(appDb(), user.scope.mandateIds);
   const showAll = sp.attention === "all";
   const pending = await appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
     .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10);
@@ -66,6 +69,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <Stat n={strip.investors} label="Capital partner profiles" href="/capital" />
         <Stat n={strip.criticalRisks} label="High-impact open risks" href="/projects" warn />
       </div>
+      {align.total > 0 && <div className={ui.stats} aria-label="Capital alignment">
+        {(["nature_positive", "transition", "unclassified"] as const).map(k => <Stat key={k} n={compactMoney(align.byAlignment[k], align.currency)} label={`${ALIGNMENT[k]} capital`} href="/capital/alignment" />)}
+        <Stat n={compactMoney(align.materialRisk, align.currency)} label="Capital with material nature risk" href="/capital/alignment" />
+      </div>}
       <div className={r.grid}>
         <section className={r.panel}>
           <p className={r.panelTitle}><span>Needs attention</span><span className={ui.sub}>{attention.length} items · ranked by severity, then due date</span></p>
