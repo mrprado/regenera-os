@@ -260,6 +260,13 @@
       "when": 1790723551384,
       "tag": "0036_ancient_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1790724207488,
+      "tag": "0037_careful_shocker",
+      "breakpoints": true
     }
   ]
 }

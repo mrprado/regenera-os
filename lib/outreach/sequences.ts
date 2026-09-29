@@ -1,5 +1,6 @@
 // Sequences, enrollment, drafting and approval (SPEC sections 8 and 21, docs/plans/phase-2.md).
 import type Anthropic from "@anthropic-ai/sdk";
+import { campaignGate } from "@/lib/compliance/engine";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
@@ -42,8 +43,13 @@ export async function enrollContacts(db: Db, input: { contactIds: string[]; sequ
   const out: EnrollOutcome = { enrolled: 0, skipped: {} };
   const skip = (reason: string) => { out.skipped[reason] = (out.skipped[reason] ?? 0) + 1; };
   const rows = await db.select().from(contacts).where(and(inArray(contacts.id, input.contactIds), eq(contacts.mandateId, seq.mandateId)));
+  // Campaign compliance: an unapproved linked campaign blocks enrollment; provenance and preferences filter the audience.
+  const gate = await campaignGate(db, seq.id, rows.map(r => r.id));
+  if (gate.blocked) throw new Error(gate.blocked);
   for (const c of rows) {
     if (mandate?.type === "investment") { skip("investment_mandate"); continue; }
+    const g = gate.skip.get(c.id);
+    if (g) { skip(g); continue; }
     if (c.suppressed) { skip("suppressed"); continue; }
     if (seq.tier === "mass" && c.emailStatus !== "verified_provider" && c.emailStatus !== "verified_manual") { skip("mass_needs_verified_email"); continue; }
     if (!c.emailLower && seq.steps.some(s => s.channel === "email")) { skip("no_email"); continue; }

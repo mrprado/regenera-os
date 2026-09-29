@@ -141,3 +141,4 @@ export * from "./power";
 export * from "./benchmarks";
 export * from "./intelligence";
 export * from "./siteintel";
+export * from "./compliance";
