@@ -227,6 +227,40 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
   (AISStream key + websocket), animated wind, time scrubbing for point feeds.
 - Status: **Done** §18–19 visual/live layer scope within licences.
 
+### Phase P14 — Capital structures, funding pathways, opportunity gates, search (2026-09-29)
+- Built:
+  - **Migration 0025:** capital_structures, capital_stack_layers and funding_pathways; stage_gates.entity_type adds
+    "deal".
+  - **Capital stack builder:**
+    - Scenarios per project are built from its capital requirements. Each layer records provider, amount, pricing,
+      rate, tenor, amortization, security, status, conditions, source and assumption status.
+    - Live figures: coverage, gap, debt/equity mix, weighted rate, committed share, and warnings.
+    - Seniority chart with the gap shown and unsourced layers hatched.
+    - Scenarios can be copied and compared, and one marked preferred.
+    - An owner records reviews; any change resets the review. Nothing is labelled "compliant".
+  - **Funding pathways:**
+    - Generic process steps per source type.
+    - Eligibility is separate from fit and is only "confirmed" with a named source.
+    - Deadlines and overdue steps appear on Today.
+    - A pathway can be started from a Funding call.
+  - **Pages:** /capital/structures and /capital/funding-pathways.
+  - **Opportunity gates:**
+    - Gates on Engaged, Proposal, Signed and Active. Conditions sit on the deal or its linked project and can apply
+      per path.
+    - Gates are cumulative along the stage flow, so stages cannot be skipped.
+    - An owner can override with a reason; the override is audited.
+  - **Opportunity detail (/deals/[id]):** overview, conditions, participants, capital, agreements and activity.
+  - **Search:** 12 more record types.
+  - **Demo data:** a DEMO scenario and pathway.
+- Verified:
+  - capital-structure.test.ts (7) pass.
+  - Full CI: lint, typecheck, 284 tests, build.
+  - Browser:
+    - A scenario was built, and editing it updated coverage and the gap live; it saved.
+    - A pathway was created with the DFI steps.
+    - Moving an opportunity to Proposal was blocked, with the failing conditions listed.
+- Status: **Done** §10 FundingPathway, §11 Capital Stack Builder, §12 stage gates and deal detail, §42 search.
+
 ## Definition of Done (§104) — actual status
 | Item | Status | Evidence / note |
 |---|---|---|
@@ -235,9 +269,9 @@ rules apply: **never Supabase** and **no Tailwind** (CLAUDE.md, memory). So the 
 | Projects CRUD / Project Digital Record | Done | Existing + new Plan, Engineering, Materials, Procurement, Systems, Economics, Risk & E&S, claims panel |
 | Relationships graph / warm paths | Done | tests/unit/graph.test.ts; browser |
 | Capital profiles, mandates, explained matching | Done | Existing (phase 6 M2) |
-| Funding pathways | Partial | Funding radar, capital pathway report, intervention funding pathway; no dedicated FundingPathway object |
-| Capital stack builder | Partial | Requirements/tranches with shares in the capital pathway report; Economics scenarios; no interactive builder |
-| Deals and stage gates | Partial | Opportunities existing; evidence gates on project stages; deal (tracker) stages ungated |
+| Funding pathways | Done | funding_pathways with eligibility, steps, deadlines (P14) |
+| Capital stack builder | Done | Interactive builder with scenarios and comparison (P14) |
+| Deals and stage gates | Done | Cumulative opportunity gates with audited override; /deals/[id] (P14) |
 | Engagement / commercial records | Done | Contracts per engagement, fees, success-fee review flag |
 | Atlas renders, layers toggle, site polygon | Done | Browser; P13 intelligence globe (docs/ATLAS.md) |
 | Site Intelligence playbook runs | Done | Browser + test |

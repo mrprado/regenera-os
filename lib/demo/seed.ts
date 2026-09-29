@@ -5,7 +5,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
-  brokerProfiles, capitalMandates, capitalProfiles, capitalRequirements, capitalTranches, constraints, contacts, dataRoomDocuments, dataRooms, documentRequests,
+  brokerProfiles, capitalMandates, capitalStackLayers, capitalStructures, fundingPathways, capitalProfiles, capitalRequirements, capitalTranches, constraints, contacts, dataRoomDocuments, dataRooms, documentRequests,
   documents, events, mandateMembers, mandates, notifications, organizations, playbooks, stageGates, triggerRules, portalUsers, projectParties, projectUpdates, projects, referralRegistrations, risks, spatialLayers, tasks,
 } from "@/db/schema";
 import { addMilestone } from "@/lib/delivery/engine";
@@ -13,6 +13,8 @@ import { normalizeOrgName } from "@/lib/dedupe/normalize";
 import { ensureRulesAndGates } from "@/lib/events/engine";
 import { ensurePlaybooks } from "@/lib/playbooks/engine";
 import { createProject, setReadiness } from "@/lib/projects/engine";
+import { createPathway } from "@/lib/capital/pathways";
+import { createStructure, saveStructure } from "@/lib/capital/stack";
 
 export const DEMO_MANDATE = "mandate_demo";
 const D = (s: string) => `DEMO — ${s}`;
@@ -80,6 +82,15 @@ export async function seedDemo(db: Db, ownerEmail: string) {
   ]).returning();
   await db.insert(capitalMandates).values({ mandateId: M, profileId: cp.id, name: D("Energy transition fund II"), geographies: ["MEX"], sectors: ["energy"], stages: ["development"], instruments: ["development_capital"], ticketMin: 1_000_000, ticketMax: 5_000_000, currency: "USD", source: "Demo data" });
 
+  // Capital stack scenario and a funding pathway (illustrative assumptions, labelled DEMO).
+  const stack = await createStructure(db, solar.id, "DEMO: base structure", "demo");
+  await saveStructure(db, stack.id, { name: "DEMO: base structure", currency: "USD", totalCost: 92_000_000, costSource: "DEMO sample assumption", status: "working", notes: "Illustrative only." }, [
+    { layer: "senior_debt", provider: "DEMO: Global Infrastructure DFI", currency: "USD", amount: 62_000_000, pricing: "DEMO: SOFR + 325 bp", ratePct: 7.6, tenorYears: 18, amortization: "Sculpted", security: "Project assets", status: "indicative", conditions: "", source: "DEMO sample assumption", assumptionStatus: "assumption" },
+    { layer: "development_equity", provider: "DEMO: Monteverde Family Office", currency: "USD", amount: 3_000_000, pricing: "", ratePct: null, tenorYears: null, amortization: "", security: "", status: "in_discussion", conditions: "", source: "DEMO sample assumption", assumptionStatus: "assumption" },
+    { layer: "sponsor_equity", provider: "DEMO: Sponsor", currency: "USD", amount: 22_000_000, pricing: "", ratePct: 14, tenorYears: null, amortization: "", security: "", status: "assumption", conditions: "", source: "DEMO sample assumption", assumptionStatus: "assumption" },
+  ], "demo");
+  await createPathway(db, { projectId: solar.id, name: "DEMO: DFI senior loan", sourceType: "dfi", provider: "DEMO: Global Infrastructure DFI", amount: 62_000_000, currency: "USD", deadline: new Date(Date.now() + 45 * 86_400_000).toISOString().slice(0, 10), notes: "Illustrative pathway." }, "demo");
+
   const land = await addMilestone(db, { projectId: solar.id, name: "DEMO: land lease executed", durationDays: 30, category: "land", owner: "Sponsor" }, "demo");
   await addMilestone(db, { projectId: solar.id, name: "DEMO: interconnection study submitted", durationDays: 60, category: "grid", dependsOn: [land.id], dueDate: "2026-12-15", evidence: "DEMO PPA clause 7.2" }, "demo");
   await db.insert(tasks).values([
@@ -109,7 +120,7 @@ export async function seedDemo(db: Db, ownerEmail: string) {
 
 /** Removes every demo record by deleting the demo entity's rows (tables are mandate-scoped). */
 export async function removeDemo(db: Db) {
-  const scoped = [notifications, events, triggerRules, stageGates, playbooks, referralRegistrations, brokerProfiles, portalUsers, spatialLayers, projectUpdates, documentRequests, dataRooms, documents, tasks, capitalMandates, capitalProfiles, risks, constraints, projectParties, capitalTranches, capitalRequirements, projects, contacts, organizations];
+  const scoped = [fundingPathways, capitalStackLayers, capitalStructures, notifications, events, triggerRules, stageGates, playbooks, referralRegistrations, brokerProfiles, portalUsers, spatialLayers, projectUpdates, documentRequests, dataRooms, documents, tasks, capitalMandates, capitalProfiles, risks, constraints, projectParties, capitalTranches, capitalRequirements, projects, contacts, organizations];
   for (const t of scoped) await db.delete(t).where(inArray((t as unknown as { mandateId: typeof projects.mandateId }).mandateId, [DEMO_MANDATE]));
   await db.delete(mandateMembers).where(eq(mandateMembers.mandateId, DEMO_MANDATE));
   await db.delete(mandates).where(eq(mandates.id, DEMO_MANDATE));

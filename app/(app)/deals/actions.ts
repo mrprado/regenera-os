@@ -8,7 +8,8 @@ import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
 import { importTrackerFromSite } from "@/lib/crm/site-intake";
-import { appDb, mandateCondition } from "@/lib/db/scoped";
+import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
+import { checkDealGate } from "@/lib/events/engine";
 import { DEAL_STAGES } from "@/lib/vocab";
 
 const zStage = z.enum(Object.keys(DEAL_STAGES) as [keyof typeof DEAL_STAGES, ...(keyof typeof DEAL_STAGES)[]]);
@@ -17,16 +18,27 @@ export async function moveDeal(formData: FormData) {
   const id = z.string().uuid().parse(formData.get("id"));
   const stage = zStage.parse(formData.get("stage"));
   const back = String(formData.get("back") ?? "/deals");
+  let blocked: string | null = null;
   await withOsUser(async user => {
     const db = appDb();
     const [d] = await db.select().from(deals).where(and(eq(deals.id, id), mandateCondition(user.scope, deals.mandateId)));
     if (!d) throw new Error("Deal not found");
     if (d.stage === stage) return;
+    // Stage gates (§12): advancing needs verifiable conditions; an owner can override with a reason (audited).
+    const gate = await checkDealGate(db, id, stage);
+    if (gate.gated && !gate.passed) {
+      const failed = gate.results.filter(r => !r.pass).map(r => r.text);
+      const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+      const override = formData.get("override") === "on" && isOwner(user.scope, d.mandateId) && reason.length >= 10;
+      if (gate.enforce === "block" && !override) { blocked = stage; return; }
+      await audit(db, { actor: user.email, action: "deal_gate_override", entity: "deals", entityId: id, after: { toStage: stage, reason, failed } });
+    }
     const now = new Date().toISOString();
     await db.update(deals).set({ stage, stageChangedAt: now, updatedAt: now }).where(eq(deals.id, id));
     await db.insert(activities).values({ mandateId: d.mandateId, dealId: id, orgId: d.orgId, contactId: d.contactId, type: "stage_change", detail: `${DEAL_STAGES[d.stage]} → ${DEAL_STAGES[stage]}`, source: "manual", actor: user.email });
     await audit(db, { actor: user.email, action: "deal_stage", entity: "deals", entityId: id, before: { stage: d.stage }, after: { stage } });
   });
+  if (blocked) redirect(`/deals/${id}?gate=${blocked}`);
   redirect(back.startsWith("/deals") ? back : "/deals");
 }
 

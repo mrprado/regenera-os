@@ -131,3 +131,4 @@ export * from "./events";
 export * from "./spatial";
 export * from "./generated";
 export * from "./graph";
+export * from "./structures";

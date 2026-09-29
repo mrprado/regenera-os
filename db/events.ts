@@ -76,9 +76,9 @@ export const notificationMutes = sqliteTable("notification_mutes", {
 export const stageGates = sqliteTable("stage_gates", {
   id: id(),
   mandateId: text("mandate_id").notNull(),
-  entityType: text("entity_type", { enum: ["project"] }).notNull().default("project"),
+  entityType: text("entity_type", { enum: ["project", "deal"] }).notNull().default("project"),
   toStage: text("to_stage").notNull(),
-  conditions: text("conditions", { mode: "json" }).$type<{ id: string; text: string; check: CheckSpec }[]>().notNull(),
+  conditions: text("conditions", { mode: "json" }).$type<{ id: string; text: string; check: CheckSpec; scope?: "deal" | "project"; paths?: string[] }[]>().notNull(),
   enforce: text("enforce", { enum: ["block", "warn"] }).notNull().default("block"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   ...timestamps,

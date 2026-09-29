@@ -66,7 +66,7 @@ export default function Kanban({ columns, deals, action, back }: {
                     onDragStart={() => setDragging(d.id)}
                     onDragEnd={() => { setDragging(null); setOver(null); }}
                   >
-                    <p className={styles.cardTitle}>{d.name}</p>
+                    <Link className={styles.cardTitle} href={`/deals/${d.id}`} draggable={false}>{d.name}</Link>
                     {d.orgId && <Link className={styles.cardOrg} href={`/companies/${d.orgId}`}>{d.orgName}</Link>}
                     <p className={styles.cardMeta}>{d.engagement.replace(/_/g, " ")} · {d.path === "capital_mandate" ? "capital" : "project"}{d.value ? ` · $${Math.round(d.value).toLocaleString("en-US")}` : ""}</p>
                     {d.nextAction && <p className={`${styles.next} ${d.overdue ? styles.overdue : ""}`}>{d.nextActionDate ? `${d.nextActionDate}: ` : ""}{d.nextAction}</p>}

@@ -63,7 +63,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
             <tbody>
               {rows.map(d => (
                 <tr key={d.id}>
-                  <td className={ui.primary}>{d.name}</td>
+                  <td className={ui.primary}><Link href={`/deals/${d.id}`}>{d.name}</Link></td>
                   <td>{d.orgId ? <Link href={`/companies/${d.orgId}`}>{d.orgName}</Link> : "—"}</td>
                   <td><span className={ui.chip}>{DEAL_STAGES[d.stage as keyof typeof DEAL_STAGES]}</span></td>
                   <td>{d.engagement.replace(/_/g, " ")}</td>

@@ -33,6 +33,7 @@ export const SOURCES: Record<string, Source> = {
   document_requests: { table: documentRequests, key: documentRequests.projectId, cols: { status: documentRequests.status } },
   org_contacts: { table: contacts, key: contacts.orgId, cols: {} },
   org_deals: { table: deals, key: deals.orgId, cols: { stage: deals.stage } },
+  deal_contracts: { table: contracts, key: contracts.dealId, cols: { lifecycle: contracts.lifecycle, category: contracts.category } },
   opportunity_matches: { table: capitalMatches, key: capitalMatches.opportunityId, cols: { status: capitalMatches.status, eligibility: capitalMatches.eligibility } },
 };
 

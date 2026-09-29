@@ -37,6 +37,8 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
       <p className={ui.notice}>Commercial fit and regulatory eligibility are always shown separately. Investor classification is jurisdiction-specific and only ever recorded from an assessment, never inferred. Investment communications pass the compliance gate and always need your approval.</p>
       <nav className={ui.tabs} aria-label="Capital sections">
         {TABS.filter(([k]) => k !== "private" || owner).map(([k, label]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/capital${k === "partners" ? "" : `?tab=${k}`}`}>{label}</Link>)}
+        <Link className={ui.tab} href="/capital/structures">Capital structures</Link>
+        <Link className={ui.tab} href="/capital/funding-pathways">Funding pathways</Link>
       </nav>
 
       {tab === "partners" && await (async () => {

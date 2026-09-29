@@ -3,7 +3,8 @@
 import { and, isNull, like, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
-  capitalOpportunities, capitalProfiles, contacts, contracts, deals, documents, fundingOpportunities, organizations, privateCapitalProfiles, projects,
+  capitalOpportunities, capitalProfiles, capitalStructures, contacts, contracts, dataRooms, deals, decisions, documents, fundingOpportunities, fundingPathways, generatedDocuments,
+  interventions, organizations, permits, playbooks, privateCapitalProfiles, procurementPackages, projectMilestones, projects, spatialLayers, studies,
 } from "@/db/schema";
 import { isOwner, mandateCondition, type UserScope } from "@/lib/db/scoped";
 
@@ -25,6 +26,36 @@ export async function globalSearch(db: Db, scope: UserScope, q: string): Promise
     db.select({ id: documents.id, title: documents.title, url: documents.url, version: documents.version }).from(documents).where(and(mandateCondition(scope, documents.mandateId), sql`${documents.status} != 'superseded'`, like(sql`lower(${documents.title})`, pat))).limit(L),
     db.select({ id: deals.id, name: deals.name, stage: deals.stage }).from(deals).where(and(mandateCondition(scope, deals.mandateId), isNull(deals.archivedAt), like(sql`lower(${deals.name})`, pat))).limit(L),
   ]);
+  // Delivery, capital structuring and workspace records (master build instruction §42).
+  const T = (col: Parameters<typeof sql>[1]) => like(sql`lower(${col})`, pat);
+  const [paths, structs, miles, studs, perms, decs, pkgs, ivs, gens, layers, rooms, books] = await Promise.all([
+    db.select({ id: fundingPathways.id, name: fundingPathways.name, projectId: fundingPathways.projectId, status: fundingPathways.status }).from(fundingPathways).where(and(mandateCondition(scope, fundingPathways.mandateId), or(T(fundingPathways.name), T(fundingPathways.provider)))).limit(L),
+    db.select({ id: capitalStructures.id, name: capitalStructures.name, projectId: capitalStructures.projectId }).from(capitalStructures).where(and(mandateCondition(scope, capitalStructures.mandateId), T(capitalStructures.name))).limit(L),
+    db.select({ id: projectMilestones.id, name: projectMilestones.name, projectId: projectMilestones.projectId, status: projectMilestones.status }).from(projectMilestones).where(and(mandateCondition(scope, projectMilestones.mandateId), T(projectMilestones.name))).limit(L),
+    db.select({ id: studies.id, title: studies.title, projectId: studies.projectId, status: studies.status }).from(studies).where(and(mandateCondition(scope, studies.mandateId), T(studies.title))).limit(L),
+    db.select({ id: permits.id, name: permits.name, projectId: permits.projectId, status: permits.status }).from(permits).where(and(mandateCondition(scope, permits.mandateId), or(T(permits.name), T(permits.authority)))).limit(L),
+    db.select({ id: decisions.id, title: decisions.title, projectId: decisions.projectId, status: decisions.status }).from(decisions).where(and(mandateCondition(scope, decisions.mandateId), T(decisions.title))).limit(L),
+    db.select({ id: procurementPackages.id, name: procurementPackages.name, projectId: procurementPackages.projectId }).from(procurementPackages).where(and(mandateCondition(scope, procurementPackages.mandateId), T(procurementPackages.name))).limit(L),
+    db.select({ id: interventions.id, issue: interventions.systemIssue, projectId: interventions.projectId }).from(interventions).where(and(mandateCondition(scope, interventions.mandateId), or(T(interventions.systemIssue), T(interventions.description)))).limit(L),
+    db.select({ id: generatedDocuments.id, title: generatedDocuments.title }).from(generatedDocuments).where(and(mandateCondition(scope, generatedDocuments.mandateId), T(generatedDocuments.title))).limit(L),
+    db.select({ id: spatialLayers.id, name: spatialLayers.name, category: spatialLayers.category }).from(spatialLayers).where(and(mandateCondition(scope, spatialLayers.mandateId), T(spatialLayers.name))).limit(L),
+    db.select({ id: dataRooms.id, name: dataRooms.name }).from(dataRooms).where(and(mandateCondition(scope, dataRooms.mandateId), T(dataRooms.name))).limit(L),
+    db.select({ id: playbooks.id, name: playbooks.name }).from(playbooks).where(and(mandateCondition(scope, playbooks.mandateId), T(playbooks.name))).limit(L),
+  ]);
+  const workspace: SearchHit[] = [
+    ...paths.map(x => ({ type: "Funding pathway", label: x.name, sub: x.status.replace(/_/g, " "), href: `/projects/${x.projectId}?tab=pathways` })),
+    ...structs.map(x => ({ type: "Capital structure", label: x.name, sub: "stack scenario", href: `/projects/${x.projectId}?tab=stack&structure=${x.id}` })),
+    ...miles.map(x => ({ type: "Milestone", label: x.name, sub: x.status.replace(/_/g, " "), href: `/projects/${x.projectId}?tab=plan` })),
+    ...studs.map(x => ({ type: "Study", label: x.title, sub: x.status.replace(/_/g, " "), href: `/projects/${x.projectId}?tab=engineering` })),
+    ...perms.map(x => ({ type: "Permit", label: x.name, sub: x.status.replace(/_/g, " "), href: `/projects/${x.projectId}?tab=regulatory` })),
+    ...decs.map(x => ({ type: "Decision", label: x.title, sub: x.status.replace(/_/g, " "), href: `/projects/${x.projectId}?tab=plan` })),
+    ...pkgs.map(x => ({ type: "Procurement package", label: x.name, sub: "", href: `/projects/${x.projectId}?tab=procurement&pkg=${x.id}` })),
+    ...ivs.map(x => ({ type: "Intervention", label: x.issue, sub: "", href: `/projects/${x.projectId}?tab=systems` })),
+    ...gens.map(x => ({ type: "Generated document", label: x.title, sub: "", href: `/documents/generator/${x.id}` })),
+    ...layers.map(x => ({ type: "Atlas layer", label: x.name, sub: x.category.replace(/_/g, " "), href: "/map" })),
+    ...rooms.map(x => ({ type: "Data room", label: x.name, sub: "", href: "/portals?tab=rooms" })),
+    ...books.map(x => ({ type: "Playbook", label: x.name, sub: "", href: `/playbooks/${x.id}` })),
+  ];
   const priv = isOwner(scope)
     ? await db.select({ id: privateCapitalProfiles.id, name: contacts.fullName }).from(privateCapitalProfiles).innerJoin(contacts, sql`${contacts.id} = ${privateCapitalProfiles.contactId}`)
       .where(and(mandateCondition(scope, privateCapitalProfiles.mandateId), like(sql`lower(${contacts.fullName})`, pat))).limit(L)
@@ -36,9 +67,10 @@ export async function globalSearch(db: Db, scope: UserScope, q: string): Promise
     ...priv.map(x => ({ type: "Private investor", label: x.name, sub: "owners only", href: `/capital/private/${x.id}` })),
     ...orgs.map(x => ({ type: "Company", label: x.name, sub: x.country ?? "", href: `/companies/${x.id}` })),
     ...people.map(x => ({ type: "Person", label: x.name, sub: x.title ?? "", href: `/people/${x.id}` })),
-    ...deal.map(x => ({ type: "Opportunity", label: x.name, sub: x.stage.replace(/_/g, " "), href: "/deals?view=table" })),
+    ...deal.map(x => ({ type: "Opportunity", label: x.name, sub: x.stage.replace(/_/g, " "), href: `/deals/${x.id}` })),
     ...cons.map(x => ({ type: "Contract", label: x.title, sub: x.lifecycle.replace(/_/g, " "), href: `/contracts/${x.id}` })),
     ...funding.map(x => ({ type: "Funding", label: x.title, sub: x.deadline ? `closes ${x.deadline}` : "rolling", href: `/funding/${x.id}` })),
     ...docs.map(x => ({ type: "Document", label: x.title, sub: `v${x.version}`, href: x.url ?? "/documents" })),
+    ...workspace,
   ];
 }

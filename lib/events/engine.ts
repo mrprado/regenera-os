@@ -1,7 +1,7 @@
 // Events, triggers, notifications and stage gates (master build instruction §09, §17, §62, §75).
-import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { events, notificationMutes, notifications, playbooks, projects, stageGates, tasks, triggerRules, type RuleAction, type RuleCondition } from "@/db/schema";
+import { deals, events, notificationMutes, notifications, playbooks, projects, stageGates, tasks, triggerRules, type RuleAction, type RuleCondition } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { enqueue } from "@/lib/jobs/queue";
 import { evaluateProof } from "@/lib/playbooks/checks";
@@ -110,18 +110,69 @@ export const DEFAULT_GATES: { toStage: string; conditions: { id: string; text: s
   ] },
 ];
 
+/** Opportunity (tracker stage) gates, §12: advancing needs verifiable conditions. "project" conditions run on the
+ * opportunity's linked project; "paths" limits a condition to capital mandates or project diagnostics. */
+export const DEFAULT_DEAL_GATES: { toStage: string; conditions: { id: string; text: string; check: CheckSpec; scope?: "deal" | "project"; paths?: string[] }[] }[] = [
+  { toStage: "engaged", conditions: [
+    { id: "d1", text: "Organization linked", check: { type: "field_present", field: "orgId" } },
+    { id: "d2", text: "Contact linked", check: { type: "field_present", field: "contactId" } },
+  ] },
+  { toStage: "proposal", conditions: [
+    { id: "d1", text: "Organization linked", check: { type: "field_present", field: "orgId" } },
+    { id: "d2", text: "Contact linked", check: { type: "field_present", field: "contactId" } },
+    { id: "d3", text: "Value estimated", check: { type: "field_present", field: "valueEstimate" } },
+    { id: "d4", text: "Project record linked (site and jurisdiction identified)", check: { type: "field_present", field: "projectId" }, paths: ["capital_mandate", "project_diagnostic"] },
+    { id: "d5", text: "Sponsor recorded on the project", check: { type: "party_role", role: "sponsor" }, scope: "project", paths: ["capital_mandate"] },
+    { id: "d6", text: "Capital ask known (at least one capital requirement)", check: { type: "count_at_least", source: "capital_requirements", min: 1 }, scope: "project", paths: ["capital_mandate"] },
+    { id: "d7", text: "Jurisdiction identified", check: { type: "field_present", field: "country" }, scope: "project", paths: ["capital_mandate", "project_diagnostic"] },
+  ] },
+  { toStage: "signed", conditions: [
+    { id: "d1", text: "Engagement agreement drafted", check: { type: "count_at_least", source: "deal_contracts", min: 1 } },
+    { id: "d2", text: "Sponsor confirmed on the project", check: { type: "party_role", role: "sponsor", confirmed: true }, scope: "project", paths: ["capital_mandate"] },
+    { id: "d3", text: "Basic compliance screen recorded (at least one regulatory requirement)", check: { type: "count_at_least", source: "requirements", min: 1 }, scope: "project", paths: ["capital_mandate"] },
+  ] },
+  { toStage: "active", conditions: [
+    { id: "d1", text: "Engagement agreement executed", check: { type: "count_at_least", source: "deal_contracts", min: 1, where: { lifecycle: ["effective", "active"] } } },
+  ] },
+];
+
+/** Forward order of tracker stages: moving forward must pass every gate on the way (no skipping Proposal). */
+export const DEAL_FLOW = ["lead", "contacted", "engaged", "call_booked", "proposal", "signed", "active", "expansion", "completed"];
+
+/** Checks the gates for moving an opportunity to a tracker stage (conditions on the deal or its linked project). */
+export async function checkDealGate(db: Db, dealId: string, toStage: string) {
+  const [d] = await db.select({ mandateId: deals.mandateId, projectId: deals.projectId, path: deals.path, stage: deals.stage }).from(deals).where(eq(deals.id, dealId));
+  if (!d) throw new Error("Opportunity not found");
+  const from = DEAL_FLOW.indexOf(d.stage), to = DEAL_FLOW.indexOf(toStage);
+  const stages = from >= 0 && to > from ? DEAL_FLOW.slice(from + 1, to + 1) : [toStage];
+  const gs = await db.select().from(stageGates).where(and(eq(stageGates.mandateId, d.mandateId), eq(stageGates.entityType, "deal"), inArray(stageGates.toStage, stages), eq(stageGates.enabled, true)));
+  if (!gs.length) return { gated: false, enforce: "warn" as const, results: [] as Awaited<ReturnType<typeof evaluateProof>>, passed: true };
+  const g = { enforce: gs.some(x => x.enforce === "block") ? "block" as const : "warn" as const };
+  const seen = new Set<string>();
+  const applicable = gs.sort((a, b) => stages.indexOf(a.toStage) - stages.indexOf(b.toStage)).flatMap(x => x.conditions.map(c => ({ ...c, id: `${x.toStage}:${c.id}` })))
+    .filter(c => (!c.paths || c.paths.includes(d.path)) && !seen.has(c.text) && (seen.add(c.text), true));
+  const results: Awaited<ReturnType<typeof evaluateProof>> = [];
+  for (const c of applicable) {
+    if (c.scope === "project" && !d.projectId) { results.push({ id: c.id, text: c.text, pass: false, detail: "No project linked to this opportunity" }); continue; }
+    const [r] = await evaluateProof(db, [c], c.scope === "project" ? "project" : "deal", c.scope === "project" ? d.projectId : dealId);
+    results.push(r);
+  }
+  return { gated: true, enforce: g.enforce, results, passed: results.every(r => r.pass === true) };
+}
+
 export async function ensureRulesAndGates(db: Db, mandateId: string) {
   const existing = await db.select({ name: triggerRules.name }).from(triggerRules).where(eq(triggerRules.mandateId, mandateId));
   for (const r of DEFAULT_RULES) if (!existing.some(e => e.name === r.name)) await db.insert(triggerRules).values({ ...r, mandateId });
-  const gates = await db.select({ toStage: stageGates.toStage }).from(stageGates).where(eq(stageGates.mandateId, mandateId));
-  for (const g of DEFAULT_GATES) if (!gates.some(x => x.toStage === g.toStage)) await db.insert(stageGates).values({ mandateId, toStage: g.toStage, conditions: g.conditions });
+  const gates = await db.select({ toStage: stageGates.toStage, entityType: stageGates.entityType }).from(stageGates).where(eq(stageGates.mandateId, mandateId));
+  for (const g of DEFAULT_GATES) if (!gates.some(x => x.entityType === "project" && x.toStage === g.toStage)) await db.insert(stageGates).values({ mandateId, toStage: g.toStage, conditions: g.conditions });
+  for (const g of DEFAULT_DEAL_GATES) if (!gates.some(x => x.entityType === "deal" && x.toStage === g.toStage)) await db.insert(stageGates).values({ mandateId, entityType: "deal", toStage: g.toStage, conditions: g.conditions });
 }
 
 /** Checks the gate for entering a stage. Returns failures; nothing blocks when no enabled gate exists. */
 export async function checkStageGate(db: Db, projectId: string, toStage: string) {
   const [p] = await db.select({ mandateId: projects.mandateId }).from(projects).where(eq(projects.id, projectId));
   if (!p) throw new Error("Project not found");
-  const [g] = await db.select().from(stageGates).where(and(eq(stageGates.mandateId, p.mandateId), eq(stageGates.toStage, toStage), eq(stageGates.enabled, true)));
+  const [g] = await db.select().from(stageGates).where(and(eq(stageGates.mandateId, p.mandateId), eq(stageGates.entityType, "project"), eq(stageGates.toStage, toStage), eq(stageGates.enabled, true)));
   if (!g) return { gated: false, enforce: "warn" as const, results: [] as Awaited<ReturnType<typeof evaluateProof>>, passed: true };
   const results = await evaluateProof(db, g.conditions, "project", projectId);
   return { gated: true, enforce: g.enforce, results, passed: results.every(r => r.pass === true) };
