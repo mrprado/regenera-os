@@ -1,8 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
-import { placeFacts } from "@/db/schema";
+import { placeFacts, siteIntelRuns } from "@/db/schema";
+import { geometryHash } from "@/lib/site-intel/engine";
+import SiteIntelPanel from "./site-intel-panel";
 import { appDb } from "@/lib/db/scoped";
 import { PLACE_DIMENSIONS, PLACE_GAPS } from "@/lib/place/engine";
 import { buildPlaceAction } from "../place-actions";
@@ -11,15 +13,17 @@ import { runPlaybookOnProjectAction } from "../playbook-actions";
 const TIER: Record<number, string> = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Tier 4", 5: "Tier 5" };
 
 /** Place profile: every fact shows its source, tier, licence, period and retrieval date; gaps stay visible. */
-export default async function PlaceTab({ project }: { project: { id: string; lat: number | null; lng: number | null; country: string | null } }) {
+export default async function PlaceTab({ project }: { project: { id: string; lat: number | null; lng: number | null; country: string | null; geometry: string | null } }) {
+  const [run] = await appDb().select().from(siteIntelRuns).where(eq(siteIntelRuns.projectId, project.id)).orderBy(desc(siteIntelRuns.createdAt)).limit(1);
   const facts = await appDb().select().from(placeFacts).where(eq(placeFacts.projectId, project.id)).orderBy(asc(placeFacts.dimension), asc(placeFacts.label));
   const latest = facts.reduce<string | null>((a, f) => (!a || f.retrievedAt > a ? f.retrievedAt : a), null);
   const stale = facts.filter(f => f.state === "stale");
   return (
     <>
+      <SiteIntelPanel projectId={project.id} initial={run ? { id: run.id, status: run.status, stages: run.stages, createdAt: run.createdAt } : null} stale={!!run && run.geometryHash !== geometryHash(project)} />
       <section className={r.panel}>
         <p className={r.panelTitle}><span>Place profile</span>
-          <span style={{ display: "flex", gap: 6 }}><form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={project.id} /><input type="hidden" name="key" value="site-intelligence" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Run site intelligence</button></form><form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={ui.miniBtn} type="submit">{facts.length ? "Refresh facts" : "Build place profile"}</button></form></span></p>
+          <span style={{ display: "flex", gap: 6 }}><form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={project.id} /><input type="hidden" name="key" value="site-intelligence" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Site-intelligence playbook</button></form><form action={buildPlaceAction}><input type="hidden" name="id" value={project.id} /><button className={ui.miniBtn} type="submit">{facts.length ? "Refresh facts" : "Build place profile"}</button></form></span></p>
         <p className={ui.sub} style={{ marginTop: 0 }}>
           {project.lat === null ? "Set the project coordinates on the Overview tab for site-level facts (solar, climate, infrastructure, seismic, biodiversity). " : `Site ${project.lat}, ${project.lng}. `}
           Facts come from NASA POWER, World Bank, OpenStreetMap, USGS and GBIF, each with its tier and licence. They describe context and are not a site assessment.

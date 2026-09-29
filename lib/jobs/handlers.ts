@@ -40,6 +40,7 @@ import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } fr
 import { enqueue, type Job } from "./queue";
 import { expireQualifications, runMatches } from "@/lib/capital/engine";
 import { expirePermissions } from "@/lib/community/engine";
+import { continueAbandonedRuns } from "@/lib/site-intel/engine";
 import { expirePermits } from "@/lib/regulatory/engine";
 import { buildPlaceProfile, projectsNeedingPlace } from "@/lib/place/engine";
 
@@ -269,6 +270,10 @@ export const handlers: Record<string, JobHandler> = {
     // Knowledge permissions past their expiry stop working and flag every output that used them.
     await expirePermissions(db, now);
   },
+  "site_intel.continue": async ({ db, now }) => {
+    // Site-intelligence runs whose panel was closed are finished here, a few stages per tick.
+    await continueAbandonedRuns(db, now);
+  },
   "funding.place": async ({ db, now }) => {
     const { more } = await placeFunding(db, 15);
     if (more) await enqueue(db, "funding.place", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `funding-place:${now.toISOString().slice(0, 16)}` });
@@ -324,4 +329,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "portal.expire": "daily:05:40",
   "events.dispatch": "every:5m",
   "place.refresh": "daily:04:10",
+  "site_intel.continue": "every:5m",
 };
