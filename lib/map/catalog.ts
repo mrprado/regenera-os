@@ -1,3 +1,5 @@
+import type { Freshness, Provenance } from "./provenance";
+
 // Atlas layer catalogue: every basemap and live-intelligence layer on the globe, with its registry key, attribution,
 // licence and refresh. Client-safe (no server imports). /api/map/catalog filters it by the integration registry and
 // by configured keys before the browser sees it, so a disabled or licence-required source never loads.
@@ -119,7 +121,12 @@ export function tileUrl(layer: Pick<CatalogLayer, "tiles">, date: string, key = 
 }
 
 /** Catalogue as offered to the browser: registry-allowed, key present, key injected server-side. */
-export type OfferedLayer = Omit<CatalogLayer, "needsEnv" | "keyEnv" | "keyedTiles">;
+export type OfferedLayer = Omit<CatalogLayer, "needsEnv" | "keyEnv" | "keyedTiles"> & {
+  /** Added by /api/map/catalog: tier and provenance (lib/map/provenance.ts), licence terms from the registry, measured freshness. */
+  provenance?: Provenance | null;
+  terms?: { license: string; licenseUrl: string | null; commercialUse: string; redistribution: string; attribution: string } | null;
+  freshness?: { status: Freshness; ageH: number | null; lastOk: string | null };
+};
 export function offerCatalog(states: Map<string, string>, env: Record<string, string | undefined>): OfferedLayer[] {
   return CATALOG.filter(l => {
     const state = states.get(l.registry);

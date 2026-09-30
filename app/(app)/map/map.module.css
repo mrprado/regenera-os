@@ -276,3 +276,15 @@
 .mly a { display: grid; gap: 2px; color: inherit; text-decoration: none; font-size: 11px; }
 .mly img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; }
 @media (max-width: 760px) { .streetView { right: 8px; left: 8px; width: auto; } .pano { height: 240px; } }
+
+/* Provenance (lib/map/provenance.ts): tier badge, freshness flag, provenance list. */
+.tier { font-size: 9.5px; font-weight: 600; letter-spacing: .06em; padding: 1px 4px; border: 1px solid rgba(242,240,233,.22); border-radius: 2px; color: var(--hud-dim); font-family: var(--font-mono); }
+.tier[data-tier="4"] { border-style: dashed; }
+.tier[data-tier="5"] { border-style: dotted; color: #e4a62a; border-color: rgba(228,166,42,.5); }
+.fresh { font-size: 10px; padding: 1px 5px; border-radius: 2px; }
+.fresh[data-fresh="aging"] { color: #e4a62a; border: 1px solid rgba(228,166,42,.45); }
+.fresh[data-fresh="stale"], .fresh[data-fresh="unavailable"] { color: #e0897f; border: 1px solid rgba(185,75,66,.6); }
+.prov { display: grid; grid-template-columns: 78px 1fr; gap: 3px 10px; margin: 6px 0; font-size: 11.5px; }
+.prov dt { color: var(--hud-dim); }
+.prov dd { margin: 0; overflow-wrap: anywhere; }
+.prov a { color: #e9c2ad; }

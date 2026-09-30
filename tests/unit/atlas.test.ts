@@ -109,3 +109,30 @@ describe("live feed normalizers", () => {
     expect(parseBbox("a,b,c,d")).toBeNull();
   });
 });
+
+describe("provenance and freshness", () => {
+  it("every catalogue layer has provenance with a valid tier; none is left unknown", async () => {
+    const { PROVENANCE, TIERS } = await import("@/lib/map/provenance");
+    const missing = CATALOG.filter(l => !PROVENANCE[l.id]).map(l => l.id);
+    expect(missing).toEqual([]);
+    for (const l of CATALOG) {
+      const p = PROVENANCE[l.id];
+      expect(Object.keys(TIERS)).toContain(String(p.tier));
+      expect(p.provider && p.sourceUrl.startsWith("https://") && p.geography && p.resolution && p.period).toBeTruthy();
+    }
+    expect(Object.keys(PROVENANCE).filter(k => !CATALOG.some(l => l.id === k))).toEqual([]);
+  });
+
+  it("freshness is measured from the ledger, never assumed", async () => {
+    const { freshnessOf, PROVENANCE } = await import("@/lib/map/provenance");
+    const now = new Date("2026-09-29T12:00:00Z");
+    const q = PROVENANCE.quakes;                                   // expected within 1 h
+    expect(freshnessOf(q, true, "2026-09-29T11:30:00Z", null, now).status).toBe("current");
+    expect(freshnessOf(q, true, "2026-09-29T10:00:00Z", null, now).status).toBe("aging");
+    expect(freshnessOf(q, true, "2026-09-28T10:00:00Z", null, now).status).toBe("stale");
+    expect(freshnessOf(q, true, "2026-09-28T10:00:00Z", "2026-09-29T11:00:00Z", now).status).toBe("unavailable");
+    expect(freshnessOf(q, true, null, null, now).status).toBe("not_tracked");
+    expect(freshnessOf(PROVENANCE.s2cloudless, false, null, null, now).status).toBe("reference");
+    expect(freshnessOf(PROVENANCE.streets, false, null, null, now).status).toBe("not_tracked");   // browser tiles: not guessed
+  });
+});

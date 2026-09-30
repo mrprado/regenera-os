@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Info } from "lucide-react";
 import { GROUP_LABELS, productDate, type LayerGroup, type OfferedLayer } from "@/lib/map/catalog";
+import { CONFIDENCE, FRESHNESS, TIERS } from "@/lib/map/provenance";
 import styles from "./map.module.css";
 
 export type FeedStatus = { loading?: boolean; count?: number; shown?: number; updated?: string; error?: string; source?: string };
@@ -29,6 +30,8 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
         <input type="checkbox" checked={on} onChange={onToggle} />
         <span className={styles.swatch} style={{ background: l.swatch }} />
         <span className={styles.layerLabel}>{l.label}</span>
+        {l.provenance && <span className={styles.tier} title={TIERS[l.provenance.tier].label} data-tier={l.provenance.tier}>T{l.provenance.tier}</span>}
+        {l.freshness && (l.freshness.status === "aging" || l.freshness.status === "stale" || l.freshness.status === "unavailable") && <span className={styles.fresh} data-fresh={l.freshness.status}>{FRESHNESS[l.freshness.status]}</span>}
         <span className={styles.count} data-state={state ?? "off"}>
           {state === "error" ? "unavailable" : state === "loading" ? "…" : on && status?.count != null ? (status.shown != null && status.shown < status.count ? `${status.shown.toLocaleString("en-US")}/${status.count.toLocaleString("en-US")}` : status.count.toLocaleString("en-US")) : on ? "on" : ""}
         </span>
@@ -38,7 +41,21 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
         <div className={styles.intelInfo}>
           <p>{l.description}</p>
           {l.legend && <p className={styles.legend}>{l.legend.map(g => <span key={g.color}><i style={{ background: g.color }} />{g.label}</span>)}</p>}
-          <p>{[l.attribution, l.license, `refresh: ${l.refresh}`, dated && `date: ${dated}`, status?.source && `via ${status.source}`, status?.updated && `loaded ${status.updated.slice(11, 16)} UTC`].filter(Boolean).join(" · ")}</p>
+          {l.provenance ? (
+            <dl className={styles.prov}>
+              <dt>Tier</dt><dd>{TIERS[l.provenance.tier].label}</dd>
+              <dt>Provider</dt><dd><a href={l.provenance.sourceUrl} target="_blank" rel="noreferrer">{l.provenance.provider}</a></dd>
+              <dt>Coverage</dt><dd>{l.provenance.geography}</dd>
+              <dt>Resolution</dt><dd>{l.provenance.resolution}</dd>
+              <dt>Period</dt><dd>{l.provenance.period}{dated ? ` · showing ${dated}` : ""}</dd>
+              <dt>Confidence</dt><dd>{CONFIDENCE[l.provenance.confidence]}</dd>
+              {l.provenance.method && <><dt>Method</dt><dd>{l.provenance.method}</dd></>}
+              <dt>Freshness</dt><dd>{l.freshness ? FRESHNESS[l.freshness.status] : "Not tracked"}{l.freshness?.lastOk ? ` · last successful load ${l.freshness.lastOk.slice(0, 16).replace("T", " ")} UTC` : ""}</dd>
+              <dt>Licence</dt><dd>{l.terms ? <>{l.terms.licenseUrl ? <a href={l.terms.licenseUrl} target="_blank" rel="noreferrer">{l.terms.license}</a> : l.terms.license} · commercial use: {l.terms.commercialUse}{l.terms.redistribution ? ` · redistribution: ${l.terms.redistribution}` : ""}</> : l.license}</dd>
+              <dt>Attribution</dt><dd>{l.attribution}</dd>
+            </dl>
+          ) : <p className={styles.error}>Provenance unknown: do not rely on this layer for a decision.</p>}
+          <p>{[`refresh: ${l.refresh}`, status?.source && `via ${status.source}`, status?.updated && `loaded ${status.updated.slice(11, 16)} UTC`].filter(Boolean).join(" · ")}</p>
           {l.caveat && <p className={styles.caveat}>{l.caveat}</p>}
           {status?.error && <p className={styles.error}>{status.error}. This does not mean there is nothing there.</p>}
         </div>
