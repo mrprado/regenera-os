@@ -1,36 +1,33 @@
-# Regenera OS design system — Territorial intelligence (2026-09-29)
+# Regenera OS design system — Systems intelligence grounded in place (2026-09-30)
 
-Supersedes the forest-green / gold styling copied from regenera.bio. The OS now has its own identity: intelligence
-grounded in place. Land is the substrate; nature, capital and infrastructure are systems drawn on it. Brand colour is
-material, not ecological; ecological colour is used only for ecological data.
+Supersedes the fern/gold styling copied from regenera.bio and the interim "Territorial intelligence" palette
+(2026-09-29). Final direction from Prado: a deep forest-carbon shell, the Regenera wordmark in gold, light mineral
+analytical surfaces, and semantic colour only where data means it. Not generic ESG green, not another firm's palette.
 
-Tokens live in `styles/tokens.css` (the only place colours are defined). Legacy names (`--paper`, `--fern`, `--pollen`,
-`--wax` …) are remapped there, so older CSS modules follow the system automatically; new code uses the new names.
+Tokens live in `styles/tokens.css` (the only place colours are defined). Legacy and interim names are remapped there.
 
 ## Colour
 
 | Role | Token | Hex | Use |
 |---|---|---|---|
-| Shell / immersive | `--volcanic` | #161816 | sidebar, top bar, Atlas, dark panels |
-| Raised dark | `--basalt` | #20231F | active navigation, floating Atlas controls |
-| Secondary dark | `--shale` | #2A2D28 | sparingly |
-| Muted on dark | `--smoke` | #777C73 | borders and text on dark |
-| Workspace | `--limestone` | #F2F0E9 | page background |
-| Analytical sheet | `--chalk` | #FAF9F5 | tables, models, reports, forms |
-| Grouping | `--sandstone` | #E7E3D8 | secondary sections |
-| Hairline | `--ash` | #D4D1C8 | borders, inactive divisions |
-| **Accent** | `--copper` | #B6633E | selection, active state, primary action, active map object |
-| Signal | `--solar` | #E4A62A | high-priority signal, active opportunity, energy — under ~5% of any screen, never a button |
-| Nature / agriculture | `--lichen` | #7C8B68 | semantic only |
-| Water | `--glacial` | #5E8C91 | semantic only |
-| Infrastructure | `--steel` | #727A7C | semantic only |
-| Capital | `--aubergine` | #675568 | capital series, financing flows, investors |
-| Critical / warning / positive | `--critical` `--warning` `--positive` | #B94B42 #C98632 #66845F | status only, always with a label or symbol |
+| Shell | `--forest-carbon` | #15251F | sidebar, header, primary buttons |
+| Elevated shell | `--deep-moss` | #1D332A | hover, active navigation, secondary shell panels |
+| Secondary green | `--canopy` | #29483A | sparingly (button hover) |
+| Muted shell text | `--sage-ash` | #718176 | inactive labels, metadata on dark |
+| Atlas base | `--atlas-base` | #101813 | immersive spatial workspace |
+| Workspace | `--limestone` | #F3F1EA | page background |
+| Analytical sheet | `--chalk` | #FCFBF7 | tables, models, reports, forms |
+| Secondary surface | `--warm-ash` | #E6E3DA | grouping |
+| Text | `--text-1` / `--text-2` | #1A1C1A / #686C68 | graphite / muted graphite |
+| **Signature** | `--gold` | #D9A52E | Regenera wordmark, nav and tab markers, selected high-level object, opportunity, important signal — never a button fill |
+| Land / development | `--copper` | #B66A47 | land, physical assets, selected geometry |
+| Nature | `--lichen` | #76896A | nature, agriculture, ecology, restoration |
+| Water | `--water` | #598A8C | hydrology |
+| Capital | `--plum` | #6A566B | capital, funds, investors |
+| Infrastructure | `--steel` | #727C7C | infrastructure |
+| Status | `--critical` `--warning` `--positive` | #B84C43 #C78332 #5F7F58 | always with a label or symbol |
 
-Proportion: 60–70% neutral surface, 20–25% structural dark/light contrast, 5–10% copper, under 5% semantic.
-No gradients on controls; the only gradients are inside the System Field motif (copper → solar, volcanic → basalt).
-
-Status: typography plus a small dot — Development ● copper, Capital raise ● aubergine, Operating ● lichen, Blocked ● critical.
+Proportion: 65–75% light surfaces, 15–20% green shell, 5–8% gold/active accents, the rest semantic.
 
 ## Type
 
@@ -49,20 +46,20 @@ Numbers use tabular figures everywhere (`td`, `.num`).
 
 ## Surfaces by environment
 
-Command: limestone with chalk sheets and a dark map. Atlas: volcanic, floating basalt controls at ~94% opacity.
+Command: limestone with chalk sheets and a green-charcoal map. Atlas: `--atlas-base`, floating deep-moss controls at ~94% opacity; selection gold, development copper.
 Project 360, Capital, Deals, Workbench, models, reports: chalk sheet on limestone. Relationship graph: volcanic.
 
 ## Components
 
-- Buttons: `.btn` (secondary, hairline), `.btn--primary` (copper fill, chalk text), `.btn--text`, `.btn--danger`.
-- Tables: 40 px rows, sticky headers, hover in limestone, selected row copper tint (`tr[aria-selected="true"]`).
+- Buttons: `.btn` (secondary, hairline), `.btn--primary` (forest-carbon fill, chalk text), `.btn--text`, `.btn--danger`.
+- Tables: 40 px rows, sticky headers, hover in limestone, selected row gold tint (`tr[aria-selected="true"]`).
 - Tags: neutral outline (`ui.chip`); colour only for semantic warnings.
 - Empty states: an uppercase title and one line, no illustration. Loading: quiet skeletons; Atlas keeps the map visible.
 
 ## Motif: System Field
 
 `components/field-motif.tsx`: deterministic contour-like field lines bent by landform attractors, with a sparse network
-over them and one solar node. Used only on sign-in, report covers and empty states.
+over them; green, gold and copper used sparingly. Used only on sign-in, report covers and empty states.
 
 ## Review checklist (visual QA)
 

@@ -1,8 +1,7 @@
 .split { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr); background: var(--limestone); }
 .visual { position: relative; overflow: hidden; background: var(--volcanic); color: var(--text-on-dark); display: flex; flex-direction: column; justify-content: space-between; padding: 40px 48px; }
 .motif { position: absolute; inset: -4%; width: 108%; height: 108%; animation: drift 38s ease-in-out infinite alternate; }
-.mark { position: relative; font-size: 12.5px; font-weight: 600; letter-spacing: .24em; display: inline-flex; align-items: center; gap: 9px; }
-.mark::before { content: ""; width: 7px; height: 7px; border-radius: 1px; background: var(--copper); }
+.mark { position: relative; font-size: 13px; font-weight: 600; letter-spacing: .26em; color: var(--gold); }
 .statement { position: relative; max-width: 560px; }
 .statement h2 { color: var(--text-on-dark); font-size: clamp(28px, 2.6vw, 40px); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 14px; }
 .statement p { color: var(--text-on-dark-2); font-size: 14px; margin: 0; max-width: 460px; }

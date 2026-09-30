@@ -1,92 +1,106 @@
-/* Regenera OS design system — "Territorial intelligence" (docs/design-system.md). Mineral neutrals, oxidized copper as
-   the one accent, solar as a rare signal; lichen, glacial, steel and aubergine are semantic data colours only.
-   Do not add ad-hoc colours: add a token here. Legacy names (paper, ink, fern, wax, pollen, leaf, reed, water, line)
-   are kept and remapped so every existing screen follows the system. */
+/* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30).
+   Deep forest-carbon shell, gold Regenera signature, limestone/chalk analytical canvas. Copper, lichen, water, plum
+   and steel are semantic data colours only. Do not add ad-hoc colours: add a token here. Legacy names (paper, ink,
+   fern, wax, pollen, leaf, reed, water, line, volcanic, basalt …) are kept and remapped so every screen follows. */
 :root {
-  /* Dark system */
-  --volcanic: #161816;
-  --basalt: #20231f;
-  --shale: #2a2d28;
-  --smoke: #777c73;
-  /* Light system */
-  --limestone: #f2f0e9;
-  --chalk: #faf9f5;
-  --sandstone: #e7e3d8;
-  --ash: #d4d1c8;
+  /* Shell (navigation, header, immersive Atlas) */
+  --forest-carbon: #15251f;
+  --deep-moss: #1d332a;
+  --canopy: #29483a;
+  --sage-ash: #718176;
+  --atlas-base: #101813;
+  /* Analytical surfaces */
+  --limestone: #f3f1ea;
+  --chalk: #fcfbf7;
+  --warm-ash: #e6e3da;
+  --ash: #d6d2c8;                  /* hairlines, input borders */
   /* Text */
-  --text-1: #161816;
-  --text-2: #5c6058;
-  --text-3: #858a80;
-  --text-on-dark: #f2f0e9;
-  --text-on-dark-2: #a4a89e;
-  /* Accent and signal */
-  --copper: #b6633e;
-  --copper-ink: #9a4f2e;           /* copper that passes contrast as text on chalk */
-  --copper-tint: rgba(182, 99, 62, .08);
-  --solar: #e4a62a;
-  /* Semantic data colours (maps, charts, status) — never decoration */
-  --lichen: #7c8b68;
-  --glacial: #5e8c91;
-  --steel: #727a7c;
-  --aubergine: #675568;
-  --critical: #b94b42;
-  --warning: #c98632;
-  --positive: #66845f;
-  --sem-energy: var(--solar);
-  --sem-water: var(--glacial);
+  --text-1: #1a1c1a;
+  --text-2: #686c68;
+  --text-3: #8b8f8a;
+  --text-on-dark: #f3f1ea;
+  --text-on-dark-2: #a7b3aa;
+  /* Signature and interaction */
+  --gold: #d9a52e;                 /* logo, selected high-level object, opportunity, important signal */
+  --gold-ink: #8a6512;             /* gold that passes contrast as text on chalk */
+  --gold-tint: rgba(217, 165, 46, .12);
+  --accent: var(--gold);
+  --accent-ink: var(--gold-ink);
+  --accent-tint: var(--gold-tint);
+  /* Semantic data colours — never decoration */
+  --copper: #b66a47;               /* land, physical assets, selected geometry, development */
+  --copper-ink: #94502f;
+  --copper-tint: rgba(182, 106, 71, .10);
+  --lichen: #76896a;               /* nature, agriculture, ecology, restoration */
+  --water: #598a8c;                /* hydrology */
+  --plum: #6a566b;                 /* capital, funds, investors */
+  --steel: #727c7c;                /* infrastructure */
+  --critical: #b84c43;
+  --warning: #c78332;
+  --positive: #5f7f58;
+  --sem-energy: var(--gold);
+  --sem-water: var(--water);
   --sem-nature: var(--lichen);
   --sem-agriculture: var(--lichen);
   --sem-land: var(--copper);
-  --sem-capital: var(--aubergine);
+  --sem-capital: var(--plum);
   --sem-built: #9a958a;
   --sem-infrastructure: var(--steel);
   --risk: var(--critical);
   --success: var(--positive);
 
-  /* Transitional aliases (code written before the palette settled) */
-  --carbon: var(--volcanic);
-  --graphite: var(--volcanic);
-  --graphite-2: var(--basalt);
-  --graphite-3: var(--shale);
+  /* Transitional aliases (earlier palettes) */
+  --volcanic: var(--forest-carbon);
+  --basalt: var(--deep-moss);
+  --shale: var(--canopy);
+  --smoke: var(--sage-ash);
+  --sandstone: var(--warm-ash);
+  --solar: var(--gold);
+  --glacial: var(--water);
+  --aubergine: var(--plum);
+  --carbon: var(--forest-carbon);
+  --graphite: var(--forest-carbon);
+  --graphite-2: var(--deep-moss);
+  --graphite-3: var(--canopy);
   --canvas: var(--chalk);
   --canvas-2: var(--limestone);
-  --canvas-3: var(--sandstone);
+  --canvas-3: var(--warm-ash);
   --hairline: var(--ash);
-  --indigo: var(--copper);
-  --indigo-ink: var(--copper-ink);
-  --indigo-tint: var(--copper-tint);
-  --ice: #e9c2ad;
+  --indigo: var(--accent);
+  --indigo-ink: var(--accent-ink);
+  --indigo-tint: var(--accent-tint);
+  --ice: #efd9a3;
 
-  /* Legacy names → the system above */
+  /* Legacy names */
   --paper: var(--chalk);
   --paper-2: var(--limestone);
   --white: #ffffff;
   --ink: var(--text-1);
-  --fern: var(--volcanic);
+  --fern: var(--forest-carbon);
   --wax: var(--text-on-dark);
-  --pollen: var(--copper);
+  --pollen: var(--gold);
   --leaf: var(--text-3);
   --reed: var(--lichen);
-  --water: var(--copper-ink);
-  --line: rgba(22, 24, 22, .11);
+  --line: rgba(26, 28, 26, .11);
 
   /* Roles */
   --bg: var(--limestone);
-  --surface: var(--sandstone);
+  --surface: var(--warm-ash);
   --text: var(--text-1);
   --text-muted: var(--text-2);
   --heading: var(--text-1);
   --eyebrow: var(--text-3);
-  --action: var(--copper);
+  --action: var(--forest-carbon);  /* primary buttons: shell green, never gold */
+  --action-hover: var(--canopy);
   --action-text: var(--chalk);
-  --link: var(--copper-ink);
-  --focus: var(--copper);
+  --link: #2f5d49;
+  --focus: var(--gold);
 
   /* Type */
   --font: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --fs-display: clamp(28px, 2.4vw, 38px);
-  --fs-title: 25px;
+  --fs-display: clamp(30px, 2.5vw, 40px);
+  --fs-title: 26px;
   --fs-section: 19px;
   --fs-sub: 15px;
   --fs-body: 13.5px;
@@ -95,14 +109,14 @@
   /* Spacing (8 px grid) */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
 
-  /* Shape: institutional, not bubbly */
+  /* Shape */
   --radius-pill: 999px;
   --radius-card: 3px;
-  --radius-control: 4px;
-  --radius-dialog: 6px;
-  --shadow-overlay: 0 16px 40px rgba(12, 13, 12, .20);
+  --radius-control: 5px;
+  --radius-dialog: 7px;
+  --shadow-overlay: 0 16px 40px rgba(10, 18, 14, .22);
 
-  /* Motion: spatial, no bounce */
+  /* Motion: fade, slide, spatial focus; no bounce */
   --t-fast: 120ms;
   --t-standard: 180ms;
   --t-panel: 220ms;
@@ -110,7 +124,7 @@
   --ease: cubic-bezier(.2, .7, .2, 1);
 
   /* Floating dark surfaces (Atlas controls) */
-  --glass-dark: rgba(32, 35, 31, .94);
+  --glass-dark: rgba(21, 37, 31, .94);
 }
 
 :root { color-scheme: light; }

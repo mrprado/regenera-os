@@ -91,10 +91,10 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Vocabulary comes from the live site (lib/vocab.ts): three practices, five
   sectors, seven territorial systems, engagement keys, tracker stages.
   Source of truth is regenera-development-office, never regenera-nextjs.
-- Design system: docs/design-system.md ("Territorial intelligence", 2026-09-29, supersedes the regenera.bio
-  fern/gold styling at the user's direction). Colours only from styles/tokens.css: volcanic/basalt shell, limestone/
-  chalk canvases, copper accent, solar as a rare signal; lichen, glacial, steel, aubergine, critical are semantic data
-  colours only. Geist + Geist Mono. Hairline sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind.
+- Design system: docs/design-system.md (2026-09-30, supersedes the regenera.bio fern/gold copy and the interim
+  copper palette, at the user's direction). Colours only from styles/tokens.css: forest-carbon green shell, gold Regenera
+  wordmark and selection markers (never button fills), limestone/chalk canvases; copper, lichen, water, plum, steel are
+  semantic data colours only. Geist + Geist Mono. Hairline sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind.
   Icons: lucide-react. Use components/page.tsx (PageHeader, EmptyState) for page chrome.
 - Client operating layer (docs/plans/phase-10-client-os.md): tenants own workspaces (the `mandates` table; UI calls
   them workspaces). Workspace grants stay the isolation boundary; lib/tenancy resolves user type, persona, module

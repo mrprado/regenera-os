@@ -30,13 +30,13 @@ export function FieldMotif({ width = 1200, height = 900, seed = 7, lines = 46, n
   return (
     <svg className={className} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid slice" aria-hidden focusable="false">
       <defs>
-        <radialGradient id="fm-glow" cx="62%" cy="42%" r="60%"><stop offset="0" stopColor="#b6633e" stopOpacity=".22" /><stop offset="1" stopColor="#b6633e" stopOpacity="0" /></radialGradient>
-        <linearGradient id="fm-line" x1="0" x2="1"><stop offset="0" stopColor="#e9c2ad" stopOpacity=".05" /><stop offset=".55" stopColor="#e9c2ad" stopOpacity=".32" /><stop offset="1" stopColor="#e4a62a" stopOpacity=".10" /></linearGradient>
+        <radialGradient id="fm-glow" cx="62%" cy="42%" r="60%"><stop offset="0" stopColor="#d9a52e" stopOpacity=".22" /><stop offset="1" stopColor="#d9a52e" stopOpacity="0" /></radialGradient>
+        <linearGradient id="fm-line" x1="0" x2="1"><stop offset="0" stopColor="#efd9a3" stopOpacity=".05" /><stop offset=".55" stopColor="#efd9a3" stopOpacity=".32" /><stop offset="1" stopColor="#d9a52e" stopOpacity=".10" /></linearGradient>
       </defs>
       <rect width={width} height={height} fill="url(#fm-glow)" />
       <g fill="none" stroke="url(#fm-line)" strokeWidth=".9">{paths.map((d, i) => <path key={i} d={d} />)}</g>
-      <g stroke="#e9c2ad" strokeOpacity=".22" strokeWidth=".7">{edges.map(([a, b], i) => <line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} />)}</g>
-      <g>{pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i % 5 === 0 ? 3 : 1.8} fill={i === 3 ? "#e4a62a" : i % 5 === 0 ? "#b6633e" : "#f2f0e9"} fillOpacity={i % 5 === 0 ? .95 : .6} />)}</g>
+      <g stroke="#efd9a3" strokeOpacity=".22" strokeWidth=".7">{edges.map(([a, b], i) => <line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} />)}</g>
+      <g>{pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i % 5 === 0 ? 3 : 1.8} fill={i === 3 ? "#d9a52e" : i % 5 === 0 ? "#d9a52e" : "#f2f0e9"} fillOpacity={i % 5 === 0 ? .95 : .6} />)}</g>
     </svg>
   );
 }

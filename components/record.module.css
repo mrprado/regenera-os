@@ -27,7 +27,7 @@
 .when { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .what b { font-weight: 600; text-transform: capitalize; }
 
-.read { border-left: 2px solid var(--copper); padding-left: 12px; font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
+.read { border-left: 2px solid var(--accent); padding-left: 12px; font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
 .scoreGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
 .scoreCell { border: 0; border-left: 1px solid var(--line); border-radius: 0; padding: 4px 12px; }
 .scoreCell b { display: block; font-size: 20px; color: var(--heading); font-variant-numeric: tabular-nums; }
