@@ -5,6 +5,7 @@ import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
+import { FitEvidence } from "@/components/fit-evidence";
 import { capitalMatches, capitalOpportunities, capitalProfiles, commitments, contacts, materialDeliveries, organizations, privateCapitalProfiles, projects } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { formation } from "@/lib/capital/engine";
@@ -72,13 +73,13 @@ export default async function CapitalOpportunityPage({ params, searchParams }: {
               <form action={runMatchesAction}><input type="hidden" name="id" value={o.id} /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Run matching</button></form></p>
             {matches.length === 0 ? <p className={r.empty}>No matches yet. Matching compares geography, sector, stage, instrument and ticket with each partner&apos;s profile and mandates, and each private investor&apos;s stated interests.</p> : (
               <table className={ui.table}>
-                <thead><tr><th>Investor</th><th>Commercial alignment</th><th>Regulatory eligibility</th><th>Status</th></tr></thead>
+                <thead><tr><th>Investor</th><th>Mandate evidence</th><th>Regulatory eligibility</th><th>Status</th></tr></thead>
                 <tbody>{matches.map(m => {
                   const href = linkOf(m.investorKey);
                   return (
                     <tr key={m.id}>
                       <td>{href ? <Link href={href}>{nameOf(m.investorKey)}</Link> : nameOf(m.investorKey)}<span className={ui.sub}>{m.investorKey.startsWith("private:") ? "Private investor" : "Capital partner"}</span></td>
-                      <td><b>{m.commercialScore}</b><span className={ui.sub}>{m.commercialReasons.join(" · ")}</span></td>
+                      <td><FitEvidence reasons={m.commercialReasons} /></td>
                       <td><span style={{ color: m.eligibility === "not_eligible" ? "#b0432f" : undefined }}>{ELIGIBILITY[m.eligibility]}</span><span className={ui.sub}>{m.eligibilityReasons.slice(0, 3).join(" · ")}</span></td>
                       <td>
                         <form action={matchStatusAction} className={styles.inline}>

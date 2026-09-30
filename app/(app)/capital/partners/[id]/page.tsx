@@ -5,6 +5,7 @@ import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
+import { FitEvidence } from "@/components/fit-evidence";
 import { capitalMandates, capitalMatches, capitalOpportunities, capitalProfiles, commitments, investorQualifications, organizations } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { CAPITAL_TYPES, COMMITMENT_STAGES, ELIGIBILITY, MATCH_STATUSES, QUALIFICATION_STATUSES, RELATIONSHIP_STRENGTH } from "@/lib/capital/vocab";
@@ -50,8 +51,8 @@ export default async function CapitalPartnerPage({ params, searchParams }: { par
             <p className={r.panelTitle}>Matched opportunities</p>
             {matches.length === 0 ? <p className={r.empty}>Not matched to any capital opportunity yet.</p> : (
               <table className={ui.table}><tbody>{matches.map(x => (
-                <tr key={x.m.id}><td><Link href={`/capital/opportunities/${x.oid}`}>{x.title}</Link><span className={ui.sub}>{x.m.commercialReasons.join(" · ")}</span></td>
-                  <td className={ui.num}>{x.m.commercialScore}</td><td>{ELIGIBILITY[x.m.eligibility]}</td><td>{MATCH_STATUSES[x.m.status]}</td></tr>
+                <tr key={x.m.id}><td><Link href={`/capital/opportunities/${x.oid}`}>{x.title}</Link></td>
+                  <td><FitEvidence reasons={x.m.commercialReasons} compact /></td><td>{ELIGIBILITY[x.m.eligibility]}</td><td>{MATCH_STATUSES[x.m.status]}</td></tr>
               ))}</tbody></table>
             )}
             {ledger.length > 0 && <>

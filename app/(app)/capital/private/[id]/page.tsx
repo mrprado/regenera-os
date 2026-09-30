@@ -5,6 +5,7 @@ import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
+import { FitEvidence } from "@/components/fit-evidence";
 import { capitalMatches, capitalOpportunities, commitments, contacts, introductions, investorQualifications, materialDeliveries, privateCapitalProfiles } from "@/db/schema";
 import { requireOsOwner } from "@/lib/auth";
 import { APPETITE, COMMITMENT_STAGES, ELIGIBILITY, INVESTOR_JOURNEY, MATCH_STATUSES, QUALIFICATION_STATUSES, RELATIONSHIP_STRENGTH } from "@/lib/capital/vocab";
@@ -57,7 +58,7 @@ export default async function PrivateInvestorPage({ params, searchParams }: { pa
                 {matches.map(x => {
                   const l = ledger.find(y => y.c.opportunityId === x.oid);
                   return (
-                    <tr key={x.m.id}><td><Link href={`/capital/opportunities/${x.oid}`}>{x.title}</Link><span className={ui.sub}>Fit {x.m.commercialScore} · {ELIGIBILITY[x.m.eligibility]} · {MATCH_STATUSES[x.m.status]}</span></td>
+                    <tr key={x.m.id}><td><Link href={`/capital/opportunities/${x.oid}`}>{x.title}</Link><FitEvidence reasons={x.m.commercialReasons} compact /><span className={ui.sub}>{ELIGIBILITY[x.m.eligibility]} · {MATCH_STATUSES[x.m.status]}</span></td>
                       <td>{l ? `${COMMITMENT_STAGES[l.c.stage]} ${compactMoney(l.c.amount, l.c.currency)}` : "No interest recorded"}</td></tr>
                   );
                 })}

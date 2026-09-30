@@ -28,7 +28,8 @@ function geoCovers(list: string[], country: string | null) {
   return list.some(g => { const x = norm(g); return x === "global" || x === c || (REGIONS[x] ?? []).includes(c); });
 }
 
-/** Commercial alignment, 0–100, with reasons. An unknown criterion scores nothing and costs nothing. */
+/** Commercial alignment with reasons. The 0–100 number only orders candidates internally and is never shown: the UI
+ *  displays per-dimension evidence (lib/capital/fit-evidence.ts). An unknown criterion scores nothing and costs nothing. */
 export function commercialFit(cr: Criteria, t: MatchTarget) {
   const reasons: string[] = [];
   let score = 0, known = 0;

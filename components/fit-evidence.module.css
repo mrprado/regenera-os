@@ -1,0 +1,12 @@
+.fit { display: grid; gap: 4px; }
+.basis { font-size: 12.5px; font-weight: 600; color: var(--text-1); }
+.basis[data-basis="conflict"] { color: var(--critical); }
+.basis[data-basis="unverified"] { color: var(--text-3); }
+.dims { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--text-2); }
+.dims li { display: inline-flex; align-items: center; gap: 4px; }
+.dims i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--text-3); }
+.dims li[data-status="confirmed"] i { background: var(--positive); border-color: var(--positive); }
+.dims li[data-status="conflict"] { color: var(--critical); }
+.dims li[data-status="conflict"] i { background: var(--critical); border-color: var(--critical); border-radius: 1px; }
+.dims li[data-status="unknown"] i { background: transparent; border-style: dashed; }
+.why { font-size: 11.5px; color: var(--text-3); }
