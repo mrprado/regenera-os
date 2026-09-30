@@ -92,8 +92,8 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   sectors, seven territorial systems, engagement keys, tracker stages.
   Source of truth is regenera-development-office, never regenera-nextjs.
 - Design system: docs/design-system.md (2026-09-30, supersedes the regenera.bio fern/gold copy and the interim
-  copper palette, at the user's direction). Colours only from styles/tokens.css: forest-carbon green shell, gold Regenera
-  wordmark and selection markers (never button fills), limestone/chalk canvases; copper, lichen, water, plum, steel are
+  copper palette, at the user's direction). Colours only from styles/tokens.css: forest-black shell (#0D1511), antique-brass
+  wordmark, old-gold selection markers (never button fills) — palette LOCKED, limestone/chalk canvases; copper, lichen, water, plum, steel are
   semantic data colours only. Geist + Geist Mono. Hairline sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind.
   Icons: lucide-react. Use components/page.tsx (PageHeader, EmptyState) for page chrome.
 - Client operating layer (docs/plans/phase-10-client-os.md): tenants own workspaces (the `mandates` table; UI calls

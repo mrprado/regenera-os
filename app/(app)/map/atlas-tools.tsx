@@ -23,7 +23,7 @@ function addLayerFor(map: maplibregl.Map, id: string, color: string) {
   map.addSource(src, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: `${src}-fill`, type: "fill", source: src, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": color, "fill-opacity": 0.18 } });
   map.addLayer({ id: `${src}-line`, type: "line", source: src, filter: ["in", ["geometry-type"], ["literal", ["Polygon", "LineString"]]], paint: { "line-color": color, "line-width": 1.6 } });
-  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#15251f", "circle-stroke-width": 1 } });
+  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#0d1511", "circle-stroke-width": 1 } });
 }
 function removeLayerFor(map: maplibregl.Map, id: string) {
   const src = `lib-${id}`;

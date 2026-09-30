@@ -1,44 +1,46 @@
-/* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30).
-   Deep forest-carbon shell, gold Regenera signature, limestone/chalk analytical canvas. Copper, lichen, water, plum
+/* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30, LOCKED).
+   Forest-black shell, antique-brass Regenera signature, limestone/chalk analytical canvas. Copper, lichen, water, plum
    and steel are semantic data colours only. Do not add ad-hoc colours: add a token here. Legacy names (paper, ink,
    fern, wax, pollen, leaf, reed, water, line, volcanic, basalt …) are kept and remapped so every screen follows. */
 :root {
   /* Shell (navigation, header, immersive Atlas) */
-  --forest-carbon: #15251f;
-  --deep-moss: #1d332a;
-  --canopy: #29483a;
-  --sage-ash: #718176;
-  --atlas-base: #101813;
+  --forest-carbon: #0d1511;
+  --deep-moss: #16201a;
+  --canopy: #263028;
+  --sage-ash: #7c877e;
+  --atlas-base: #0a110d;
   /* Analytical surfaces */
-  --limestone: #f3f1ea;
-  --chalk: #fcfbf7;
-  --warm-ash: #e6e3da;
-  --ash: #d6d2c8;                  /* hairlines, input borders */
+  --limestone: #f1eee6;
+  --chalk: #faf8f2;
+  --warm-ash: #e4ded1;
+  --ash: #d3ccbe;                  /* hairlines, input borders */
   /* Text */
-  --text-1: #1a1c1a;
-  --text-2: #686c68;
-  --text-3: #8b8f8a;
-  --text-on-dark: #f3f1ea;
-  --text-on-dark-2: #a7b3aa;
+  --text-1: #191c19;
+  --text-2: #6b6d67;
+  --text-3: #8d8e88;
+  --text-on-dark: #f1eee6;
+  --text-on-dark-2: #a3aba4;
   /* Signature and interaction */
-  --gold: #d9a52e;                 /* logo, selected high-level object, opportunity, important signal */
-  --gold-ink: #8a6512;             /* gold that passes contrast as text on chalk */
-  --gold-tint: rgba(217, 165, 46, .12);
+  --gold: #a37c2d;                 /* logo, selected high-level object, opportunity, important signal */
+  --gold-ink: #7a5a1c;             /* gold that passes contrast as text on chalk */
+  --gold-tint: rgba(163, 124, 45, .12);
+  --brass: #8f6b24;                /* Antique brass: the Regenera wordmark */
   --accent: var(--gold);
   --accent-ink: var(--gold-ink);
   --accent-tint: var(--gold-tint);
   /* Semantic data colours — never decoration */
-  --copper: #b66a47;               /* land, physical assets, selected geometry, development */
-  --copper-ink: #94502f;
-  --copper-tint: rgba(182, 106, 71, .10);
-  --lichen: #76896a;               /* nature, agriculture, ecology, restoration */
-  --water: #598a8c;                /* hydrology */
-  --plum: #6a566b;                 /* capital, funds, investors */
-  --steel: #727c7c;                /* infrastructure */
-  --critical: #b84c43;
-  --warning: #c78332;
-  --positive: #5f7f58;
-  --sem-energy: var(--gold);
+  --copper: #9b6248;               /* land, physical assets, selected geometry, development */
+  --copper-ink: #7d4b35;
+  --copper-tint: rgba(155, 98, 72, .10);
+  --lichen: #6f8062;               /* nature, agriculture, ecology, restoration */
+  --water: #557f7c;                /* hydrology */
+  --plum: #655468;                 /* capital, funds, investors */
+  --steel: #6d7573;                /* infrastructure */
+  --critical: #a84b40;
+  --warning: #b17b2e;
+  --positive: #5b7552;
+  --energy: #b17b2e;
+  --sem-energy: var(--energy);
   --sem-water: var(--water);
   --sem-nature: var(--lichen);
   --sem-agriculture: var(--lichen);
@@ -55,7 +57,7 @@
   --shale: var(--canopy);
   --smoke: var(--sage-ash);
   --sandstone: var(--warm-ash);
-  --solar: var(--gold);
+  --solar: var(--energy);
   --glacial: var(--water);
   --aubergine: var(--plum);
   --carbon: var(--forest-carbon);
@@ -81,7 +83,7 @@
   --pollen: var(--gold);
   --leaf: var(--text-3);
   --reed: var(--lichen);
-  --line: rgba(26, 28, 26, .11);
+  --line: rgba(25, 28, 25, .11);
 
   /* Roles */
   --bg: var(--limestone);
@@ -93,7 +95,7 @@
   --action: var(--forest-carbon);  /* primary buttons: shell green, never gold */
   --action-hover: var(--canopy);
   --action-text: var(--chalk);
-  --link: #2f5d49;
+  --link: #3b5a45;
   --focus: var(--gold);
 
   /* Type */
@@ -114,7 +116,7 @@
   --radius-card: 3px;
   --radius-control: 5px;
   --radius-dialog: 7px;
-  --shadow-overlay: 0 16px 40px rgba(10, 18, 14, .22);
+  --shadow-overlay: 0 16px 40px rgba(8, 13, 10, .24);
 
   /* Motion: fade, slide, spatial focus; no bounce */
   --t-fast: 120ms;
@@ -124,7 +126,7 @@
   --ease: cubic-bezier(.2, .7, .2, 1);
 
   /* Floating dark surfaces (Atlas controls) */
-  --glass-dark: rgba(21, 37, 31, .94);
+  --glass-dark: rgba(22, 32, 26, .94);
 }
 
 :root { color-scheme: light; }

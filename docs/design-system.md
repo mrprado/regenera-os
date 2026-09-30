@@ -6,28 +6,34 @@ analytical surfaces, and semantic colour only where data means it. Not generic E
 
 Tokens live in `styles/tokens.css` (the only place colours are defined). Legacy and interim names are remapped there.
 
-## Colour
+## Colour (LOCKED 2026-09-30)
+
+Dark forest + aged brass + limestone + iron + earth. Green and brass establish the identity; the working environment
+stays limestone, charcoal and semantic data colour. Sophistication comes from typography, spacing, data visualization,
+motion and layout — not further colour changes. No blue, purple, orange or pure black as the primary architecture.
 
 | Role | Token | Hex | Use |
 |---|---|---|---|
-| Shell | `--forest-carbon` | #15251F | sidebar, header, primary buttons |
-| Elevated shell | `--deep-moss` | #1D332A | hover, active navigation, secondary shell panels |
-| Secondary green | `--canopy` | #29483A | sparingly (button hover) |
-| Muted shell text | `--sage-ash` | #718176 | inactive labels, metadata on dark |
-| Atlas base | `--atlas-base` | #101813 | immersive spatial workspace |
-| Workspace | `--limestone` | #F3F1EA | page background |
-| Analytical sheet | `--chalk` | #FCFBF7 | tables, models, reports, forms |
-| Secondary surface | `--warm-ash` | #E6E3DA | grouping |
-| Text | `--text-1` / `--text-2` | #1A1C1A / #686C68 | graphite / muted graphite |
-| **Signature** | `--gold` | #D9A52E | Regenera wordmark, nav and tab markers, selected high-level object, opportunity, important signal — never a button fill |
-| Land / development | `--copper` | #B66A47 | land, physical assets, selected geometry |
-| Nature | `--lichen` | #76896A | nature, agriculture, ecology, restoration |
-| Water | `--water` | #598A8C | hydrology |
-| Capital | `--plum` | #6A566B | capital, funds, investors |
-| Infrastructure | `--steel` | #727C7C | infrastructure |
-| Status | `--critical` `--warning` `--positive` | #B84C43 #C78332 #5F7F58 | always with a label or symbol |
+| Forest black | `--forest-carbon` | #0D1511 | sidebar, header, primary buttons |
+| Pine carbon | `--deep-moss` | #16201A | hover, active navigation, elevated dark surface |
+| Moss graphite | `--canopy` | #263028 | secondary dark panel, button hover |
+| Shell metadata | `--sage-ash` | #7C877E | inactive labels on dark |
+| Atlas base | `--atlas-base` | #0A110D | immersive spatial workspace |
+| Antique brass | `--brass` | #8F6B24 | the Regenera wordmark |
+| Old gold | `--gold` / `--accent` | #A37C2D | nav and tab markers, selected high-level object, opportunity, important signal — never a button fill |
+| Limestone | `--limestone` | #F1EEE6 | main workspace |
+| Bone | `--chalk` | #FAF8F2 | analysis, tables, reports |
+| Parchment | `--warm-ash` | #E4DED1 | secondary surface |
+| Ink / Stone | `--text-1` / `--text-2` | #191C19 / #6B6D67 | primary / secondary text |
+| Land / development | `--copper` | #9B6248 | semantic |
+| Nature / agriculture | `--lichen` | #6F8062 | semantic |
+| Water | `--water` | #557F7C | semantic |
+| Capital | `--plum` | #655468 | semantic |
+| Infrastructure | `--steel` | #6D7573 | semantic |
+| Energy | `--energy` | #B17B2E | semantic |
+| Risk | `--critical` | #A84B40 | status, always with a label or symbol |
 
-Proportion: 65–75% light surfaces, 15–20% green shell, 5–8% gold/active accents, the rest semantic.
+Proportion: 65–75% light surfaces, 15–20% forest shell, 5–8% brass/gold accents, the rest semantic.
 
 ## Type
 
