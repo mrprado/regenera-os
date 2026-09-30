@@ -272,7 +272,7 @@ export const handlers: Record<string, JobHandler> = {
   },
   "site_intel.continue": async ({ db, now }) => {
     // Site-intelligence runs whose panel was closed are finished here, a few stages per tick.
-    await continueAbandonedRuns(db, now);
+    await continueAbandonedRuns(db, now, 6, env as unknown as Record<string, string | undefined>);
   },
   "funding.place": async ({ db, now }) => {
     const { more } = await placeFunding(db, 15);

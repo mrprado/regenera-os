@@ -9,12 +9,13 @@ import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, MapGeoJSONFeature, RasterTileSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry, Point as GeoPoint } from "geojson";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, Play, Scan, Search, Share2, Square, X } from "lucide-react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, PersonStanding, Play, Scan, Search, Share2, Square, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
 import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, type MapRecord } from "@/lib/map/discovery";
 import { fitGeometry, flyToCoordinates } from "./camera";
 import SavedViews from "./saved-views";
+import type { StreetViewConfig } from "./street-view";
 import { decodeView, encodeView, parseCoordinates, productDate, type OfferedLayer } from "@/lib/map/catalog";
 import type { Omm } from "@/lib/map/live";
 import { SECTORS, TERRITORIAL_SYSTEMS } from "@/lib/vocab";
@@ -27,6 +28,9 @@ import { Detection, Hud, MODES, SensorFilters, type Mode, type Target } from "./
 import { IntelPanel, MISSIONS, type FeedStatus } from "./intel-panel";
 import { Detail, type Selected } from "./detail";
 import { buildSats, groundTrack, position, satFeatures, type Sat } from "./satellites";
+
+// Street-level view is loaded only when opened.
+const StreetView = lazy(() => import("./street-view"));
 
 maplibregl.setWorkerUrl(withBase("/maplibre-gl-worker.js"));
 
@@ -106,6 +110,8 @@ function MapClient() {
   const [hazards, setHazards] = useState<FeatureCollection | null>(null);
   const [catalog, setCatalog] = useState<OfferedLayer[]>([]);
   const [firmsKey, setFirmsKey] = useState(false);
+  const [streetCfg, setStreetCfg] = useState<StreetViewConfig>({ provider: "none", key: "" });
+  const [streetAt, setStreetAt] = useState<{ lat: number; lng: number } | null>(null);
   const [base, setBase] = useState<string>(init.base ?? "esri");
   const [overlays, setOverlays] = useState<Set<string>>(() => new Set(init.layers?.filter(l => !RECORD_KEYS.includes(l as LayerKey)) ?? ["quakes", "events", "cyclones"]));
   const [visible, setVisible] = useState<Record<LayerKey, boolean>>(() => {
@@ -181,8 +187,8 @@ function MapClient() {
     const get = <T,>(path: string) => fetch(withBase(path), { signal: controller.signal }).then(r => r.ok ? r.json() as Promise<T> : Promise.reject(new Error(String(r.status))));
     get<MapPayload>("/api/map/features").then(setData).catch(e => { if (!controller.signal.aborted) setLoadError(`Map records could not load (${e.message}). Reload to retry.`); });
     get<FeatureCollection>("/api/map/hazards").then(setHazards).catch(() => { if (!controller.signal.aborted) setStatus(s => ({ ...s, hazards: { error: "GDACS alerts unavailable" } })); });
-    get<{ layers: OfferedLayer[]; firmsKey: boolean }>("/api/map/catalog").then(c => {
-      setCatalog(c.layers); setFirmsKey(c.firmsKey);
+    get<{ layers: OfferedLayer[]; firmsKey: boolean; streetView?: StreetViewConfig }>("/api/map/catalog").then(c => {
+      setCatalog(c.layers); setFirmsKey(c.firmsKey); if (c.streetView) setStreetCfg(c.streetView);
       if (!init.base && c.layers.some(l => l.id === "esri")) setBase("esri");
     }).catch(e => { if (!controller.signal.aborted) setMapError(`Layer catalogue unavailable (${e.message}).`); });
     return () => controller.abort();
@@ -581,6 +587,7 @@ function MapClient() {
       else if (k === "d") setDetectOn(v => !v);
       else if (k === "g") toggleProjection();
       else if (k === "t") toggle3d();
+      else if (k === "v") { const c = mapRef.current?.getCenter(); if (c) setStreetAt(at => (at ? null : { lat: c.lat, lng: c.lng })); }
       else if (k === "o") setOrbitOn(v => !v);
       else if (k === "p") tilt();
       else if (k === "n") northUp();
@@ -634,6 +641,7 @@ function MapClient() {
         {searchNote && <p className={`${styles.glass} ${styles.searchNote}`} role="status">{searchNote}</p>}
       </div>
       <SavedViews />
+      {streetAt && <Suspense fallback={null}><StreetView lat={streetAt.lat} lng={streetAt.lng} config={streetCfg} onClose={() => setStreetAt(null)} /></Suspense>}
 
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
@@ -683,6 +691,7 @@ function MapClient() {
       <div className={styles.controls}>
         <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={toggleProjection} aria-pressed={globe} title="Globe / flat (G)"><Globe2 size={17} /></button>
         <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={toggle3d} aria-pressed={terrain3d} title="3D terrain (T)"><Mountain size={17} /></button>
+        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => { const c = mapRef.current?.getCenter(); if (c) setStreetAt({ lat: c.lat, lng: c.lng }); }} aria-pressed={!!streetAt} title="Street view at the crosshair (V)"><PersonStanding size={17} /></button>
         <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={tilt} title="Tilt (P)"><Square size={15} style={{ transform: "perspective(20px) rotateX(35deg)" }} /></button>
         <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={northUp} title="North up (N)"><Compass size={17} /></button>
         <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setOrbitOn(v => !v)} aria-pressed={orbitOn} title="Orbit (O)"><Orbit size={17} /></button>
@@ -701,7 +710,7 @@ function MapClient() {
           <button type="button" className={styles.close} onClick={() => setShowKeys(false)} aria-label="Close"><X size={14} /></button>
           <p className={styles.panelTitle}>Keyboard</p>
           <dl className={styles.facts}>
-            {[["1–6", "Normal · CRT · NVG · FLIR · Thermal · Noir"], ["H", "HUD"], ["D", "Detection boxes"], ["G", "Globe / flat"], ["T", "3D terrain"], ["P", "Tilt"], ["N", "North up"], ["O", "Orbit"], ["R", "Reset globe"], ["L", "Hide / show panel"], ["/", "Search"], ["Esc", "Stop tracking, tour and orbit"]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+            {[["1–6", "Normal · CRT · NVG · FLIR · Thermal · Noir"], ["H", "HUD"], ["D", "Detection boxes"], ["G", "Globe / flat"], ["T", "3D terrain"], ["V", "Street view at the crosshair"], ["P", "Tilt"], ["N", "North up"], ["O", "Orbit"], ["R", "Reset globe"], ["L", "Hide / show panel"], ["/", "Search"], ["Esc", "Stop tracking, tour and orbit"]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
           </dl>
         </div>
       )}

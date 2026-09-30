@@ -12,14 +12,17 @@ import { audit } from "@/lib/audit";
 import { bboxOf, inside, landCoverComposition, type SiteGeometry } from "@/lib/geo/landcover";
 import { nearestInfrastructure } from "@/lib/geo/osm";
 import { gbifBiodiversity, nasaPower, usgsSeismic, wbIndicators } from "@/lib/place/adapters";
+import { eeStatus } from "@/lib/providers/earth-engine";
+import { runEe, type EeAnalysis } from "@/lib/providers/ee-service";
 
 export const STAGES = [
-  ["spatial", "Spatial analysis"], ["energy", "Energy resource"], ["grid", "Grid"], ["water", "Water"], ["ecology", "Ecology"], ["land", "Land & terrain"],
+  ["spatial", "Spatial analysis"], ["energy", "Energy resource"], ["grid", "Grid"], ["water", "Water"], ["ecology", "Ecology"], ["land", "Land & terrain"], ["remote_sensing", "Remote sensing (Earth Engine)"],
   ["infrastructure", "Infrastructure"], ["climate", "Climate & hazards"], ["community", "Community"], ["regulatory", "Regulatory"], ["finance", "Finance relevance"],
 ] as const;
 export type StageKey = (typeof STAGES)[number][0];
 type Project = typeof projects.$inferSelect;
-type Ctx = { db: Db; p: Project; g: SiteGeometry | null; lat: number; lng: number; fetchImpl?: typeof fetch };
+type Ctx = { db: Db; p: Project; g: SiteGeometry | null; lat: number; lng: number; fetchImpl?: typeof fetch; env: Record<string, string | undefined> };
+class Skip extends Error {}
 type Out = { summary: string; facts: StageFact[] };
 
 export function parseGeometry(text: string | null): SiteGeometry | null {
@@ -106,6 +109,20 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
       { label: "Share of site ≤ 5% slope", value: `${r.gentlePct.toFixed(0)}%`, source: "Copernicus DEM GLO-30 (screening)" },
     ] };
   },
+  async remote_sensing({ db, p, g, env, fetchImpl }) {
+    const status = eeStatus(env);
+    if (!status.connected) throw new Skip(status.reason);
+    if (!g) throw new Skip("Needs a site boundary");
+    const facts: StageFact[] = [];
+    const step = async (a: EeAnalysis, fmt: (r: Record<string, unknown>) => StageFact[]) => { try { facts.push(...fmt((await runEe(db, env, p.id, a, {}, fetchImpl)).result)); } catch (e) { facts.push({ label: a.replace("_", " "), value: `Unavailable: ${(e as Error).message}`, source: "Google Earth Engine" }); } };
+    const n = (x: unknown, d = 2) => (typeof x === "number" ? x.toFixed(d) : "—");
+    await step("vegetation", r => [{ label: "NDVI (last full year, mean ± sd)", value: `${n(r.ndviMean)} ± ${n(r.ndviStd)}`, source: `Earth Engine · ${r.dataset} · ${r.scaleM} m` }]);
+    await step("ndvi_change", r => [{ label: "NDVI change over 5 years", value: typeof r.delta === "number" ? `${r.delta >= 0 ? "+" : ""}${r.delta.toFixed(3)}` : "—", source: "Earth Engine · Sentinel-2 SR harmonised" }]);
+    await step("surface_water", r => [{ label: "Surface-water occurrence 1984–2021", value: `mean ${n(r.occurrenceMeanPct, 1)}%, max ${n(r.occurrenceMaxPct, 0)}%`, source: `Earth Engine · ${r.dataset}` }]);
+    await step("terrain", r => [{ label: "Slope (mean / max)", value: `${n(r.slopeMeanDeg, 1)}° / ${n(r.slopeMaxDeg, 1)}°`, source: `Earth Engine · ${r.dataset}` }]);
+    await step("embedding", () => [{ label: "Landscape embedding", value: "Stored for similarity (AlphaEarth annual)", source: "Earth Engine · GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL" }]);
+    return { summary: facts.slice(0, 2).map(f => `${f.label}: ${f.value}`).join(" · "), facts };
+  },
   async infrastructure({ db, lat, lng, fetchImpl }) {
     const r = await nearestInfrastructure(db, lng, lat, fetchImpl);
     const pick = r.items.filter(i => ["major_road", "road", "rail", "port", "airport", "town", "industrial"].includes(i.key));
@@ -160,7 +177,7 @@ export async function startRun(db: Db, projectId: string, actor: string) {
 }
 
 /** Execute the next queued stage of a run (idempotent under concurrent callers: a running stage is not restarted). */
-export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fetch) {
+export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fetch, env: Record<string, string | undefined> = {}) {
   const [run] = await db.select().from(siteIntelRuns).where(eq(siteIntelRuns.id, runId));
   if (!run) throw new Error("Run not found");
   const stages: StageState[] = [...run.stages];
@@ -174,10 +191,10 @@ export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fet
   await db.update(siteIntelRuns).set({ stages, status: "running", updatedAt: new Date().toISOString() }).where(eq(siteIntelRuns.id, runId));
   try {
     if (!p || lat === null || lng === null) throw new Error("Project location missing");
-    const out = await RUNNERS[stages[i].key as StageKey]({ db, p, g, lat, lng, fetchImpl });
+    const out = await RUNNERS[stages[i].key as StageKey]({ db, p, g, lat, lng, fetchImpl, env });
     stages[i] = { ...stages[i], status: "done", finishedAt: new Date().toISOString(), summary: out.summary, facts: out.facts };
   } catch (e) {
-    stages[i] = { ...stages[i], status: "failed", finishedAt: new Date().toISOString(), error: (e as Error).message.slice(0, 300) };
+    stages[i] = { ...stages[i], status: e instanceof Skip ? "skipped" : "failed", finishedAt: new Date().toISOString(), ...(e instanceof Skip ? { summary: (e as Error).message } : { error: (e as Error).message.slice(0, 300) }) };
   }
   const remaining = stages.some(s => s.status === "queued");
   const status = remaining ? "running" : stages.some(s => s.status === "failed") ? "partial" : "complete";
@@ -186,14 +203,14 @@ export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fet
 }
 
 /** Cron: continue runs whose panel was closed (stale for > 2 minutes). */
-export async function continueAbandonedRuns(db: Db, now = new Date(), maxStages = 6) {
+export async function continueAbandonedRuns(db: Db, now = new Date(), maxStages = 6, env: Record<string, string | undefined> = {}) {
   const cutoff = new Date(now.getTime() - 120_000).toISOString();
   const runs = (await db.select().from(siteIntelRuns).where(inArray(siteIntelRuns.status, ["queued", "running"]))).filter(r => r.updatedAt < cutoff);
   let done = 0;
   for (const r of runs) {
     // A stage stuck in "running" (request died) is re-queued once.
     if (r.stages.some(s => s.status === "running")) await db.update(siteIntelRuns).set({ stages: r.stages.map(s => (s.status === "running" ? { ...s, status: "queued" as const } : s)) }).where(eq(siteIntelRuns.id, r.id));
-    while (done < maxStages) { const x = await runNextStage(db, r.id); done++; if (!x.stages.some(s => s.status === "queued")) break; }
+    while (done < maxStages) { const x = await runNextStage(db, r.id, undefined, env); done++; if (!x.stages.some(s => s.status === "queued")) break; }
     if (done >= maxStages) break;
   }
   return { runs: runs.length, stages: done };

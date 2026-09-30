@@ -26,3 +26,5 @@
 @keyframes pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .running .dot { animation: none; } .bar i { transition: none; } }
 @media (max-width: 800px) { .row { grid-template-columns: 12px 1fr; } .sum { grid-column: 2; white-space: normal; } .facts div { grid-template-columns: 1fr; } }
+.skipped .dot { background: #b8b3a7; }
+.skipped .sum { color: var(--text-muted); font-style: italic; }

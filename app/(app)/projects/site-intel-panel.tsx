@@ -7,7 +7,7 @@ import { withBase } from "@/lib/base-path";
 import type { StageState } from "@/db/siteintel";
 import s from "./site-intel.module.css";
 
-const LABELS: Record<string, string> = { spatial: "Spatial analysis", energy: "Energy resource", grid: "Grid", water: "Water", ecology: "Ecology", land: "Land & terrain", infrastructure: "Infrastructure", climate: "Climate & hazards", community: "Community", regulatory: "Regulatory", finance: "Finance relevance" };
+const LABELS: Record<string, string> = { spatial: "Spatial analysis", energy: "Energy resource", grid: "Grid", water: "Water", ecology: "Ecology", land: "Land & terrain", remote_sensing: "Remote sensing (Earth Engine)", infrastructure: "Infrastructure", climate: "Climate & hazards", community: "Community", regulatory: "Regulatory", finance: "Finance relevance" };
 type Run = { id: string; status: string; stages: StageState[]; createdAt?: string };
 
 export default function SiteIntelPanel({ projectId, initial, stale }: { projectId: string; initial: Run | null; stale: boolean }) {
@@ -61,7 +61,7 @@ export default function SiteIntelPanel({ projectId, initial, stale }: { projectI
           <button type="button" className={s.row} onClick={() => setOpen(open === x.key ? null : x.key)} aria-expanded={open === x.key} disabled={!x.facts?.length && !x.error}>
             <span className={s.dot} />
             <span className={s.name}>{LABELS[x.key] ?? x.key}</span>
-            <span className={s.sum}>{x.status === "queued" ? "Queued" : x.status === "running" ? "Analysing…" : x.status === "failed" ? `Unavailable: ${x.error}` : x.summary}</span>
+            <span className={s.sum}>{x.status === "queued" ? "Queued" : x.status === "running" ? "Analysing…" : x.status === "failed" ? `Unavailable: ${x.error}` : x.status === "skipped" ? `Skipped: ${x.summary}` : x.summary}</span>
           </button>
           {open === x.key && x.facts && <dl className={s.facts}>{x.facts.map((f, i) => <div key={i}><dt>{f.label}</dt><dd>{f.value}<small>{f.source}</small></dd></div>)}</dl>}
         </li>))}</ol>}

@@ -14,6 +14,9 @@ export async function GET() {
     const rows = await appDb().select({ key: integrations.key, state: integrations.featureState }).from(integrations);
     states = new Map(rows.map(r => [r.key, r.state]));
   } catch { /* registry not migrated: offer everything that needs no key */ }
-  const layers = offerCatalog(states, { ESRI_API_KEY: env.ESRI_API_KEY });
-  return Response.json({ layers, firmsKey: Boolean(env.NASA_FIRMS_MAP_KEY), generatedAt: new Date().toISOString() }, { headers: { "cache-control": "private, max-age=300" } });
+  const e = env as unknown as Record<string, string | undefined>;
+  const layers = offerCatalog(states, { ESRI_API_KEY: e.ESRI_API_KEY, MAPILLARY_TOKEN: e.MAPILLARY_TOKEN });
+  // Street-level providers in order of preference. Only browser-safe, referrer-restricted keys are sent.
+  const streetView = e.GOOGLE_MAPS_BROWSER_KEY ? { provider: "google" as const, key: e.GOOGLE_MAPS_BROWSER_KEY } : e.MAPILLARY_TOKEN ? { provider: "mapillary" as const, key: e.MAPILLARY_TOKEN } : { provider: "none" as const, key: "" };
+  return Response.json({ layers, firmsKey: Boolean(e.NASA_FIRMS_MAP_KEY), streetView, generatedAt: new Date().toISOString() }, { headers: { "cache-control": "private, max-age=300" } });
 }

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { siteIntelRuns } from "@/db/schema";
 import { getOsApiUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
+import { env } from "cloudflare:workers";
 import { runNextStage } from "@/lib/site-intel/engine";
 
 async function scoped(id: string) {
@@ -23,6 +24,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const s = await scoped((await params).id);
   if (s.error) return s.error;
   if (s.run.stages.some(x => x.status === "running")) return Response.json({ id: s.run.id, status: s.run.status, stages: s.run.stages, busy: true });
-  const r = await runNextStage(appDb(), s.run.id);
+  const r = await runNextStage(appDb(), s.run.id, undefined, env as unknown as Record<string, string | undefined>);
   return Response.json({ id: r.id, status: r.status, stages: r.stages }, { headers: { "cache-control": "no-store" } });
 }
