@@ -2,8 +2,9 @@ import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { appDb, isOwner, type UserScope } from "./db/scoped";
+import { appDb, isInternal, isOwner, type UserScope } from "./db/scoped";
 import { narrowScope } from "./mandates";
+import { moduleForPath, pathAllowed } from "./tenancy/vocab";
 import { parseAllowlist, resolveMembership } from "./membership";
 import { SESSION_COOKIE, sessionEmail } from "./session";
 
@@ -37,6 +38,8 @@ export async function requireOsUser(returnTo: string): Promise<OsUser> {
   if (!email) redirect(`/signin?return_to=${encodeURIComponent(returnTo)}`);
   const os = await fromEmail(email);
   if (!os) redirect("/not-allowed");
+  // Module entitlements (lib/tenancy): a client user opening a module their organization does not license is sent away.
+  if (!pathAllowed(os.scope.modules, returnTo)) redirect(`/not-allowed?module=${encodeURIComponent(moduleForPath(returnTo) ?? "")}`);
   return os;
 }
 
@@ -53,10 +56,14 @@ export async function getOsApiUser(): Promise<OsUser | null> {
 }
 
 /** Wrap every server action body. Throws rather than redirecting so a forged call gets nothing. */
-export async function withOsUser<T>(fn: (user: OsUser) => Promise<T>, opts: { owner?: boolean } = {}): Promise<T> {
+export async function withOsUser<T>(fn: (user: OsUser) => Promise<T>, opts: { owner?: boolean; internal?: boolean } = {}): Promise<T> {
   const os = await getOsApiUser();
   if (!os) throw new Error("Not authorized");
   if (opts.owner && !isOwner(os.scope)) throw new Error("Owner only");
+  // Platform administration (jobs, sending, demo data, prompts) is Regenera's; a client admin owning their own workspace is not enough.
+  if (opts.internal && !isInternal(os.scope)) throw new Error("Regenera internal only");
+  // Read-only users can open everything they are granted and change nothing: refused here, for every action.
+  if (os.scope.userType === "read_only") throw new Error("Read-only access");
   return fn(os);
 }
 

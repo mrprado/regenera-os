@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { redirectTo, sameOrigin, sessionCookie } from "@/lib/auth-http";
 import { appDb } from "@/lib/db/scoped";
 import { parseAllowlist } from "@/lib/membership";
+import { credentialFor, recordLogin } from "@/lib/tenancy/engine";
 import { fixedPasswordCheck, hasMembers, normalizeEmail, safeReturnTo, SESSION_COOKIE, SESSION_DAYS, trackerPasswordCheck, verifyPassword } from "@/lib/session";
 
 export async function POST(request: Request) {
@@ -15,14 +16,18 @@ export async function POST(request: Request) {
   // Say so plainly when nobody can sign in yet, instead of "incorrect".
   if (!env.OS_ALLOWLIST && !(await hasMembers(appDb()))) return back("setup");
   // OS_PASSWORD (a Worker secret) is the password when set; otherwise the tracker password is checked.
-  const check = env.OS_PASSWORD
+  // Invited client users have their own credential (lib/tenancy); it takes precedence for their email.
+  const credential = await credentialFor(appDb(), email);
+  const check = credential ?? (env.OS_PASSWORD
     ? fixedPasswordCheck(env.OS_PASSWORD)
-    : trackerPasswordCheck(env.TRACKER_AUTH_URL ?? `${env.SITE_BASE_URL ?? "https://regenera.bio"}/api/pipeline/auth`);
+    : trackerPasswordCheck(env.TRACKER_AUTH_URL ?? `${env.SITE_BASE_URL ?? "https://regenera.bio"}/api/pipeline/auth`));
+  const ip = request.headers.get("cf-connecting-ip") ?? "local";
   let result;
   try {
     result = await verifyPassword(appDb(), {
-      email, password: String(form.get("password") ?? ""), ip: request.headers.get("cf-connecting-ip") ?? "local",
+      email, password: String(form.get("password") ?? ""), ip,
     }, parseAllowlist(env.OS_ALLOWLIST), check);
+    await recordLogin(appDb(), { email, ok: result.ok, method: credential ? "credential" : "regenera", ip, userAgent: request.headers.get("user-agent") ?? "" });
   } catch {
     return back("unavailable");
   }

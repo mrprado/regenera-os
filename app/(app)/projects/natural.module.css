@@ -1,5 +1,5 @@
-.graph { width: 100%; height: auto; background: var(--paper-2, #f7f5ef); border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; }
-.node { fill: #fff; stroke: #2f4a3a; stroke-width: 1.2; }
+.graph { width: 100%; height: auto; background: var(--paper-2, #f2f0e9); border: 1px solid var(--line); border-radius: 4px; margin: 6px 0; }
+.node { fill: #fff; stroke: #161816; stroke-width: 1.2; }
 .node[data-kind="asset"] { fill: #e7f1e4; stroke: #2f7d4f; }
 .node[data-kind="investor"], .node[data-kind="lender"], .node[data-kind="insurer"], .node[data-kind="client"] { fill: #f2efe4; stroke: #8a7a3a; }
 .node[data-kind="holdco"], .node[data-kind="manager"] { fill: #eef2f5; stroke: #4c6b84; }
@@ -9,12 +9,12 @@
 .edgeLabel { font-size: 10px; fill: #5b6058; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--text-muted); margin: 4px 0 10px; }
 .legend i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; }
-.strip, .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 8px 0; }
+.strip, .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 8px 0; }
 .strip div, .flow div { padding: 8px 10px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
 .strip div:last-child, .flow div:last-child { border-right: 0; }
 .strip span, .flow span { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--eyebrow); }
 .strip b, .flow b { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--heading); }
-.card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; display: grid; gap: 6px; }
+.card { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 8px 0; display: grid; gap: 6px; }
 .card header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .kv { display: grid; grid-template-columns: 200px 1fr; gap: 3px 10px; font-size: 12.5px; margin: 0; }
 .kv dt { color: var(--text-muted); }

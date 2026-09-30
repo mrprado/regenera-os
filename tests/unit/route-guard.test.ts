@@ -29,6 +29,8 @@ const ANONYMOUS_API: Record<string, RegExp> = {
   // Email + password sign-in (docs/DEPLOY.md): each checks Origin and does only its own step.
   "api/auth/signin/route.ts": /verifyPassword\(/,
   "api/auth/signout/route.ts": /endSession\(/,
+  // Client operating layer: an invited OS user sets a password from a one-time token.
+  "api/auth/accept/route.ts": /acceptOsInvite\(/,
   // External portals and public intake (master build instruction §02, §69): own sessions, own checks.
   "api/portal/signin/route.ts": /portalSignIn\(/,
   "api/portal/signout/route.ts": /endPortalSession\(/,
@@ -41,6 +43,7 @@ const ANONYMOUS_PAGES: Record<string, string> = {
   "page.tsx": "redirects to /today, renders nothing",
   "(auth)/not-allowed/page.tsx": "the 403 page itself",
   "(auth)/signin/page.tsx": "the sign-in form",
+  "(auth)/join/[token]/page.tsx": "sets a password from a one-time OS invite token (openInvite)",
   "(portal)/portal/signin/page.tsx": "the portal sign-in form",
   "(portal)/portal/invite/[token]/page.tsx": "sets a password from a one-time invite token (inviteUser)",
   "(portal)/portal/page.tsx": "redirects to the portal home or sign-in, renders nothing",

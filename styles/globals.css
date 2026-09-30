@@ -2,21 +2,31 @@
 
 * { box-sizing: border-box; }
 html { background: var(--bg); }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
-a { color: var(--link); text-decoration: none; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+code, kbd, .mono { font-family: var(--font-mono); font-size: .92em; }
+a { color: var(--link); text-decoration: none; transition: color var(--t-fast) var(--ease); }
+a:hover { color: var(--copper); }
 button, input, select, textarea { font: inherit; }
-::selection { background: var(--pollen); color: var(--fern); }
+::selection { background: #e9c2ad; color: var(--volcanic); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 h1, h2, h3, p { margin-top: 0; }
-h1, h2 { font-weight: 600; letter-spacing: -.035em; line-height: 1; color: var(--heading); }
-h1 { font-size: clamp(32px, 3.2vw, 48px); }
-h2 { font-size: clamp(24px, 2.2vw, 32px); }
-h3 { font-size: 18px; line-height: 1.15; letter-spacing: -.02em; color: var(--heading); }
+h1, h2 { font-weight: 600; letter-spacing: -.028em; line-height: 1.08; color: var(--heading); }
+h1 { font-size: var(--fs-display); }
+h2 { font-size: var(--fs-section); letter-spacing: -.015em; }
+h3 { font-size: var(--fs-sub); line-height: 1.25; letter-spacing: -.01em; color: var(--heading); }
 
-.eyebrow { margin: 0 0 14px; font-size: 12px; line-height: 1.2; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; color: var(--eyebrow); }
+.eyebrow { margin: 0 0 12px; font-size: 11px; line-height: 1.2; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; color: var(--eyebrow); }
 
-.btn { display: inline-flex; align-items: center; gap: 10px; height: 34px; padding: 0 18px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: transparent; color: var(--text); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
-.btn--primary { background: var(--action); color: var(--action-text); border-color: var(--action); }
-.btn--primary:hover { background: color-mix(in srgb, var(--pollen) 82%, black); }
+/* Controls: 4 px radius, sentence case. Primary = copper fill; secondary = hairline outline; tertiary = text. Solar is never a button. */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: var(--radius-control); border: 1px solid var(--ash); background: var(--chalk); color: var(--text); font-size: 13px; font-weight: 500; letter-spacing: 0; cursor: pointer; transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.btn:hover { border-color: var(--text-3); color: var(--text); }
+.btn--primary { background: var(--copper); color: var(--chalk); border-color: var(--copper); }
+.btn--primary:hover { background: var(--copper-ink); border-color: var(--copper-ink); color: var(--chalk); }
+.btn--danger { background: transparent; color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+.btn--text { border-color: transparent; background: transparent; padding: 0 4px; color: var(--copper-ink); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
+input, select, textarea { border-radius: var(--radius-control); }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid color-mix(in srgb, var(--copper) 70%, transparent); outline-offset: 0; border-color: var(--copper); }
+.num, td, .tabular { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

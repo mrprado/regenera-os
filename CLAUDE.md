@@ -91,13 +91,18 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Vocabulary comes from the live site (lib/vocab.ts): three practices, five
   sectors, seven territorial systems, engagement keys, tracker stages.
   Source of truth is regenera-development-office, never regenera-nextjs.
-- Design tokens from styles/tokens.css only (copied from
-  regenera-development-office/app/globals.css): paper, ink, fern, leaf, reed,
-  water, wax, pollen, line. Font: Helvetica Neue. Pollen is for primary
-  actions and urgency only. CSS Modules per screen. No Tailwind. Icons: lucide-react.
-- UX is Apollo.io's layout in Regenera's brand (SPEC section 11): white header,
-  fern sidebar, filter panel + dense table + bulk action bar + side panel preview.
-  Use components/page.tsx (PageHeader, EmptyState) for page chrome.
+- Design system: docs/design-system.md ("Territorial intelligence", 2026-09-29, supersedes the regenera.bio
+  fern/gold styling at the user's direction). Colours only from styles/tokens.css: volcanic/basalt shell, limestone/
+  chalk canvases, copper accent, solar as a rare signal; lichen, glacial, steel, aubergine, critical are semantic data
+  colours only. Geist + Geist Mono. Hairline sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind.
+  Icons: lucide-react. Use components/page.tsx (PageHeader, EmptyState) for page chrome.
+- Client operating layer (docs/plans/phase-10-client-os.md): tenants own workspaces (the `mandates` table; UI calls
+  them workspaces). Workspace grants stay the isolation boundary; lib/tenancy resolves user type, persona, module
+  entitlements and deactivation. requireOsUser enforces module entitlements by route (lib/tenancy/vocab ROUTE_MODULES);
+  withOsUser refuses read-only users; platform administration uses withOsUser(..., { internal: true }).
+  The prompt's "Mandate" (scope of work) is a different object from the `mandates` table.
+- Navigation: lib/nav.ts is the single map (sidebar, Systems flyout, menu search, Cmd+K). A new page must be added
+  there or tests/unit/nav-inventory.test.ts fails. Top-level groups are frozen.
 - Write JS regex and embedded scripts in their own files and run node --check.
   Avoid ID-level display overrides in CSS.
 - Tests required for: dedupe, scoring, screening matrix, send idempotency,

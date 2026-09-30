@@ -1,9 +1,9 @@
-.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 12px 0 6px; }
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 12px 0 6px; }
 .strip div { padding: 9px 12px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
 .strip div:last-child { border-right: 0; }
 .strip span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--eyebrow); }
 .strip b { font-size: 16px; color: var(--heading); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.services { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: grid; gap: 2px; max-height: 260px; overflow: auto; }
+.services { border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; display: grid; gap: 2px; max-height: 260px; overflow: auto; }
 .services legend { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 .services label { display: flex !important; gap: 6px; align-items: center; font-weight: 400 !important; font-size: 12.5px !important; }
 .services label input { width: auto !important; }

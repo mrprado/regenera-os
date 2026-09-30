@@ -51,7 +51,7 @@ export function baseStyle(): StyleSpecification {
         paint: { "line-color": ["match", ["get", "class"], ["motorway", "trunk"], "#f4c77d", "primary", "#f8dea5", ["path", "track"], "#d8cfbd", "#ffffff"], "line-dasharray": ["match", ["get", "class"], ["path", "track"], ["literal", [2, 1]], ["literal", [1, 0]]],
           "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 5, ["match", ["get", "class"], ["motorway", "trunk"], 0.8, 0.2], 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 17, ["service"], 4.5, ["path", "track"], 1.5, 11]] } },
       { id: "lt-rail", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 8, filter: ["==", ["get", "class"], "rail"], layout: { visibility: "none" }, paint: { "line-color": "#b9b2a6", "line-width": 1.2, "line-dasharray": [3, 2] } },
-      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#efe9dc", "hillshade-accent-color": "#131b13" } },
+      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#f2f0e9", "hillshade-accent-color": "#161816" } },
       anchor(A_RASTER),
       anchor(A_VECTOR),
       // Hybrid reference layers over imagery (OpenStreetMap via OpenFreeMap): roads, buildings, street names, places,
@@ -69,7 +69,7 @@ export function baseStyle(): StyleSpecification {
         paint: { "text-color": "#ffffff", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1.5 } },
       { id: "hy-place-minor", type: "symbol", source: "ofm", "source-layer": "place", minzoom: 10, filter: ["in", ["get", "class"], ["literal", ["village", "suburb", "neighbourhood", "hamlet", "quarter"]]],
         layout: { "text-field": NAME, "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 16, 14], "text-transform": "uppercase", "text-letter-spacing": 0.08, "text-max-width": 8 },
-        paint: { "text-color": "#fbf6e8", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.3 } },
+        paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.3 } },
       { id: "hy-poi", type: "symbol", source: "ofm", "source-layer": "poi", minzoom: 15, filter: ["<=", ["coalesce", ["get", "rank"], 99], ["step", ["zoom"], 5, 16, 15, 17, 60]],
         layout: { "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": 11, "text-max-width": 9, "text-optional": true, "text-padding": 4 },
         paint: { "text-color": "#ffe9b0", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1.2 } },
@@ -77,12 +77,12 @@ export function baseStyle(): StyleSpecification {
         layout: { "text-field": ["get", "housenumber"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-padding": 2 },
         paint: { "text-color": "#dfe7e2", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1 } },
       { id: "admin-1", type: "line", source: "ofm", "source-layer": "boundary", minzoom: 3.5, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]],
-        paint: { "line-color": "rgba(239,233,220,0.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.4, 10, 1.2], "line-dasharray": [2, 2] } },
+        paint: { "line-color": "rgba(242,240,233,0.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.4, 10, 1.2], "line-dasharray": [2, 2] } },
       { id: "admin-0", type: "line", source: "ofm", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
         paint: { "line-color": "#f2d25c", "line-opacity": 0.75, "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.5, 5, 1.1, 10, 2] } },
       { id: "country-labels", type: "symbol", source: "ofm", "source-layer": "place", maxzoom: 7, filter: ["==", ["get", "class"], "country"],
         layout: { "text-field": NAME, "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 5, 14], "text-transform": "uppercase", "text-letter-spacing": 0.22, "text-max-width": 8 },
-        paint: { "text-color": "#fbf6e8", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.4 } },
+        paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,0.85)", "text-halo-width": 1.4 } },
       { id: "city-labels", type: "symbol", source: "ofm", "source-layer": "place", minzoom: 4.5, filter: ["in", ["get", "class"], ["literal", ["city", "town"]]],
         layout: { "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11, 12, 15], "text-anchor": "top", "text-offset": [0, 0.4] },
         paint: { "text-color": "#ffffff", "text-halo-color": "rgba(3,6,8,0.9)", "text-halo-width": 1.3 } },
@@ -231,7 +231,7 @@ export function addOverlay(map: maplibregl.Map, l: OfferedLayer, date: string) {
     map.addLayer({ id: `${p}-subs`, type: "circle", source: p, "source-layer": "power_substation_point", minzoom: 7, paint: { "circle-radius": 3, "circle-color": "#f2b35a", "circle-stroke-color": "#05080b", "circle-stroke-width": 1 } }, A_VECTOR);
     map.addLayer({ id: `${p}-plants`, type: "circle", source: p, "source-layer": "power_plant_point", minzoom: 4, paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 2.5, 10, 6],
-      "circle-color": ["match", ["get", "source"], "solar", "#f2d25c", "wind", "#9fd3e6", "hydro", "#4a90ff", "nuclear", "#c79bff", "coal", "#6b6b6b", "gas", "#ff8a4c", "oil", "#a47551", "biomass", "#7ac47f", "geothermal", "#ff6f91", "#efe9dc"],
+      "circle-color": ["match", ["get", "source"], "solar", "#f2d25c", "wind", "#9fd3e6", "hydro", "#4a90ff", "nuclear", "#c79bff", "coal", "#6b6b6b", "gas", "#ff8a4c", "oil", "#a47551", "biomass", "#7ac47f", "geothermal", "#ff6f91", "#f2f0e9"],
       "circle-stroke-color": "#05080b", "circle-stroke-width": 1 } }, A_VECTOR);
     return;
   }

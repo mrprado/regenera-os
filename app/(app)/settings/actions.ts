@@ -18,7 +18,7 @@ export async function runJobsNow() {
   await withOsUser(async user => {
     const result = await tick(appDb(), { budgetMs: 20_000 });
     await audit(appDb(), { actor: user.email, action: "manual_tick", entity: "jobs", after: result });
-  }, { owner: true });
+  }, { owner: true, internal: true });
   redirect("/settings/jobs?ran=1");
 }
 
@@ -27,7 +27,7 @@ export async function retryJob(formData: FormData) {
   await withOsUser(async user => {
     await retryDead(appDb(), id, new Date());
     await audit(appDb(), { actor: user.email, action: "retry_job", entity: "jobs", entityId: id });
-  }, { owner: true });
+  }, { owner: true, internal: true });
   redirect("/settings/jobs");
 }
 
@@ -38,7 +38,7 @@ export async function addMember(formData: FormData) {
     const mandateId = user.scope.ownerOf[0];
     await appDb().insert(mandateMembers).values({ mandateId, email: email.data, role: "member" }).onConflictDoNothing();
     await audit(appDb(), { actor: user.email, action: "add_member", entity: "mandate_members", entityId: mandateId, after: { email: email.data } });
-  }, { owner: true });
+  }, { owner: true, internal: true });
   redirect("/settings/members?added=1");
 }
 
@@ -50,7 +50,7 @@ export async function removeMember(formData: FormData) {
     if (!row || row.role === "owner" || !user.scope.ownerOf.includes(row.mandateId)) throw new Error("Not allowed");
     await appDb().delete(mandateMembers).where(and(eq(mandateMembers.id, id), eq(mandateMembers.role, "member")));
     await audit(appDb(), { actor: user.email, action: "remove_member", entity: "mandate_members", entityId: row.mandateId, before: { email: row.email } });
-  }, { owner: true });
+  }, { owner: true, internal: true });
   redirect("/settings/members");
 }
 
@@ -75,6 +75,6 @@ export async function sendTestEmail(formData: FormData) {
       console.error("Test email failed", error);
       outcome = "error";
     }
-  }, { owner: true });
+  }, { owner: true, internal: true });
   redirect(`/settings/connections?test=${outcome}`);
 }

@@ -14,7 +14,7 @@ import { runPlaybookOnProjectAction } from "../playbook-actions";
 import styles from "./map.module.css";
 
 export type LibraryLayer = { id: string; name: string; category: string; provider: string; sourceDate: string | null; retrievedAt: string; license: string; resolution: string; coverage: string; confidence: string; featureCount: number; isDemo: boolean };
-const CAT_COLOR: Record<string, string> = { grid: "#f2b35a", transmission: "#f2b35a", substations: "#e59f5a", water: "#5fa8d3", watersheds: "#4a90b8", water_stress: "#3f7fb0", protected_areas: "#6fbf73", biodiversity: "#7ac47f", land_use: "#c9b27a", parcels: "#d8c79a", roads: "#bbbbbb", ports: "#9aa8b5", communities: "#d9c7f0", regulatory: "#e07a7a", project_area: "#b59a5b", solar: "#f2d25c", wind: "#9fd3e6", agriculture: "#a5c77f", climate: "#e59a3a", topography: "#a38f7a", other: "#efe9dc" };
+const CAT_COLOR: Record<string, string> = { grid: "#f2b35a", transmission: "#f2b35a", substations: "#e59f5a", water: "#5fa8d3", watersheds: "#4a90b8", water_stress: "#3f7fb0", protected_areas: "#6fbf73", biodiversity: "#7ac47f", land_use: "#c9b27a", parcels: "#d8c79a", roads: "#bbbbbb", ports: "#9aa8b5", communities: "#d9c7f0", regulatory: "#e07a7a", project_area: "#b59a5b", solar: "#f2d25c", wind: "#9fd3e6", agriculture: "#a5c77f", climate: "#e59a3a", topography: "#a38f7a", other: "#f2f0e9" };
 const CATEGORIES = Object.keys(CAT_COLOR);
 
 function addLayerFor(map: maplibregl.Map, id: string, color: string) {
@@ -23,7 +23,7 @@ function addLayerFor(map: maplibregl.Map, id: string, color: string) {
   map.addSource(src, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: `${src}-fill`, type: "fill", source: src, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": color, "fill-opacity": 0.18 } });
   map.addLayer({ id: `${src}-line`, type: "line", source: src, filter: ["in", ["geometry-type"], ["literal", ["Polygon", "LineString"]]], paint: { "line-color": color, "line-width": 1.6 } });
-  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#0d120e", "circle-stroke-width": 1 } });
+  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#161816", "circle-stroke-width": 1 } });
 }
 function removeLayerFor(map: maplibregl.Map, id: string) {
   const src = `lib-${id}`;
@@ -94,7 +94,7 @@ export function useAtlas(mapRef: React.MutableRefObject<maplibregl.Map | null>, 
     const map = mapRef.current;
     if (!mapReady || !map) return;
     for (const l of library) {
-      if (active.has(l.id)) addLayerFor(map, l.id, CAT_COLOR[l.category] ?? "#efe9dc"); else removeLayerFor(map, l.id);
+      if (active.has(l.id)) addLayerFor(map, l.id, CAT_COLOR[l.category] ?? "#f2f0e9"); else removeLayerFor(map, l.id);
     }
     refresh();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -117,7 +117,7 @@ export function LibraryPanel({ atlas }: { atlas: ReturnType<typeof useAtlas> }) 
       {atlas.library.map(l => (
         <div key={l.id} className={styles.layerRow} style={{ alignItems: "flex-start" }}>
           <input type="checkbox" checked={atlas.active.has(l.id)} onChange={() => atlas.setActive(s => { const n = new Set(s); if (n.has(l.id)) n.delete(l.id); else n.add(l.id); return n; })} aria-label={`Show ${l.name}`} />
-          <span className={styles.swatch} style={{ background: CAT_COLOR[l.category] ?? "#efe9dc" }} />
+          <span className={styles.swatch} style={{ background: CAT_COLOR[l.category] ?? "#f2f0e9" }} />
           <span className={styles.layerLabel}>{l.isDemo ? "DEMO / SAMPLE · " : ""}{l.name}
             <small style={{ display: "block", opacity: 0.8 }}>{[l.category.replace(/_/g, " "), l.provider || "provider not recorded", l.sourceDate && `source ${l.sourceDate}`, `retrieved ${l.retrievedAt.slice(0, 10)}`, l.license || "licence not recorded", l.resolution, l.coverage, `confidence ${l.confidence}`, `${l.featureCount} features`].filter(Boolean).join(" · ")}</small>
             <form action={deleteLayerAction} style={{ display: "inline" }}><input type="hidden" name="layerId" value={l.id} /><button type="submit" className={styles.more} style={{ padding: "0 4px" }}>Remove</button></form>

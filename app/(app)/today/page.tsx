@@ -2,9 +2,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import Loading from "../loading";
 import { Notice } from "@/components/crm-bits";
-import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
+import MiniMap from "@/components/mini-map";
+import { projects, tenantMembers } from "@/db/schema";
+import { isNotNull, isNull } from "drizzle-orm";
+import t from "./today.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { aiConfig, apolloConfig } from "@/lib/config";
 import { homeData } from "@/lib/crm/home";
@@ -40,11 +43,21 @@ function Stat({ n, label, href, warn }: { n: number | string; label: string; hre
 export default async function HomePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/today");
   const sp = await searchParams;
-  const first = user.displayName.split(/[\s@]/)[0];
+  // A real name only when one is recorded (Organization → Users); an email handle is not a name.
+  const [member] = await appDb().select({ name: tenantMembers.name }).from(tenantMembers).where(eq(tenantMembers.email, user.email)).limit(1);
+  const name = member?.name?.trim().split(/\s+/)[0] ?? "";
+  const now = new Date();
+  const tz = "America/Merida";
+  const hour = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(now));
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const date = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: tz }).format(now);
   // The header renders at once; the body streams in behind a structural skeleton as its queries resolve.
   return (
     <>
-      <PageHeader title={`Good to see you, ${first}`} actions={<Link className="btn" href="/map">Atlas</Link>} />
+      <header className={t.head}>
+        <p className={t.date}>{date}</p>
+        <div className={t.row}><h1 className={t.hello}>{greeting}{name ? `, ${name}` : ""}.</h1><Link className="btn" href="/map">Open Atlas</Link></div>
+      </header>
       <Notice text={sp.notice} />
       <Suspense fallback={<Loading />}>
         <TodayBody user={user} sp={sp} />
@@ -61,13 +74,18 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
     changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
   ]);
   const showAll = sp.attention === "all";
-  const [align, pending, [gateQueue]] = await Promise.all([
+  const [align, pending, [gateQueue], located] = await Promise.all([
     capitalAlignment(appDb(), user.scope.mandateIds),
     appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
       .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10),
     appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
       .where(and(mandateCondition(user.scope, capitalOpportunities.mandateId), inArray(capitalOpportunities.gateState, ["review_required", "hold"]), sql`${capitalOpportunities.status} != 'closed'`)),
+    appDb().select({ id: projects.id, name: projects.name, lat: projects.lat, lng: projects.lng, stage: projects.stage, country: projects.country }).from(projects)
+      .where(and(mandateCondition(user.scope, projects.mandateId), isNull(projects.archivedAt), isNotNull(projects.lat), isNotNull(projects.lng))).limit(500),
   ]);
+  const flagged = new Set(attention.map(a => a.href.match(/^\/projects\/([^/?]+)/)?.[1]).filter(Boolean));
+  const points = located.map(p => ({ id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, stage: stageLabel(p.stage as never) ?? p.stage, sub: p.country ?? undefined, alert: flagged.has(p.id) }));
+  const critical = attention.filter(a => a.severity === "critical" || a.severity === "high").length;
   const now = new Date().toISOString();
   const alerts = [
     ...sending.checks.flatMap(c => deliverabilityIssues(c)),
@@ -77,6 +95,7 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
   const apollo = apolloConfig();
   return (
     <>
+      <p className={t.statement}>{attention.length === 0 ? "Nothing needs attention across the portfolio." : `${attention.length} item${attention.length === 1 ? " needs" : "s need"} attention${critical ? `, ${critical} of them high or critical` : ""}.`}</p>
       <div className={ui.stats}>
         <Stat n={strip.projects} label="Projects" href="/projects" />
         <Stat n={strip.deals} label="Active opportunities" href="/deals" />
@@ -110,6 +129,10 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
           {attention.length > 12 && <p className={ui.sub}>{showAll ? <Link href="/today">Show the top 12</Link> : <Link href="/today?attention=all">Show all {attention.length}</Link>}</p>}
         </section>
         <aside>
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Portfolio map</span><Link href="/map">Open in Atlas</Link></p>
+            <MiniMap points={points} height={260} />
+          </section>
           <section className={r.panel}>
             <p className={r.panelTitle}>What changed since your last session</p>
             <p className={ui.sub} style={{ marginTop: 0 }}>Since {changes.since.slice(0, 16).replace("T", " ")} UTC, from the event log (each links to its record).</p>

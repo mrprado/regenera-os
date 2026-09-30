@@ -1,12 +1,12 @@
 .board { display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: 12px; overflow-x: auto; }
 .col { border: 1px solid var(--line); border-radius: var(--radius-card); background: color-mix(in srgb, var(--wax) 35%, var(--paper)); padding: 10px; min-height: 160px; }
 .colTitle { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; display: flex; justify-content: space-between; }
-.card { display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 9px 10px; margin-bottom: 8px; color: inherit; font-size: 13px; }
+.card { display: block; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); padding: 9px 10px; margin-bottom: 8px; color: inherit; font-size: 13px; }
 .card b { display: block; font-size: 13.5px; color: var(--heading); margin-bottom: 2px; }
 .card span { display: block; color: var(--text-muted); font-size: 12px; }
 .flag { color: #b0432f; font-weight: 600; }
 .readiness { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.dim { border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+.dim { border: 1px solid var(--line); border-radius: 4px; padding: 10px; font-size: 13px; }
 .dim b { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
 .dim form { display: grid; gap: 5px; }
 .dim select, .dim input { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 12.5px; }
@@ -30,7 +30,7 @@
 .gDone { background: var(--text-muted); opacity: .5; }
 .gDue { position: absolute; top: -2px; width: 2px; height: 18px; background: var(--heading); }
 .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 6px 0 10px; }
-.metric { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.metric { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
 .metric span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
 .metric b { font-size: 17px; color: var(--heading); }
 .checks { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }

@@ -9,7 +9,7 @@
 .main { max-width: 1080px; margin: 0 auto; padding: 28px 28px 64px; }
 .lede { color: var(--text-muted); font-size: 14px; margin: 4px 0 22px; max-width: 70ch; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-.card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; background: var(--paper); }
+.card { border: 1px solid var(--line); border-radius: 4px; padding: 16px 18px; background: var(--paper); }
 .card h3 { margin: 0 0 4px; font-size: 15px; color: var(--heading); }
 .label { display: inline-block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; margin-right: 6px; }
 .section { margin-top: 28px; }

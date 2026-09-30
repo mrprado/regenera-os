@@ -34,9 +34,9 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const f1 = (n: number, d = 1) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: 0 }) : "—");
 const feat = (geometry: Geometry, properties: Record<string, unknown> = {}): Feature => ({ type: "Feature", geometry, properties });
 
-const RESULT_COLORS: [string, string][] = [["contour", "#d9b45a"], ["mask", "#7ac47f"], ["watershed", "#4a90ff"], ["drainage", "#5ad1ff"], ["ponding", "#2f6fd6"], ["viewshed", "#f2d25c"], ["envelope", "#6fbf73"], ["excluded", "#e0672f"], ["constraint", "#e07a7a"], ["nearest", "#c9a84d"], ["buffer", "#b59a5b"], ["design", "#efe9dc"], ["observation", "#ff8a4c"], ["sight", "#ffffff"], ["sketch", "#f2d25c"]];
+const RESULT_COLORS: [string, string][] = [["contour", "#d9b45a"], ["mask", "#7ac47f"], ["watershed", "#4a90ff"], ["drainage", "#5ad1ff"], ["ponding", "#2f6fd6"], ["viewshed", "#f2d25c"], ["envelope", "#6fbf73"], ["excluded", "#e0672f"], ["constraint", "#e07a7a"], ["nearest", "#b6633e"], ["buffer", "#b59a5b"], ["design", "#f2f0e9"], ["observation", "#ff8a4c"], ["sight", "#ffffff"], ["sketch", "#f2d25c"]];
 const DESIGN_KINDS = { solar_array: "Solar array", battery_storage: "Battery storage", substation: "Substation", building: "Building", road: "Access road", transmission_route: "Transmission route", water_infrastructure: "Water infrastructure", conservation_area: "Conservation set-aside", restoration_area: "Restoration zone", buffer: "Buffer", custom: "Custom" } as const;
-const DESIGN_COLORS: Record<string, string> = { solar_array: "#1f4e79", battery_storage: "#8a5cff", substation: "#f2b35a", building: "#c0c0c0", road: "#a47551", transmission_route: "#ff6a4d", water_infrastructure: "#4a90ff", conservation_area: "#2e8b57", restoration_area: "#9acd32", buffer: "#b59a5b", custom: "#efe9dc" };
+const DESIGN_COLORS: Record<string, string> = { solar_array: "#1f4e79", battery_storage: "#8a5cff", substation: "#f2b35a", building: "#c0c0c0", road: "#a47551", transmission_route: "#ff6a4d", water_infrastructure: "#4a90ff", conservation_area: "#2e8b57", restoration_area: "#9acd32", buffer: "#b59a5b", custom: "#f2f0e9" };
 const OSM_CONSTRAINTS: { key: string; label: string; kind: "hard" | "soft"; bufferM: number }[] = [
   { key: "protected", label: "Protected areas (OSM)", kind: "hard", bufferM: 0 },
   { key: "wetland", label: "Wetlands", kind: "hard", bufferM: 30 },
@@ -69,15 +69,15 @@ export function useWorkbench(map: maplibregl.Map | null, projectId: string) {
     map.addSource("wb-results", { type: "geojson", data: EMPTY });
     map.addSource("wb-active", { type: "geojson", data: EMPTY });
     map.addSource("wb-sketch", { type: "geojson", data: EMPTY });
-    const color = ["coalesce", ["get", "color"], ["match", ["get", "kind"], ...RESULT_COLORS.flat(), "#efe9dc"]] as unknown as maplibregl.ExpressionSpecification;
+    const color = ["coalesce", ["get", "color"], ["match", ["get", "kind"], ...RESULT_COLORS.flat(), "#f2f0e9"]] as unknown as maplibregl.ExpressionSpecification;
     map.addLayer({ id: "wb-res-fill", type: "fill", source: "wb-results", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": color, "fill-opacity": ["coalesce", ["get", "opacity"], 0.28] } });
     map.addLayer({ id: "wb-res-line", type: "line", source: "wb-results", filter: ["in", ["geometry-type"], ["literal", ["LineString", "Polygon"]]], paint: {
       "line-color": color, "line-width": ["case", ["==", ["get", "kind"], "contour"], ["case", ["get", "major"], 1.6, 0.7], ["==", ["get", "kind"], "drainage"], ["interpolate", ["linear"], ["coalesce", ["get", "acc"], 1], 1, 0.6, 2000, 3], 1.6] } });
-    map.addLayer({ id: "wb-res-label", type: "symbol", source: "wb-results", filter: ["all", ["==", ["get", "kind"], "contour"], ["get", "major"]], layout: { "symbol-placement": "line", "text-field": ["concat", ["to-string", ["get", "elevation"]], " m"], "text-font": ["Noto Sans Regular"], "text-size": 10, "symbol-spacing": 280 }, paint: { "text-color": "#fbf6e8", "text-halo-color": "rgba(3,6,8,.9)", "text-halo-width": 1.2 } });
+    map.addLayer({ id: "wb-res-label", type: "symbol", source: "wb-results", filter: ["all", ["==", ["get", "kind"], "contour"], ["get", "major"]], layout: { "symbol-placement": "line", "text-field": ["concat", ["to-string", ["get", "elevation"]], " m"], "text-font": ["Noto Sans Regular"], "text-size": 10, "symbol-spacing": 280 }, paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,.9)", "text-halo-width": 1.2 } });
     map.addLayer({ id: "wb-res-pt", type: "circle", source: "wb-results", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": color, "circle-stroke-color": "#05080b", "circle-stroke-width": 1.2 } });
-    map.addLayer({ id: "wb-active-fill", type: "fill", source: "wb-active", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#c9a84d", "fill-opacity": 0.08 } });
-    map.addLayer({ id: "wb-active-line", type: "line", source: "wb-active", paint: { "line-color": "#c9a84d", "line-width": 2.4 } });
-    map.addLayer({ id: "wb-active-pt", type: "circle", source: "wb-active", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 7, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#c9a84d", "circle-stroke-width": 2.4 } });
+    map.addLayer({ id: "wb-active-fill", type: "fill", source: "wb-active", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#b6633e", "fill-opacity": 0.08 } });
+    map.addLayer({ id: "wb-active-line", type: "line", source: "wb-active", paint: { "line-color": "#b6633e", "line-width": 2.4 } });
+    map.addLayer({ id: "wb-active-pt", type: "circle", source: "wb-active", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 7, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#b6633e", "circle-stroke-width": 2.4 } });
     map.addLayer({ id: "wb-sketch-line", type: "line", source: "wb-sketch", paint: { "line-color": "#f2d25c", "line-width": 2, "line-dasharray": [2, 1] } });
     map.addLayer({ id: "wb-sketch-pt", type: "circle", source: "wb-sketch", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": "#f2d25c" } });
   }, [map]);
@@ -585,11 +585,11 @@ export function AnalysisTray({ wb, map }: { wb: Workbench; map: maplibregl.Map |
     <div className={styles.tray} role="region" aria-label="Elevation profile">
       <div className={styles.trayHead}><b>{op.title}</b><span>{op.summary.map(([k, v]) => `${k} ${v}`).join(" · ")}</span><button type="button" onClick={() => setClosed(op.id)} aria-label="Close tray">×</button></div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseLeave={() => setHover(null)} onMouseMove={e => { const r = e.currentTarget.getBoundingClientRect(); const d = (((e.clientX - r.left) / r.width) * W - pad) / (W - pad * 2) * pr.lengthM; setHover(Math.max(0, Math.min(pr.points.length - 1, Math.round((d / pr.lengthM) * (pr.points.length - 1))))); }}>
-        <path d={`${path}L${x(pr.lengthM)},${H - 20}L${x(0)},${H - 20}Z`} fill="rgba(201,168,77,.18)" />
-        <path d={path} fill="none" stroke="#c9a84d" strokeWidth={1.6} />
+        <path d={`${path}L${x(pr.lengthM)},${H - 20}L${x(0)},${H - 20}Z`} fill="rgba(182,99,62,.18)" />
+        <path d={path} fill="none" stroke="#b6633e" strokeWidth={1.6} />
         <text x={4} y={y(max) + 4}>{Math.round(max)} m</text><text x={4} y={y(min)}>{Math.round(min)} m</text>
         <text x={W - pad} y={H - 4} textAnchor="end">{(pr.lengthM / 1000).toFixed(2)} km</text>
-        {hp && Number.isFinite(hp.elevation) && <><line x1={x(hp.distanceM)} x2={x(hp.distanceM)} y1={10} y2={H - 20} stroke="#efe9dc" strokeDasharray="3 3" /><text x={Math.min(W - 120, x(hp.distanceM) + 6)} y={18}>{(hp.distanceM / 1000).toFixed(2)} km · {hp.elevation.toFixed(0)} m</text></>}
+        {hp && Number.isFinite(hp.elevation) && <><line x1={x(hp.distanceM)} x2={x(hp.distanceM)} y1={10} y2={H - 20} stroke="#f2f0e9" strokeDasharray="3 3" /><text x={Math.min(W - 120, x(hp.distanceM) + 6)} y={18}>{(hp.distanceM / 1000).toFixed(2)} km · {hp.elevation.toFixed(0)} m</text></>}
       </svg>
       <p className={styles.caveat}>{op.limitation}</p>
     </div>

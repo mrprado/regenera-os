@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import { FieldMotif } from "@/components/field-motif";
 import { currentEmail } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { safeReturnTo } from "@/lib/session";
+import s from "../auth.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign in" };
@@ -17,19 +19,32 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   const returnTo = safeReturnTo(sp.return_to);
   if (await currentEmail()) redirect(returnTo);
   return (
-    <main style={{ maxWidth: 400, margin: "18vh auto", padding: "0 16px" }}>
-      <p className="eyebrow">Regenera OS</p>
-      <h1>Sign in</h1>
-      {sp.signed_out && <p style={{ color: "var(--text-muted)" }}>You are signed out.</p>}
-      {sp.error && ERRORS[sp.error] && <p role="alert" style={{ color: "#b0432f" }}>{ERRORS[sp.error]}</p>}
-      <form method="post" action={withBase("/api/auth/signin")} style={{ display: "grid", gap: 10 }}>
-        <input type="hidden" name="return_to" value={returnTo} />
-        <label htmlFor="email">Email</label>
-        <input id="email" name="email" type="email" autoComplete="username" required autoFocus />
-        <label htmlFor="password">Password</label>
-        <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={200} />
-        <button className="btn btn--primary" type="submit">Sign in</button>
-      </form>
+    <main className={s.split}>
+      <section className={s.visual} aria-hidden>
+        <FieldMotif className={s.motif} />
+        <span className={s.mark}>REGENERA</span>
+        <div className={s.statement}>
+          <h2>Systems intelligence for complex assets.</h2>
+          <p>Land, infrastructure, development, nature and capital in one decision and execution environment.</p>
+        </div>
+      </section>
+      <section className={s.form}>
+        <p className="eyebrow">Regenera OS</p>
+        <h1>Sign in</h1>
+        <p className={s.lede}>Use the email your workspace was set up with.</p>
+        {sp.joined && <p className={s.msg}>Your password is set. Sign in to continue.</p>}
+        {sp.signed_out && <p className={s.msg}>You are signed out.</p>}
+        {sp.error && ERRORS[sp.error] && <p role="alert" className={s.err}>{ERRORS[sp.error]}</p>}
+        <form method="post" action={withBase("/api/auth/signin")} className={s.fields}>
+          <input type="hidden" name="return_to" value={returnTo} />
+          <label htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" autoComplete="username" required autoFocus />
+          <label htmlFor="password">Password</label>
+          <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={200} />
+          <button className="btn btn--primary" type="submit">Sign in</button>
+        </form>
+        <p className={s.foot}>Private system. Access is by invitation; activity is logged.</p>
+      </section>
     </main>
   );
 }

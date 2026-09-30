@@ -7,7 +7,7 @@
 .bulkBtn:hover { border-color: var(--heading); }
 .items { list-style: none; margin: 0; padding: 0; }
 .itemBtn { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); background: transparent; cursor: pointer; font: inherit; color: inherit; }
-.itemBtn:hover { background: #fbfaf6; }
+.itemBtn:hover { background: #f2f0e9; }
 .itemActive { background: color-mix(in srgb, var(--pollen) 12%, transparent); box-shadow: inset 3px 0 0 var(--pollen); }
 .itemActive:hover { background: color-mix(in srgb, var(--pollen) 16%, transparent); }
 .itemTop { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--heading); }
@@ -21,10 +21,10 @@
 .to span { font-weight: 400; color: var(--text-muted); font-size: 14px; }
 .meta { margin: 4px 0 0; font-size: 12.5px; color: var(--text-muted); }
 .open { font-size: 12.5px; color: var(--link); white-space: nowrap; }
-.issues { margin: 0 0 12px; padding: 10px 12px 10px 28px; background: #fbe7e2; border: 1px solid #e8b3a6; border-radius: 8px; font-size: 13px; }
+.issues { margin: 0 0 12px; padding: 10px 12px 10px 28px; background: #fbe7e2; border: 1px solid #e8b3a6; border-radius: 4px; font-size: 13px; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .label { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
-.subject, .body, .regen input { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: 14px/1.55 var(--font-sans, inherit); color: var(--text); background: var(--paper); }
+.subject, .body, .regen input { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font: 14px/1.55 var(--font-sans, inherit); color: var(--text); background: var(--paper); }
 .subject { height: 36px; }
 .body { resize: vertical; min-height: 160px; }
 .subject:focus, .body:focus, .regen input:focus { outline: 2px solid color-mix(in srgb, var(--pollen) 60%, transparent); outline-offset: 0; }

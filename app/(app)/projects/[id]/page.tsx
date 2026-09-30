@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Notice } from "@/components/crm-bits";
-import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
+import ph from "./project-head.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { kindLabel, lifecycleLabel } from "@/lib/contracts/labels";
@@ -44,6 +44,17 @@ import { runPlaybookOnProjectAction } from "../../playbook-actions";
 export const dynamic = "force-dynamic";
 
 const PLAYBOOK_CHOICES = [["project-intake", "Project intake"], ["project-qualification", "Project qualification"], ["site-intelligence", "Site intelligence"], ["solar-project-screen", "Solar project screen"], ["capital-pathway-analysis", "Capital pathway analysis"], ["compliance-screen", "Compliance screen"], ["data-room-audit", "Data room audit"], ["system-capacity-assessment", "System capacity assessment"], ["project-update", "Monthly project update"]] as const;
+type TabKey = (typeof TABS)[number][0];
+/** Project 360 context groups (navigation prompt §9): what part of the project am I working on? */
+const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
+  { label: "Overview", tabs: ["overview", "activity"] },
+  { label: "Site & land", tabs: ["place", "constraints", "systems", "natural"] },
+  { label: "Development", tabs: ["readiness", "plan", "engineering", "power", "materials", "procurement"] },
+  { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community"] },
+  { label: "Capital", tabs: ["capital", "stack", "pathways", "funding"] },
+  { label: "Economics", tabs: ["financials", "economics", "benchmarks"] },
+  { label: "Partners & agreements", tabs: ["partners", "contracts"] },
+];
 export const metadata = { title: "Project" };
 
 const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
@@ -55,7 +66,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const data = await getProject(user.scope, id);
   if (!data) notFound();
   const { p } = data;
-  const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : "overview";
+  const tab: TabKey = TABS.some(([k]) => k === sp.tab) ? (sp.tab as TabKey) : "overview";
   const today = new Date().toISOString().slice(0, 10);
   const openCons = data.constraints.filter(c => c.status === "open" || c.status === "in_progress");
   const blockedDims = data.readiness.filter(x => x.status === "blocked");
@@ -67,21 +78,36 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   return (
     <>
-      <PageHeader title={p.name} actions={<><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link>}<Link className="btn" href="/projects">All projects</Link></>} />
+      {/* Project identity (docs/design-system.md): the project as an object, then its key facts as a typographic strip. */}
+      <header className={ph.head}>
+        <p className={ph.kicker}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not set"].filter(Boolean).join("  ·  ")}</p>
+        <div className={ph.titleRow}>
+          <h1 className={ph.title}>{p.name}</h1>
+          <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link>}<Link className="btn" href="/projects">All projects</Link></div>
+        </div>
+        <dl className={ph.strip}>
+          <div><dt>Stage</dt><dd><span className={ph.dot} data-tone={blockedDims.length ? "critical" : p.stage === "operations" || p.status === "operating" ? "lichen" : "copper"} aria-hidden />{stageLabel(p.stage)}</dd></div>
+          <div><dt>Capacity</dt><dd>{p.capacity ? `${p.capacity.toLocaleString("en-US")} ${p.capacityUnit ?? ""}` : <span className={ph.unknown}>Not recorded</span>}</dd></div>
+          <div><dt>Capital requirement</dt><dd>{data.capital.byCurrency.length ? data.capital.byCurrency.map(c => compactMoney(c.target, c.currency)).join(" + ") : <span className={ph.unknown}>Not recorded</span>}</dd></div>
+          <div><dt>Still to raise</dt><dd>{data.capital.byCurrency.length ? data.capital.byCurrency.map(c => compactMoney(Math.max(0, c.target - c.secured), c.currency)).join(" + ") : "—"}</dd></div>
+          <div><dt>Readiness recorded</dt><dd>{knownDims} / 14{blockedDims.length ? <span className={ph.bad}> · {blockedDims.length} blocked</span> : null}</dd></div>
+          <div><dt>Open constraints</dt><dd className={openCons.some(c => c.severity === "critical" || c.severity === "high") ? ph.badValue : undefined}>{openCons.length}</dd></div>
+        </dl>
+        <p className={ph.meta}>{PROJECT_STATUSES[p.status]}{sponsor ? ` · Sponsor: ${sponsor.orgName ?? sponsor.contactName ?? "recorded"}` : " · Sponsor: unknown"}{p.regeneraRole ? ` · Regenera: ${REGENERA_ROLES[p.regeneraRole]}` : ""}</p>
+      </header>
       <Notice text={sp.notice} />
-      <p className={ui.sub} style={{ marginTop: -6, marginBottom: 12 }}>
-        <span className={ui.chip}>{stageLabel(p.stage)}</span> {PROJECT_STATUSES[p.status]}
-        {p.assetClass ? ` · ${ASSET_CLASSES[p.assetClass]}` : ""}{p.capacity ? ` · ${p.capacity} ${p.capacityUnit ?? ""}` : ""}
-        {[p.municipality, p.subdivision, p.country].filter(Boolean).length ? ` · ${[p.municipality, p.subdivision, p.country].filter(Boolean).join(", ")}` : " · Location not set"}
-        {p.regeneraRole ? ` · Regenera: ${REGENERA_ROLES[p.regeneraRole]}` : ""}
-      </p>
+      {/* Context tabs, grouped: every ?tab= key is unchanged, so deep links and bookmarks keep working. */}
       <nav className={ui.tabs} aria-label="Project sections">
-        {TABS.map(([k, label]) => (
-          <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/projects/${p.id}${k === "overview" ? "" : `?tab=${k}`}`}>
-            {label}{k === "constraints" && openCons.length ? ` (${openCons.length})` : ""}
+        {TAB_GROUPS.map(g => (
+          <Link key={g.label} className={`${ui.tab} ${g.tabs.includes(tab) ? ui.tabActive : ""}`} href={`/projects/${p.id}${g.tabs[0] === "overview" ? "" : `?tab=${g.tabs[0]}`}`}>
+            {g.label}{g.tabs.includes("constraints") && openCons.length ? ` (${openCons.length})` : ""}
           </Link>
         ))}
       </nav>
+      {(() => { const g = TAB_GROUPS.find(x => x.tabs.includes(tab)); return g && g.tabs.length > 1 ? (
+        <nav className={ph.subtabs} aria-label={`${g.label} sections`}>
+          {g.tabs.map(k => <Link key={k} className={tab === k ? ph.subActive : undefined} aria-current={tab === k ? "page" : undefined} href={`/projects/${p.id}${k === "overview" ? "" : `?tab=${k}`}`}>{TABS.find(([kk]) => kk === k)?.[1]}{k === "constraints" && openCons.length ? ` (${openCons.length})` : ""}</Link>)}
+        </nav>) : null; })()}
 
       {tab === "overview" && (
         <div className={r.grid}>

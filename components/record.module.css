@@ -1,12 +1,12 @@
 .head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
 .kicker { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--eyebrow); }
-.title { margin: 0; font-size: 26px; letter-spacing: -.02em; line-height: 1.15; }
+.title { margin: 0; font-size: var(--fs-display); font-weight: 600; letter-spacing: -.03em; line-height: 1.08; }
 .meta { margin: 6px 0 0; font-size: 13.5px; color: var(--text-muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
-.panel { border: 1px solid var(--line); border-radius: var(--radius-card); padding: 16px; margin-bottom: 16px; background: var(--paper); }
-.panelTitle { margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--eyebrow); display: flex; justify-content: space-between; gap: 8px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
+.panel { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 16px 0 22px; margin-bottom: 8px; background: transparent; }
+.panelTitle { margin: 0 0 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); display: flex; justify-content: space-between; gap: 8px; }
 
 .fieldRow { display: grid; grid-template-columns: 170px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); font-size: 13.5px; }
 .fieldRow:first-of-type { border-top: 0; }
@@ -27,14 +27,14 @@
 .when { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .what b { font-weight: 600; text-transform: capitalize; }
 
-.read { border-left: 2px solid var(--pollen); padding-left: 12px; font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
+.read { border-left: 2px solid var(--copper); padding-left: 12px; font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
 .scoreGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-.scoreCell { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.scoreCell { border: 0; border-left: 1px solid var(--line); border-radius: 0; padding: 4px 12px; }
 .scoreCell b { display: block; font-size: 20px; color: var(--heading); font-variant-numeric: tabular-nums; }
 .scoreCell span { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
 .why { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0; }
 
-.form textarea, .form input, .form select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; background: var(--paper); color: var(--text); }
+.form textarea, .form input, .form select { width: 100%; border: 1px solid var(--ash); border-radius: var(--radius-control); padding: 8px 10px; font: inherit; font-size: 13px; background: var(--paper); color: var(--text); }
 .form textarea { min-height: 90px; resize: vertical; }
 .form button { margin-top: 8px; }
 .formRow { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }

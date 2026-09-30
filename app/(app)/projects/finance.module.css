@@ -5,7 +5,7 @@
 .inlineForm input, .inlineForm select { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 13px; }
 .govGrid { display: grid; gap: 4px; }
 .ws { display: grid; gap: 10px; }
-.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
 .strip div { padding: 8px 10px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
 .strip div:last-child { border-right: 0; }
 .strip span { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--eyebrow); }

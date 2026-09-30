@@ -1,0 +1,25 @@
+.split { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr); background: var(--limestone); }
+.visual { position: relative; overflow: hidden; background: var(--volcanic); color: var(--text-on-dark); display: flex; flex-direction: column; justify-content: space-between; padding: 40px 48px; }
+.motif { position: absolute; inset: -4%; width: 108%; height: 108%; animation: drift 38s ease-in-out infinite alternate; }
+.mark { position: relative; font-size: 12.5px; font-weight: 600; letter-spacing: .24em; display: inline-flex; align-items: center; gap: 9px; }
+.mark::before { content: ""; width: 7px; height: 7px; border-radius: 1px; background: var(--copper); }
+.statement { position: relative; max-width: 560px; }
+.statement h2 { color: var(--text-on-dark); font-size: clamp(28px, 2.6vw, 40px); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 14px; }
+.statement p { color: var(--text-on-dark-2); font-size: 14px; margin: 0; max-width: 460px; }
+.form { display: flex; flex-direction: column; justify-content: center; padding: 48px clamp(28px, 5vw, 72px); }
+.form h1 { font-size: 26px; margin: 0 0 6px; }
+.form .lede { color: var(--text-2); font-size: 13.5px; margin: 0 0 28px; }
+.fields { display: grid; gap: 8px; max-width: 360px; }
+.fields label { font-size: 12px; font-weight: 500; color: var(--text-2); margin-top: 8px; }
+.fields input { height: 40px; padding: 0 12px; border: 1px solid var(--ash); background: #fff; font-size: 14px; color: var(--text-1); }
+.fields button { margin-top: 18px; height: 40px; justify-content: center; }
+.msg { font-size: 13px; color: var(--text-2); max-width: 360px; }
+.err { font-size: 13px; color: var(--risk); max-width: 360px; }
+.foot { margin-top: 40px; font-size: 11.5px; color: var(--text-3); max-width: 360px; }
+@keyframes drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-2%, 1.5%, 0) scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .motif { animation: none; } }
+@media (max-width: 860px) {
+  .split { grid-template-columns: 1fr; }
+  .visual { min-height: 220px; padding: 24px; }
+  .statement h2 { font-size: 24px; }
+}

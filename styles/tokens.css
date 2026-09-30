@@ -1,32 +1,121 @@
-/* Copied from regenera-development-office/app/globals.css (live regenera.bio). Do not add ad-hoc colors. */
+/* Regenera OS design system — "Territorial intelligence" (docs/design-system.md). Mineral neutrals, oxidized copper as
+   the one accent, solar as a rare signal; lichen, glacial, steel and aubergine are semantic data colours only.
+   Do not add ad-hoc colours: add a token here. Legacy names (paper, ink, fern, wax, pollen, leaf, reed, water, line)
+   are kept and remapped so every existing screen follows the system. */
 :root {
-  --paper: #ffffff;
+  /* Dark system */
+  --volcanic: #161816;
+  --basalt: #20231f;
+  --shale: #2a2d28;
+  --smoke: #777c73;
+  /* Light system */
+  --limestone: #f2f0e9;
+  --chalk: #faf9f5;
+  --sandstone: #e7e3d8;
+  --ash: #d4d1c8;
+  /* Text */
+  --text-1: #161816;
+  --text-2: #5c6058;
+  --text-3: #858a80;
+  --text-on-dark: #f2f0e9;
+  --text-on-dark-2: #a4a89e;
+  /* Accent and signal */
+  --copper: #b6633e;
+  --copper-ink: #9a4f2e;           /* copper that passes contrast as text on chalk */
+  --copper-tint: rgba(182, 99, 62, .08);
+  --solar: #e4a62a;
+  /* Semantic data colours (maps, charts, status) — never decoration */
+  --lichen: #7c8b68;
+  --glacial: #5e8c91;
+  --steel: #727a7c;
+  --aubergine: #675568;
+  --critical: #b94b42;
+  --warning: #c98632;
+  --positive: #66845f;
+  --sem-energy: var(--solar);
+  --sem-water: var(--glacial);
+  --sem-nature: var(--lichen);
+  --sem-agriculture: var(--lichen);
+  --sem-land: var(--copper);
+  --sem-capital: var(--aubergine);
+  --sem-built: #9a958a;
+  --sem-infrastructure: var(--steel);
+  --risk: var(--critical);
+  --success: var(--positive);
+
+  /* Transitional aliases (code written before the palette settled) */
+  --carbon: var(--volcanic);
+  --graphite: var(--volcanic);
+  --graphite-2: var(--basalt);
+  --graphite-3: var(--shale);
+  --canvas: var(--chalk);
+  --canvas-2: var(--limestone);
+  --canvas-3: var(--sandstone);
+  --hairline: var(--ash);
+  --indigo: var(--copper);
+  --indigo-ink: var(--copper-ink);
+  --indigo-tint: var(--copper-tint);
+  --ice: #e9c2ad;
+
+  /* Legacy names → the system above */
+  --paper: var(--chalk);
+  --paper-2: var(--limestone);
   --white: #ffffff;
-  --ink: #0d120e;
-  --fern: #131b13;
-  --leaf: #7a8675;
-  --reed: #a9c799;
-  --water: #476b5e;
-  --wax: #efe9dc;
-  --pollen: #c9a84d;
-  --line: rgba(13, 18, 14, 0.18);
+  --ink: var(--text-1);
+  --fern: var(--volcanic);
+  --wax: var(--text-on-dark);
+  --pollen: var(--copper);
+  --leaf: var(--text-3);
+  --reed: var(--lichen);
+  --water: var(--copper-ink);
+  --line: rgba(22, 24, 22, .11);
 
-  /* OS semantic tokens, derived from the palette above */
-  --bg: var(--paper);
-  --surface: var(--wax);
-  --text: var(--ink);
-  --text-muted: #566158;
-  --heading: var(--fern);
-  --eyebrow: var(--leaf);
-  --action: var(--pollen);
-  --action-text: var(--fern);
-  --link: var(--water);
-  --positive: var(--reed);
+  /* Roles */
+  --bg: var(--limestone);
+  --surface: var(--sandstone);
+  --text: var(--text-1);
+  --text-muted: var(--text-2);
+  --heading: var(--text-1);
+  --eyebrow: var(--text-3);
+  --action: var(--copper);
+  --action-text: var(--chalk);
+  --link: var(--copper-ink);
+  --focus: var(--copper);
 
-  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Type */
+  --font: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --fs-display: clamp(28px, 2.4vw, 38px);
+  --fs-title: 25px;
+  --fs-section: 19px;
+  --fs-sub: 15px;
+  --fs-body: 13.5px;
+  --fs-meta: 11.5px;
+
+  /* Spacing (8 px grid) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  /* Shape: institutional, not bubbly */
   --radius-pill: 999px;
-  --radius-card: 12px;
+  --radius-card: 3px;
+  --radius-control: 4px;
+  --radius-dialog: 6px;
+  --shadow-overlay: 0 16px 40px rgba(12, 13, 12, .20);
+
+  /* Motion: spatial, no bounce */
+  --t-fast: 120ms;
+  --t-standard: 180ms;
+  --t-panel: 220ms;
+  --t-context: 280ms;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+
+  /* Floating dark surfaces (Atlas controls) */
+  --glass-dark: rgba(32, 35, 31, .94);
 }
 
-/* Light only, like regenera.bio: the work area is always white. Only the header and sidebar are fern. */
 :root { color-scheme: light; }
+/* Density: FOCUS / STANDARD (default) / DENSE, set on <html data-density>. */
+:root[data-density="dense"] { --fs-body: 12.5px; }
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-standard: 0ms; --t-panel: 0ms; --t-context: 0ms; }
+}

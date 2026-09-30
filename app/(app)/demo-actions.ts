@@ -7,11 +7,11 @@ import { removeDemo, seedDemo } from "@/lib/demo/seed";
 
 export async function loadDemoAction() {
   let msg = "";
-  await withOsUser(async user => { const r = await seedDemo(appDb(), user.email); msg = r.created ? "Demo data loaded into the DEMO entity. Switch entity in the header to focus on it." : "Demo data is already loaded."; }, { owner: true });
+  await withOsUser(async user => { const r = await seedDemo(appDb(), user.email); msg = r.created ? "Demo data loaded into the DEMO entity. Switch entity in the header to focus on it." : "Demo data is already loaded."; }, { owner: true, internal: true });
   redirect(`/settings/demo?notice=${encodeURIComponent(msg)}`);
 }
 
 export async function removeDemoAction() {
-  await withOsUser(async () => { await removeDemo(appDb()); }, { owner: true });
+  await withOsUser(async () => { await removeDemo(appDb()); }, { owner: true, internal: true });
   redirect(`/settings/demo?notice=${encodeURIComponent("Demo data removed.")}`);
 }

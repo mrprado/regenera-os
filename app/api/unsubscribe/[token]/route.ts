@@ -7,7 +7,7 @@ import { applyUnsubscribe, verifyUnsubscribeToken } from "@/lib/outreach/unsubsc
 
 const page = (title: string, body: string, status = 200) => new Response(
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>
-<style>body{margin:0;background:#fff;color:#131b13;font:16px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif}main{max-width:480px;margin:18vh auto;padding:0 16px}h1{font-size:22px;font-weight:600;margin:0 0 8px}button{margin-top:16px;background:#131b13;color:#fff;border:0;border-radius:6px;padding:10px 18px;font:inherit;cursor:pointer}</style>
+<style>body{margin:0;background:#fff;color:#161816;font:16px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif}main{max-width:480px;margin:18vh auto;padding:0 16px}h1{font-size:22px;font-weight:600;margin:0 0 8px}button{margin-top:16px;background:#161816;color:#fff;border:0;border-radius:6px;padding:10px 18px;font:inherit;cursor:pointer}</style>
 </head><body><main>${body}</main></body></html>`,
   { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
 );

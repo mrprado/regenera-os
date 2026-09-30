@@ -2,18 +2,26 @@
 
 import { Command } from "cmdk";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { flatNav, type NavUser } from "@/lib/nav";
+import { pathAllowed } from "@/lib/tenancy/vocab";
 import { confirmProposalAction, rejectProposalAction } from "./intel-actions";
 import styles from "./command-bar.module.css";
 import { withBase } from "@/lib/base-path";
 
 type Turn = { role: "user" | "assistant"; text: string; proposals?: { id: string; title: string }[] };
 
-const PAGES = [
-  ["Today", "/today"], ["Projects", "/projects"], ["Project pipeline", "/projects?view=board"], ["Map", "/map"], ["People", "/people"], ["Companies", "/companies"], ["Prospecting", "/prospecting"], ["Triggers", "/triggers"], ["Funding", "/funding"],
-  ["Approval queue", "/queue"], ["Sequences", "/sequences"], ["Inbox", "/inbox"], ["Tasks", "/tasks"], ["Opportunities", "/deals"], ["Partners", "/partners"],
-  ["Reports", "/reports"], ["Forecast", "/reports?tab=forecast"], ["Settings", "/settings"],
-] as const;
+/** Quick actions: each opens the screen where the action is completed (nothing is created from the palette itself). */
+const ACTIONS: [string, string][] = [
+  ["Create project", "/projects"], ["Add person", "/people/new"], ["Add organization", "/companies/new"], ["Import contacts", "/people/import"], ["Create deal", "/deals"],
+  ["Create engagement", "/commercial?tab=engagements"], ["New client organization", "/clients"], ["Invite a member", "/org?tab=users"], ["Open Atlas", "/map"],
+  ["Run site intelligence (choose a project in Atlas)", "/map"], ["Find capital for a project", "/capital?tab=opportunities"], ["Upload or register a document", "/documents"],
+  ["Generate a document", "/documents/generator"], ["Create report", "/reports"], ["Record a large load", "/power"], ["Add a land candidate", "/land"],
+];
+const RECENT_KEY = "os_recent";
+function readRecent(): { href: string; title: string }[] {
+  try { return (JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") as { href: string; title: string }[]).slice(1); } catch { return []; }
+}
 const EXAMPLES = [
   "Show family offices in Latin America with a trigger this year",
   "Which deals have no next action?",
@@ -28,7 +36,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_person: "Opening a record", pipeline_metrics: "Computing metrics", list_replies: "Reading replies", search_funding: "Searching funding", search_projects: "Reading projects",
 };
 
-export default function CommandBar() {
+export default function CommandBar({ nav }: { nav: NavUser }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -37,6 +45,18 @@ export default function CommandBar() {
   const router = useRouter();
   const pathname = usePathname();
   const endRef = useRef<HTMLDivElement>(null);
+  const flat = useMemo(() => flatNav(nav), [nav]);
+  const recent = useMemo(() => (open ? readRecent() : []), [open]);
+  // Recents are a per-browser convenience (localStorage); they never leave the device.
+  useEffect(() => {
+    const href = window.location.pathname.replace(/^\/os/, "") + window.location.search;
+    const title = document.title.replace(/\s*[·|–-]\s*Regenera.*$/, "") || href;
+    try {
+      const prev = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") as { href: string; title: string }[];
+      const next = [{ href, title }, ...prev.filter(p => p.href !== href)].slice(0, 8);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch { /* storage unavailable */ }
+  }, [pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,7 +118,9 @@ export default function CommandBar() {
   }
 
   const shownHits = value.trim().length >= 2 ? hits : [];
-  const filteredPages = PAGES.filter(([label]) => !value || label.toLowerCase().includes(value.toLowerCase()));
+  const needle = value.trim().toLowerCase();
+  const filteredPages = flat.filter(f => !needle ? false : `${f.path} ${f.keywords}`.toLowerCase().includes(needle)).slice(0, 12);
+  const filteredActions = ACTIONS.filter(([label, href]) => pathAllowed(nav.modules, href) && (!needle || label.toLowerCase().includes(needle)) && (href !== "/clients" || nav.internal)).slice(0, needle ? 6 : 8);
 
   return (
     <>
@@ -149,10 +171,20 @@ export default function CommandBar() {
               ))}
             </Command.Group>
           )}
+          {!needle && recent.length > 0 && (
+            <Command.Group heading="Recent" className={styles.group}>
+              {recent.map(r => <Command.Item key={r.href} value={`recent:${r.href}`} onSelect={() => { setOpen(false); router.push(r.href); }} className={styles.item}>{r.title}<span style={{ opacity: 0.6, marginLeft: 8, fontSize: 12 }}>{r.href}</span></Command.Item>)}
+            </Command.Group>
+          )}
+          {filteredActions.length > 0 && (
+            <Command.Group heading="Actions" className={styles.group}>
+              {filteredActions.map(([label, href]) => <Command.Item key={label} value={`act:${label}`} onSelect={() => { setOpen(false); router.push(href); }} className={styles.item}>{label}</Command.Item>)}
+            </Command.Group>
+          )}
           {filteredPages.length > 0 && (
             <Command.Group heading="Go to" className={styles.group}>
-              {filteredPages.map(([label, href]) => (
-                <Command.Item key={href} value={`go:${href}`} onSelect={() => { setOpen(false); router.push(href); }} className={styles.item}>{label}</Command.Item>
+              {filteredPages.map(f => (
+                <Command.Item key={f.path} value={`go:${f.path}`} onSelect={() => { setOpen(false); router.push(f.href); }} className={styles.item}>{f.path}</Command.Item>
               ))}
             </Command.Group>
           )}

@@ -1,14 +1,14 @@
 .wrap { display: grid; gap: 14px; padding: 4px 0; }
 .title { width: 280px; height: 26px; border-radius: 6px; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.stat { height: 64px; border-radius: 8px; }
+.stat { height: 64px; border-radius: 4px; }
 .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
-.panel { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+.panel { border: 1px solid var(--line); border-radius: 4px; padding: 14px; display: grid; gap: 10px; }
 .line { height: 12px; border-radius: 4px; }
 .short { width: 40%; }
-.shim { background: linear-gradient(90deg, var(--line) 0%, var(--paper-2, #f4f1e8) 50%, var(--line) 100%); background-size: 200% 100%; animation: shim 1.2s linear infinite; }
-.error { border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; max-width: 720px; }
-.map { position: relative; height: calc(100vh - 120px); border-radius: 10px; background: #0f1512; overflow: hidden; }
+.shim { background: linear-gradient(90deg, var(--line) 0%, var(--paper-2, #f2f0e9) 50%, var(--line) 100%); background-size: 200% 100%; animation: shim 1.2s linear infinite; }
+.error { border: 1px solid var(--line); border-radius: 4px; padding: 16px; display: grid; gap: 8px; max-width: 720px; }
+.map { position: relative; height: calc(100vh - 120px); border-radius: 4px; background: #0f1512; overflow: hidden; }
 .mapLabel { position: absolute; left: 16px; bottom: 16px; color: #cfd8d2; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
 @keyframes shim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .shim { animation: none; } }

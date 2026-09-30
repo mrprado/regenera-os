@@ -26,7 +26,7 @@ type Project = typeof projects.$inferSelect;
 type Scope = Parameters<typeof mandateCondition>[0];
 const SECTIONS = [["structure", "Structure & horizons"], ["production", "Production"], ["design", "Ecological design"], ["certification", "Certification & MRV"], ["inventory", "Inventory"], ["offtake", "Environmental offtake"], ["risk", "Risk transfer"]] as const;
 const n0 = (x: number | null | undefined) => (x === null || x === undefined ? "—" : Math.round(x).toLocaleString("en-US"));
-const LINK_COLORS: Record<string, string> = { ownership: "#2f4a3a", contract: "#6b9fb8", cash_flow: "#c9a227", service: "#8a8f86", liability: "#b0432f", land_right: "#6fa36f" };
+const LINK_COLORS: Record<string, string> = { ownership: "#161816", contract: "#6b9fb8", cash_flow: "#c9a227", service: "#8a8f86", liability: "#b0432f", land_right: "#6fa36f" };
 
 export default async function NaturalTab({ project, scope, sec }: { project: Project; scope: Scope; sec?: string }) {
   const section = SECTIONS.some(([k]) => k === sec) ? sec! : "structure";

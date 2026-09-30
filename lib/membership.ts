@@ -3,6 +3,7 @@ import type { Db } from "@/db";
 import { mandateMembers, mandates } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { UserScope } from "@/lib/db/scoped";
+import { ensureRegeneraTenant, resolveAccess } from "@/lib/tenancy/engine";
 
 export const REGENERA_MANDATE_ID = "mandate_regenera";
 
@@ -38,6 +39,7 @@ export async function resolveMembership(
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(mandateMembers);
     if (count > 0 || !bootstrapAllowlist.has(email)) return null;
     await ensureRegeneraMandate(db);
+    await ensureRegeneraTenant(db);
     await db.insert(mandateMembers).values({ mandateId: REGENERA_MANDATE_ID, email, userId: user.userId, role: "owner" }).onConflictDoNothing();
     await audit(db, { actor: email, action: "bootstrap_owner", entity: "mandate_members", entityId: REGENERA_MANDATE_ID });
     rows = await db.select().from(mandateMembers).where(eq(mandateMembers.email, email));
@@ -49,11 +51,20 @@ export async function resolveMembership(
     await db.update(mandateMembers).set({ userId: user.userId }).where(and(eq(mandateMembers.email, email), isNull(mandateMembers.userId)));
   }
 
+  // Tenant state (lib/tenancy): deactivated members and suspended client organizations lose their grants here.
+  const access = await resolveAccess(db, email, rows);
+  if (!access) return null;
+  const live = new Set(access.mandateIds);
   return {
     kind: "user",
     userId: user.userId,
     email,
-    mandateIds: rows.map(r => r.mandateId),
-    ownerOf: rows.filter(r => r.role === "owner").map(r => r.mandateId),
+    mandateIds: access.mandateIds,
+    ownerOf: rows.filter(r => r.role === "owner" && live.has(r.mandateId)).map(r => r.mandateId),
+    userType: access.userType,
+    persona: access.persona,
+    tenantIds: access.tenantIds,
+    adminOf: access.adminOf,
+    modules: access.modules,
   };
 }

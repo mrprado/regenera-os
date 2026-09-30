@@ -15,6 +15,12 @@ export type UserScope = {
   /** Every mandate the user belongs to, before the header switcher narrows `mandateIds`. */
   memberOf?: string[];
   ownerOfAll?: string[];
+  /** Client operating layer (lib/tenancy). Absent on scopes built before it, which behave as Regenera internal. */
+  userType?: "regenera_internal" | "client_admin" | "client_user" | "read_only";
+  persona?: string;
+  tenantIds?: string[];
+  adminOf?: string[];
+  modules?: string[] | "all";
 };
 export type SystemScope = { kind: "system"; reason: string };
 export type Scope = UserScope | SystemScope;
@@ -39,4 +45,9 @@ export async function systemScope(db: Db, reason: string): Promise<SystemScope> 
 export function isOwner(scope: Scope, mandateId?: string): boolean {
   if (scope.kind === "system") return true;
   return mandateId ? scope.ownerOf.includes(mandateId) : scope.ownerOf.length > 0;
+}
+
+/** Regenera staff (or a system job). Client users, read-only users and client admins are not. */
+export function isInternal(scope: Scope): boolean {
+  return scope.kind === "system" || scope.userType === undefined || scope.userType === "regenera_internal";
 }

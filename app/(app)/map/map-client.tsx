@@ -34,7 +34,7 @@ const StreetView = lazy(() => import("./street-view"));
 
 maplibregl.setWorkerUrl(withBase("/maplibre-gl-worker.js"));
 
-const C = { fern: "#131b13", ink: "#0d120e", wax: "#efe9dc", pollen: "#c9a84d", reed: "#a9c799", ember: "#c8553d", sky: "#7fb7d6" };
+const C = { fern: "#161816", ink: "#161816", wax: "#f2f0e9", pollen: "#c97a52", reed: "#a9c799", ember: "#c8553d", sky: "#7fb7d6" };
 const SECTOR_COLORS: [string, string][] = [["energy", C.pollen], ["infrastructure", C.sky], ["land_built_environment", C.reed], ["waste_resource_systems", "#c08a5a"], ["water_food_nature", "#5fb3a1"]];
 const TRIGGER_COLORS: [string, string][] = [["capital", C.pollen], ["crisis", C.ember], ["people", "#d9c7f0"], ["project", C.reed], ["regulatory", "#e59f5a"], ["commitment", "#5fb3a1"], ["event", C.wax]];
 
@@ -62,14 +62,14 @@ function addDataLayers(map: maplibregl.Map) {
   map.addLayer({ id: "hazards", type: "circle", source: "hazards", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 8, 11], "circle-color": ["match", ["get", "level"], "Red", "#d9412b", "#e59a3a"], "circle-opacity": 0.25, "circle-stroke-color": ["match", ["get", "level"], "Red", "#ff6a4d", "#f2b35a"], "circle-stroke-width": 1.5 } });
   map.addLayer({ id: "organizations-cluster", type: "circle", source: "organizations", filter: ["has", "point_count"], paint: { "circle-color": "rgba(19,27,19,0.82)", "circle-stroke-color": C.reed, "circle-stroke-width": 1.5, "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 50, 24] } });
   map.addLayer({ id: "organizations-count", type: "symbol", source: "organizations", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 11 }, paint: { "text-color": C.wax } });
-  map.addLayer({ id: "organizations", type: "circle", source: "organizations", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3.5, 10, 7], "circle-color": sectorColor, "circle-stroke-color": "rgba(13,18,14,0.9)", "circle-stroke-width": 1.2 } });
-  map.addLayer({ id: "deals", type: "circle", source: "deals", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 7, 10, 13], "circle-color": "rgba(201,168,77,0.12)", "circle-stroke-color": C.pollen, "circle-stroke-width": 2.4 } });
+  map.addLayer({ id: "organizations", type: "circle", source: "organizations", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3.5, 10, 7], "circle-color": sectorColor, "circle-stroke-color": "rgba(22,24,22,0.9)", "circle-stroke-width": 1.2 } });
+  map.addLayer({ id: "deals", type: "circle", source: "deals", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 7, 10, 13], "circle-color": "rgba(182,99,62,0.12)", "circle-stroke-color": C.pollen, "circle-stroke-width": 2.4 } });
   map.addLayer({ id: "projects-glow", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 14, 10, 26], "circle-color": C.pollen, "circle-opacity": 0.16, "circle-blur": 0.8 } });
   map.addLayer({ id: "projects", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 6, 10, 12], "circle-color": C.wax, "circle-stroke-color": "#173b2a", "circle-stroke-width": 3 } });
-  map.addLayer({ id: "projects-label", type: "symbol", source: "projects", minzoom: 3.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-letter-spacing": 0.04, "text-optional": true }, paint: { "text-color": "#fbf6e8", "text-halo-color": "rgba(3,6,8,.92)", "text-halo-width": 1.5 } });
+  map.addLayer({ id: "projects-label", type: "symbol", source: "projects", minzoom: 3.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-letter-spacing": 0.04, "text-optional": true }, paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,.92)", "text-halo-width": 1.5 } });
   map.addLayer({ id: "procurement", type: "circle", source: "procurement", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "triggers-halo", type: "circle", source: "triggers", paint: { "circle-radius": 12, "circle-color": triggerColor, "circle-opacity": 0.18, "circle-blur": 0.6 } });
-  map.addLayer({ id: "triggers", type: "circle", source: "triggers", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, ["+", 3, ["coalesce", ["get", "urgency"], 3]], 10, ["+", 6, ["coalesce", ["get", "urgency"], 3]]], "circle-color": triggerColor, "circle-stroke-color": "#0d120e", "circle-stroke-width": 1.2 } });
+  map.addLayer({ id: "triggers", type: "circle", source: "triggers", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, ["+", 3, ["coalesce", ["get", "urgency"], 3]], 10, ["+", 6, ["coalesce", ["get", "urgency"], 3]]], "circle-color": triggerColor, "circle-stroke-color": "#161816", "circle-stroke-width": 1.2 } });
 }
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

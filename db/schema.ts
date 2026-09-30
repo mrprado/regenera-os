@@ -27,6 +27,10 @@ export const mandates = sqliteTable("mandates", {
   // Investment mandates cannot send until an owner records that counsel confirmed the outreach rules (SPEC section 13).
   counselConfirmedAt: text("counsel_confirmed_at"),
   counselConfirmedBy: text("counsel_confirmed_by"),
+  // Client operating layer: the tenant (client organization) that owns this workspace. Null = Regenera.
+  tenantId: text("tenant_id"),
+  // Sandbox workspaces hold test data only; they are labelled everywhere and never mix with production records.
+  sandbox: integer("sandbox", { mode: "boolean" }).notNull().default(false),
   ...timestamps,
 }, () => [check("mandates_type_check", inList("type", MANDATE_TYPES))]);
 
@@ -142,3 +146,4 @@ export * from "./benchmarks";
 export * from "./intelligence";
 export * from "./siteintel";
 export * from "./compliance";
+export * from "./tenancy";

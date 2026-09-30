@@ -106,14 +106,15 @@ export async function verifyLatestBackup(db: Db, store: BackupStore, now = new D
   return result;
 }
 
-/** Restores one night into an empty database (tests and scripts/restore-backup.mjs). Rows are inserted as stored. */
+/** Restores one night into a freshly migrated database (tests and scripts/restore-backup.mjs). Backup rows win over rows
+ *  seeded by migrations (e.g. the Regenera tenant), hence "insert or replace". */
 export async function restoreInto(exec: (statement: string, params: unknown[]) => Promise<void>, files: Record<string, string>) {
   const counts: Record<string, number> = {};
   for (const [name, body] of Object.entries(files)) {
     const rows = body ? body.split("\n").map(l => JSON.parse(l) as Record<string, unknown>) : [];
     for (const r of rows) {
       const cols = Object.keys(r);
-      await exec(`insert into "${name}" (${cols.map(c => `"${c}"`).join(", ")}) values (${cols.map(() => "?").join(", ")})`, cols.map(c => r[c]));
+      await exec(`insert or replace into "${name}" (${cols.map(c => `"${c}"`).join(", ")}) values (${cols.map(() => "?").join(", ")})`, cols.map(c => r[c]));
     }
     counts[name] = rows.length;
   }
