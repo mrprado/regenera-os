@@ -15,7 +15,9 @@ import { deliverabilityIssues } from "@/lib/outreach/deliverability";
 import { engageCounts, sendingOverview, upcomingMeetings } from "@/lib/outreach/queries";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { capitalOpportunities, proposals } from "@/db/schema";
-import { appDb, mandateCondition } from "@/lib/db/scoped";
+import { appDb, isInternal, mandateCondition } from "@/lib/db/scoped";
+import { commercialOverview } from "@/lib/commercial/engine";
+import { commercialMetrics } from "@/lib/commercial/metrics";
 import { confirmProposalAction, rejectProposalAction } from "../intel-actions";
 import { fundingCounts } from "@/lib/funding/queries";
 import { contractTotals } from "@/lib/contracts/queries";
@@ -74,6 +76,10 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
     changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
   ]);
   const showAll = sp.attention === "all";
+  // Regenera's own commercial position: internal staff only, never a client user (hardening §31; company model §30).
+  const internal = isInternal(user.scope);
+  const comm = internal ? await commercialOverview(appDb(), user.scope.mandateIds) : null;
+  const cm = comm ? commercialMetrics(comm.rows) : null;
   const [align, pending, [gateQueue], located] = await Promise.all([
     capitalAlignment(appDb(), user.scope.mandateIds),
     appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
@@ -103,6 +109,14 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
         <Stat n={strip.investors} label="Capital partner profiles" href="/capital" />
         <Stat n={strip.criticalRisks} label="High-impact open risks" href="/projects" warn />
       </div>
+      {cm && cm.byCurrency.some(m => m.arr || m.advisoryMrr || m.backlog || m.weighted || m.renewals) && cm.byCurrency.map(m => (
+        <div key={m.currency} className={ui.stats} aria-label="Regenera commercial (internal)">
+          <Stat n={compactMoney(m.arr, m.currency)} label="Platform ARR" href="/commercial" />
+          <Stat n={compactMoney(m.advisoryMrr, m.currency)} label="Advisory MRR" href="/commercial" />
+          <Stat n={compactMoney(m.backlog, m.currency)} label="Implementation backlog" href="/commercial" />
+          <Stat n={compactMoney(m.weighted, m.currency)} label="Weighted pipeline" href="/commercial?tab=engagements" />
+          <Stat n={compactMoney(m.renewals, m.currency)} label="Renewing in 120 days" href="/commercial" />
+        </div>))}
       {align.total > 0 && <div className={ui.stats} aria-label="Capital alignment">
         {(["nature_positive", "transition", "unclassified"] as const).map(k => <Stat key={k} n={compactMoney(align.byAlignment[k], align.currency)} label={`${ALIGNMENT[k]} capital`} href="/capital/alignment" />)}
         <Stat n={compactMoney(align.materialRisk, align.currency)} label="Capital with material nature risk" href="/capital/alignment" />

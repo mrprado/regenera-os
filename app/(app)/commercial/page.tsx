@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { commercialMetrics } from "@/lib/commercial/metrics";
 import { asc, eq, isNull, and } from "drizzle-orm";
 import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
@@ -8,7 +9,7 @@ import { accountConnections, commercialPartners, corporateEntities, organization
 import { requireOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { commercialOverview, ensureServices, priceService } from "@/lib/commercial/engine";
-import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, DEPTHS, ENGAGEMENT_STATUSES, ENTITY_KINDS, INVOICE_STATUSES, LIFECYCLE_PHASES, PARTNER_KINDS, SERVICE_FAMILIES, VENDOR_CAPABILITIES } from "@/lib/commercial/vocab";
+import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, DEPTHS, ENGAGEMENT_STATUSES, ENTITY_KINDS, INVOICE_STATUSES, LIFECYCLE_PHASES, PARTNER_KINDS, SERVICE_FAMILIES, VENDOR_CAPABILITIES , REVENUE_CATEGORIES } from "@/lib/commercial/vocab";
 import { addAccountAction, addEntityAction, addPartnerAction, createEngagementAction, updateServiceAction } from "../commercial-actions";
 import styles from "./commercial.module.css";
 
@@ -27,6 +28,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   const primary = user.scope.mandateIds.find(m => m !== "mandate_demo") ?? user.scope.mandateIds[0];
   await ensureServices(db, primary);
   const [o, svc] = await Promise.all([commercialOverview(db, user.scope.mandateIds), db.select().from(services).where(and(mandateCondition(user.scope, services.mandateId), eq(services.mandateId, primary))).orderBy(asc(services.phase), asc(services.name))]);
+  const metrics = commercialMetrics(o?.rows ?? []);
   const svcName = new Map(svc.map(s => [s.key, `${s.name}${s.depth !== "standard" ? ` · ${DEPTHS[s.depth]}` : ""}`]));
   const today = new Date().toISOString().slice(0, 10);
 
@@ -37,8 +39,22 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       <nav className={ui.tabs} aria-label="Commercial sections">{TABS.map(([k, l]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/commercial${k === "overview" ? "" : `?tab=${k}`}`}>{l}</Link>)}</nav>
 
       {tab === "overview" && o && <>
-        <div className={styles.strip}>
-          {[["Pipeline", money(o.pipelineValue)], ["Weighted pipeline", money(o.pipelineWeighted)], ["Active contract value", money(o.activeValue)], ["MRR / ARR", `${money(o.mrr)} / ${money(o.arr)}`], ["Receivables", money(o.receivables)], ["Overdue invoices", String(o.overdue.length)], ["Win rate", o.winRate === null ? "—" : `${o.winRate}%`]].map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
+        {metrics.byCurrency.map(m => (
+          <dl key={m.currency} className={ui.stats} aria-label={`Commercial metrics in ${m.currency}`}>
+            {([["Platform ARR", m.arr, metrics.definitions.arr], ["Advisory MRR", m.advisoryMrr, metrics.definitions.advisoryMrr], ["Other recurring / month", m.otherMrr, metrics.definitions.otherMrr],
+              ["Implementation backlog", m.backlog, metrics.definitions.backlog], ["Weighted pipeline", m.weighted, metrics.definitions.weighted], ["Renewing in 120 days", m.renewals, metrics.definitions.renewals]] as const).map(([label, v, def]) => (
+              <div key={label} className={ui.stat} title={def}><b>{money(v, m.currency)}</b><span>{label}</span></div>))}
+          </dl>))}
+        <p className={ui.sub}>Receivables {money(o.receivables)} · {o.overdue.length} overdue invoice{o.overdue.length === 1 ? "" : "s"} · open pipeline {metrics.byCurrency.map(m => money(m.pipeline, m.currency)).join(" + ") || "—"}{o.winRate !== null ? ` · win rate ${o.winRate}%` : ""}. Hover a figure for its definition.{metrics.inferredCategories ? ` ${metrics.inferredCategories} engagement(s) have an inferred revenue category: confirm it on the engagement.` : ""}</p>
+        <div className={r.grid}>
+          <section className={r.panel}><p className={r.panelTitle}>Revenue mix (won and active)</p>
+            {metrics.mix.length === 0 ? <p className={r.empty}>No won engagements yet.</p> : <table className={ui.table}><thead><tr><th>Category</th><th>Recurring</th><th className={ui.num}>Engagements</th><th className={ui.num}>Contract value</th><th className={ui.num}>Gross margin</th></tr></thead><tbody>
+              {metrics.mix.map(x => <tr key={`${x.category}|${x.currency}`}><td>{REVENUE_CATEGORIES[x.category].label}</td><td>{REVENUE_CATEGORIES[x.category].recurring ? "Yes" : "No"}</td><td className={ui.num}>{x.count}</td><td className={ui.num}>{money(x.contract, x.currency)}</td><td className={ui.num}>{x.marginKnown && x.marginPct !== null ? `${x.marginPct}%` : <span className={ui.sub}>Needs cost rate</span>}</td></tr>)}
+            </tbody></table>}
+          </section>
+          <aside><section className={r.panel}><p className={r.panelTitle}>Renewals (120 days)</p>
+            {metrics.renewing.length === 0 ? <p className={r.empty}>None due.</p> : <table className={ui.table}><tbody>{metrics.renewing.map(x => <tr key={x.id}><td><Link href={`/commercial/engagements/${x.id}`}>{x.name}</Link><span className={ui.sub}>{x.date}</span></td><td className={ui.num}>{money(x.value, x.currency)}</td></tr>)}</tbody></table>}
+          </section></aside>
         </div>
         <p className={ui.sub}>Advisory economics of Regenera only: kept separate from project investment economics (project Financials). Pipeline weights are stage defaults unless set per engagement.</p>
         <div className={r.grid}>

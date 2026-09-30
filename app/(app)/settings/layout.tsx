@@ -11,13 +11,15 @@ export default async function SettingsLayout({ children }: Readonly<{ children: 
       <nav className={styles.tabs} aria-label="Settings sections">
         <Link href="/settings/connections">Connections</Link>
         <Link href="/settings/sending">Sending</Link>
-        <Link href="/settings/mandates">Entities</Link>
+        <Link href="/settings/mandates">Workspaces</Link>
         <Link href="/settings/extension">Extension</Link>
         <Link href="/settings/claude">Claude</Link>
         <Link href="/settings/jobs">Jobs</Link>
         <Link href="/settings/integrations">Integrations</Link>
         <Link href="/settings/members">Members</Link>
         <Link href="/settings/demo">Demo data</Link>
+        <Link href="/settings/product">Product governance</Link>
+        <Link href="/org">Organization</Link>
       </nav>
       {children}
     </section>

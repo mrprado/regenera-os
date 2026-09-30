@@ -1,0 +1,10 @@
+.wrap { margin: 8px 0 12px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 16px; }
+.wide { grid-column: 1 / -1; }
+.checks { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; }
+.checks legend { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+.checks label { display: inline-flex !important; gap: 5px; align-items: center; font-weight: 400 !important; }
+.checks input { width: auto !important; }
+.inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.inline input, .inline select { height: 28px; font-size: 12.5px; padding: 0 8px; border: 1px solid var(--ash); background: var(--chalk); }
+details summary { cursor: pointer; margin: 6px 0; }

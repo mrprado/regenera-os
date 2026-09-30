@@ -120,6 +120,7 @@ export const SETTINGS_NAV: NavLeaf[] = [
   { label: "Claude", href: "/settings/claude", keywords: "prompts ai" },
   { label: "Extension", href: "/settings/extension" },
   { label: "Demo data", href: "/settings/demo" },
+  { label: "Product governance", href: "/settings/product", keywords: "backlog technical debt product debt requests roadmap" },
   { label: "API & MCP", href: "/connect/mcp", keywords: "tokens" },
 ];
 

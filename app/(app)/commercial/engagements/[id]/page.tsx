@@ -14,6 +14,7 @@ import { BILLING_TYPES, CHANGE_REASONS, CONFLICT_STATES, DELIVERABLE_STATUSES, D
 import { approveEngagementAction, changeOrderAction, conflictCheckAction, conflictDecisionAction, deliverableAction, expenseAction, invoiceAction, partnerLineAction, statusAction, timeAction, updateEngagementAction } from "../../../commercial-actions";
 import { createContractAction } from "../../../contract-actions";
 import styles from "../../commercial.module.css";
+import Lifecycle from "./lifecycle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Engagement" };
@@ -54,6 +55,8 @@ export default async function EngagementPage({ params, searchParams }: { params:
       <div className={styles.strip}>
         {[["Contract value", money(econ.contractValue, e.currency)], ["Invoiced", money(econ.invoiced, e.currency)], ["Collected", money(econ.collected, e.currency)], ["Outstanding", money(econ.outstanding, e.currency)], ["To invoice", money(econ.toInvoice, e.currency)], ["Hours (vs plan)", `${econ.hours}${econ.hoursVsPlanPct !== null ? ` (${econ.hoursVsPlanPct}%)` : ""}`], ["Gross margin", econ.marginPct === null ? "—" : `${econ.marginPct}%${econ.internalCostKnown ? "" : " (no time cost)"}`]].map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
       </div>
+
+      <Lifecycle e={e} scope={user.scope} />
 
       <div className={r.grid}>
         <div>

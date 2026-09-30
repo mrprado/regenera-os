@@ -191,7 +191,7 @@ export async function commercialOverview(db: Db, mandateIds: string[], today = n
   const orgs = orgIds.length ? await db.select({ id: organizations.id, name: organizations.name }).from(organizations).where(inArray(organizations.id, orgIds)) : [];
   const orgName = new Map(orgs.map(o => [o.id, o.name]));
   const rows = es.map(e => ({ e, client: e.orgId ? orgName.get(e.orgId) ?? "—" : "—", econ: engagementEconomics(e, invs.filter(i => i.engagementId === e.id), exps.filter(x => x.engagementId === e.id), time.filter(t => t.engagementId === e.id)) }));
-  const open = rows.filter(r => ["prospect", "scoping", "proposal", "negotiation", "contracting", "renewal"].includes(r.e.status));
+  const open = rows.filter(r => ["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting", "renewal"].includes(r.e.status));
   const active = rows.filter(r => ["active", "waiting_on_client", "on_hold"].includes(r.e.status));
   const liveInv = invs.filter(i => i.status !== "void").map(i => ({ ...i, derived: derivedInvoiceStatus(i, today) }));
   const byService = new Map<string, { contract: number; margin: number; revenue: number; count: number }>();
@@ -211,7 +211,7 @@ export async function commercialOverview(db: Db, mandateIds: string[], today = n
     overdue: liveInv.filter(i => i.derived === "overdue"), dueSoon: liveInv.filter(i => i.derived === "due" || i.derived === "partially_paid"),
     byService: [...byService.entries()].map(([k, v]) => ({ service: k, ...v, marginPct: v.revenue ? r2((v.margin / v.revenue) * 100) : null })).sort((a, b) => b.contract - a.contract),
     byClient: [...byClient.entries()].map(([k, v]) => ({ client: k, ...v })).sort((a, b) => b.contract - a.contract),
-    winRate: (() => { const decided = rows.filter(r => r.e.status === "lost" || !["prospect", "scoping", "proposal", "negotiation", "contracting"].includes(r.e.status)); const won = decided.filter(r => r.e.status !== "lost"); return decided.length ? r2((won.length / decided.length) * 100) : null; })(),
+    winRate: (() => { const decided = rows.filter(r => r.e.status === "lost" || !["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting"].includes(r.e.status)); const won = decided.filter(r => r.e.status !== "lost"); return decided.length ? r2((won.length / decided.length) * 100) : null; })(),
   };
 }
 
