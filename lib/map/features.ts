@@ -1,6 +1,7 @@
 // GeoJSON for the Map screen: projects, organizations, deals, triggers and open procurement,
 // all mandate-scoped. Hazards come from the regenera.bio intelligence API on the client.
 import { and, isNull, ne } from "drizzle-orm";
+import { currentCall } from "@/lib/funding/queries";
 import type { Db } from "@/db";
 import { deals, fundingOpportunities, organizations, projects, triggers } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
@@ -54,7 +55,7 @@ export async function mapFeatures(scope: Scope, now = new Date(), db: Db = appDb
   // Funding opportunities placed by eligible country (0,0 marks "not placeable": EU-wide or global calls).
   const fundingRows = await db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline,
     fit: fundingOpportunities.fit, type: fundingOpportunities.type, url: fundingOpportunities.url, lat: fundingOpportunities.lat, lng: fundingOpportunities.lng, summary: fundingOpportunities.read })
-    .from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed")));
+    .from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), currentCall(new Date().toISOString().slice(0, 10)), ne(fundingOpportunities.decision, "dismissed")));
   const fundingPoints = fundingRows.filter(f => validCoordinates(f.lng, f.lat) && (f.lat !== 0 || f.lng !== 0)).map(f => point(f.lng!, f.lat!, {
     id: f.id, kind: "procurement", type: f.type, summary: f.title, eventDate: f.deadline, urgency: null, relevance: f.fit, source: "funding", url: f.url,
     orgId: null, orgName: f.funder, status: null, decisionRead: f.summary?.summary ?? null, href: `/funding/${f.id}`, locationBasis: "Eligible-country reference point; not a project site",

@@ -65,6 +65,10 @@ export const organizations = sqliteTable("organizations", {
   geoSource: text("geo_source"),         // wikidata, nominatim, apollo, manual
   source: text("source", { enum: keys(LEAD_SOURCES) }).notNull(),
   fieldSources: text("field_sources", { mode: "json" }).$type<FieldSources>().notNull().default(sql`'{}'`),
+  // Commercial roles this organization holds for Regenera (ORG_ROLES); one record, several roles.
+  roles: text("roles", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+  ownerEmail: text("owner_email"),       // relationship owner at Regenera (one accountable person)
+  testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   archivedAt: text("archived_at"),
   ...timestamps,
 }, t => [
@@ -104,6 +108,7 @@ export const contacts = sqliteTable("contacts", {
   suppressed: integer("suppressed", { mode: "boolean" }).notNull().default(false),
   linkedinProfileText: text("linkedin_profile_text"),
   fieldSources: text("field_sources", { mode: "json" }).$type<FieldSources>().notNull().default(sql`'{}'`),
+  testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   archivedAt: text("archived_at"),
   ...timestamps,
 }, t => [
@@ -202,6 +207,7 @@ export const deals = sqliteTable("deals", {
   projectId: text("project_id"),            // physical project this row is about (phase 6)
   monthlyValue: real("monthly_value"),       // retainers
   stageChangedAt: text("stage_changed_at").notNull().default(now),
+  testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   archivedAt: text("archived_at"),
   ...timestamps,
 }, t => [

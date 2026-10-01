@@ -38,6 +38,7 @@ import { freshnessSince } from "@/lib/freshness";
 import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
+import { runScanJob } from "@/lib/scan/engine";
 import { expireQualifications, runMatches } from "@/lib/capital/engine";
 import { expirePermissions } from "@/lib/community/engine";
 import { continueAbandonedRuns } from "@/lib/site-intel/engine";
@@ -302,6 +303,10 @@ export const handlers: Record<string, JobHandler> = {
     if (mandateId) { const w = await getWork(db, mandateId); if (w) await setWork(db, mandateId, { ...w, phase: "syncing", label: `Syncing the ${iso.toUpperCase()} queue` }); }
     const r = await syncQueue(db, iso, now);
     await signalsFromQueueChanges(db, r.changes, now);
+  },
+  // Shared scan engine (phase 15): one bounded step per job, resuming from the run's checkpoint.
+  "scan.step": async ({ db, job, now }) => {
+    await runScanJob(db, job, { apollo: apolloConfig(), ai: aiConfig() }, now);
   },
   "mandates.universe": async ({ db, job, now }) => {
     const id = String(job.payload.id);

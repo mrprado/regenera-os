@@ -2,7 +2,8 @@
 // mandate, only once, only before it expires, and through the same guards as the screens.
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { activities, contacts, deals, listMembers, lists, mandates, messages, proposals } from "@/db/schema";
+import { activities, contacts, deals, listMembers, lists, mandates, messages, organizations, proposals, tasks, QUALIFICATION_FIELDS, COVERAGE_ROLES, type QualificationField } from "@/db/schema";
+import { setCoverage, setQualificationField } from "@/lib/flow/commercial";
 import { audit } from "@/lib/audit";
 import type { UserScope } from "@/lib/db/scoped";
 import { enrollContacts } from "@/lib/outreach/sequences";
@@ -99,6 +100,29 @@ async function applyAction(db: Db, mandateId: string, actor: string, change: { a
         status: issues.length ? "style_failed" : "pending_approval", tier: "targeted", angleTag: "ask", scheduledAt: now, styleIssues: issues.length ? issues : null,
       }).returning({ id: messages.id });
       return { messageId: msg.id, queued: true, styleIssues: issues.length };
+    }
+    // Meeting-to-action proposals (phase 15): applied only after a person confirms each one.
+    case "create_task": {
+      const dealId = a.dealId ? String(a.dealId) : null, orgId = a.orgId ? String(a.orgId) : null;
+      if (dealId) { const [d] = await db.select({ id: deals.id }).from(deals).where(and(eq(deals.id, dealId), eq(deals.mandateId, mandateId))); if (!d) throw new Error("Opportunity not found in this workspace"); }
+      if (orgId) { const [o] = await db.select({ id: organizations.id }).from(organizations).where(and(eq(organizations.id, orgId), eq(organizations.mandateId, mandateId))); if (!o) throw new Error("Organization not found in this workspace"); }
+      const due = /^\d{4}-\d{2}-\d{2}$/.test(String(a.due ?? "")) ? String(a.due) : new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+      const [t] = await db.insert(tasks).values({ mandateId, dealId, orgId, type: "follow_up", title: String(a.title).slice(0, 300), body: String(a.body ?? "").slice(0, 2000), dueAt: `${due}T15:00:00.000Z`, owner: a.owner ? String(a.owner) : actor, workstream: a.workstream ? String(a.workstream).slice(0, 120) : null }).returning({ id: tasks.id });
+      return { taskId: t.id, due };
+    }
+    case "qualification_field": {
+      const field = String(a.field) as QualificationField;
+      if (!(field in QUALIFICATION_FIELDS)) throw new Error("Unknown qualification field");
+      const [d] = await db.select({ id: deals.id }).from(deals).where(and(eq(deals.id, String(a.dealId)), eq(deals.mandateId, mandateId)));
+      if (!d) throw new Error("Opportunity not found in this workspace");
+      await setQualificationField(db, mandateId, d.id, field, String(a.text), String(a.evidence ?? ""), actor);
+      return { dealId: d.id, field };
+    }
+    case "coverage_role": {
+      const role = String(a.role);
+      if (!(role in COVERAGE_ROLES)) throw new Error("Unknown coverage role");
+      await setCoverage(db, mandateId, String(a.orgId), role, { contactId: a.contactId ? String(a.contactId) : null, relationshipOwner: a.owner ? String(a.owner) : actor, nextAction: String(a.nextAction ?? ""), evidence: String(a.evidence ?? "") }, actor);
+      return { orgId: String(a.orgId), role };
     }
     default:
       throw new Error(`Unknown action ${change.action}`);

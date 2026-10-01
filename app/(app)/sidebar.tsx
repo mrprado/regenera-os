@@ -19,7 +19,11 @@ function leafActive(href: string, pathname: string, params: URLSearchParams) {
   if (!q) for (const k of ["tab", "view", "stage", "capital", "blocked", "path"]) if (params.get(k)) return false;
   return true;
 }
-const groupActive = (g: NavGroup, pathname: string) => (g.href ? pathname === g.href || pathname.startsWith(`${g.href}/`) : g.sections.some(s => s.items.some(i => { const p = i.href.split("?")[0]; return pathname === p || pathname.startsWith(`${p}/`); })));
+const groupActive = (g: NavGroup, pathname: string) => {
+  const own = g.href ? g.href.split("?")[0] : null;
+  if (own && (pathname === own || pathname.startsWith(`${own}/`))) return true;
+  return g.sections.some(s => s.items.some(i => { const p = i.href.split("?")[0]; return pathname === p || pathname.startsWith(`${p}/`); }));
+};
 
 function Leaves({ items, pathname, params, onPick }: { items: NavLeaf[]; pathname: string; params: URLSearchParams; onPick?: () => void }) {
   return <>{items.map(i => <Link key={i.href + i.label} href={i.href} onClick={onPick} className={`${styles.subItem} ${leafActive(i.href, pathname, params) ? styles.subItemActive : ""}`}>{i.label}</Link>)}</>;
@@ -68,21 +72,25 @@ export function SidebarNav({ user, variant = "flyout" }: { user: NavUser; varian
           {groups.map(g => {
             const Icon = ICONS[g.icon] ?? House;
             const active = groupActive(g, pathname);
-            if (g.href) return (
+            if (g.href && g.sections.length === 0) return (
               <Link key={g.key} href={g.href} className={`${styles.navItem} ${active ? styles.navItemActive : ""}`} aria-current={active ? "page" : undefined} title={g.label}>
                 <Icon size={17} strokeWidth={1.75} aria-hidden /><span>{g.label}</span>
               </Link>
             );
             const expanded = open === g.key;
+            // The label opens the group's landing page; the chevron (a separate button) opens its submenu.
             return (
-              <div key={g.key}>
-                <button type="button" data-navgroup className={`${styles.navItem} ${styles.navButton} ${active ? styles.navItemActive : ""}`} aria-expanded={expanded} aria-haspopup={variant === "flyout" ? "menu" : undefined} title={g.label}
+              <div key={g.key} className={styles.navSplit}>
+                <Link href={g.href ?? g.sections[0]?.items[0]?.href ?? "/today"} className={`${styles.navItem} ${active ? styles.navItemActive : ""}`} aria-current={active && pathname === (g.href ?? "").split("?")[0] ? "page" : undefined} title={g.label} onClick={() => setOpen(null)}>
+                  <Icon size={17} strokeWidth={1.75} aria-hidden /><span>{g.label}</span>
+                </Link>
+                <button type="button" data-navgroup className={styles.navChevron} aria-expanded={expanded} aria-haspopup={variant === "flyout" ? "menu" : undefined} aria-label={`${expanded ? "Close" : "Open"} ${g.label} menu`} title={`${g.label} menu`}
                   onClick={e => {
                     const rows = g.sections.reduce((a, s) => a + s.items.length * 30 + (s.label ? 26 : 0), 50);
                     setTop(Math.max(64, Math.min((e.currentTarget as HTMLElement).getBoundingClientRect().top - 8, window.innerHeight - rows - 16)));
                     setOpen(expanded ? null : g.key);
                   }}>
-                  <Icon size={17} strokeWidth={1.75} aria-hidden /><span>{g.label}</span><ChevronRight size={14} aria-hidden className={styles.chev} data-open={expanded && variant === "accordion" ? "" : undefined} />
+                  <ChevronRight size={14} aria-hidden className={styles.chev} data-open={expanded && variant === "accordion" ? "" : undefined} />
                 </button>
                 {variant === "accordion" && expanded && (
                   <div className={styles.accordion}>{g.sections.map((s, i) => <div key={i}>{s.label && <p className={styles.navGroupLabel}>{s.label}</p>}<Leaves items={s.items} pathname={pathname} params={params} /></div>)}</div>

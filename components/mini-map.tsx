@@ -1,13 +1,19 @@
 "use client";
 
-// Command map (phase 10; Atlas §54): a small situational map without the Atlas engine. Keyless Esri dark-gray raster
-// tiles in Web Mercator, drag to pan, wheel or buttons to zoom, clustered project points, click for a preview with
-// Open project / Open in Atlas. No MapLibre here: heavy Atlas libraries stay inside the map route (tested).
+// Command map (phase 10; Atlas §54; phase 15 §4): a small situational map without the Atlas engine. Keyless Esri
+// dark-gray raster tiles in Web Mercator, drag to pan, wheel or buttons to zoom, clustered points, click for a preview
+// with Open record / Open in Atlas. Points may be projects, prospects or partners; location quality is drawn (solid =
+// recorded point or site, ring = geocoded / approximate, dashed = country-level) and named in the preview, so a country
+// centroid never looks like a verified site. No aircraft, satellites or global feeds here. No MapLibre (tested).
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import s from "./mini-map.module.css";
 
-export type MiniPoint = { id: string; name: string; lat: number; lng: number; stage: string; sub?: string; alert?: boolean };
+export type MiniKind = "project" | "prospect" | "partner";
+export type MiniQuality = "exact" | "recorded" | "approximate" | "country";
+export type MiniPoint = { id: string; name: string; lat: number; lng: number; stage: string; sub?: string; alert?: boolean; kind?: MiniKind; quality?: MiniQuality; next?: string; href?: string; atlasHref?: string };
+const KIND_LABEL: Record<MiniKind, string> = { project: "Projects", prospect: "Prospects", partner: "Partners" };
+const QUALITY_LABEL: Record<MiniQuality, string> = { exact: "Site geometry recorded", recorded: "Point recorded", approximate: "Approximate (geocoded headquarters)", country: "Country-level only, not a site location" };
 
 const T = 256;
 const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`;
@@ -24,10 +30,13 @@ function fit(points: MiniPoint[], w: number, h: number) {
   return { z: 1, cx: wx(0, 1), cy: wy(10, 1) };
 }
 
-export default function MiniMap({ points, height = 320 }: { points: MiniPoint[]; height?: number }) {
+export default function MiniMap({ points: all, height = 320, missing }: { points: MiniPoint[]; height?: number; missing?: { count: number; href: string } }) {
   const box = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(520);
-  const [view, setView] = useState(() => fit(points, 520, height));
+  const kinds = useMemo(() => [...new Set(all.map(p => p.kind ?? "project"))], [all]);
+  const [hidden, setHidden] = useState<Set<MiniKind>>(new Set());
+  const points = useMemo(() => all.filter(p => !hidden.has(p.kind ?? "project")), [all, hidden]);
+  const [view, setView] = useState(() => fit(all, 520, height));
   const [sel, setSel] = useState<MiniPoint | null>(null);
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | null>(null);
 
@@ -73,28 +82,38 @@ export default function MiniMap({ points, height = 320 }: { points: MiniPoint[];
 
   return (
     <div className={s.wrap}>
+      {kinds.length > 1 && (
+        <div className={s.filters} role="group" aria-label="Show on map">
+          {kinds.map(k => <button key={k} type="button" aria-pressed={!hidden.has(k)} data-kind={k} onClick={() => setHidden(h => { const n = new Set(h); if (n.has(k)) n.delete(k); else n.add(k); return n; })}>{KIND_LABEL[k]} ({all.filter(p => (p.kind ?? "project") === k).length})</button>)}
+          <button type="button" onClick={() => setView(fit(points, w, height))}>Fit visible</button>
+        </div>
+      )}
       <div ref={box} className={s.map} style={{ height }}
         onPointerDown={e => { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, cx, cy, moved: false }; }}
         onPointerMove={e => { const d = drag.current; if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true; setView(v => ({ ...v, cx: d.cx - dx, cy: d.cy - dy })); }}
         onPointerUp={() => { setTimeout(() => { drag.current = null; }, 0); }}
         onWheel={e => { const r = box.current!.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }}
-        role="region" aria-label="Project map">
+        role="region" aria-label="Map of projects, prospects and partners">
         {tiles.map(t => <img key={t.key} src={t.src} alt="" draggable={false} className={s.tile} style={{ transform: `translate(${t.x}px, ${t.y}px)` }} />)}
         {clusters.map((c, i) => c.items.length > 1
-          ? <button key={i} type="button" className={s.cluster} style={{ transform: `translate(${c.x - 14}px, ${c.y - 14}px)` }} aria-label={`${c.items.length} projects`}
+          ? <button key={i} type="button" className={s.cluster} style={{ transform: `translate(${c.x - 14}px, ${c.y - 14}px)` }} aria-label={`${c.items.length} records`}
               onClick={() => { if (!drag.current?.moved) zoomAt(2, c.x, c.y); }}>{c.items.length}</button>
-          : <button key={c.items[0].id} type="button" className={`${s.dot} ${c.items[0].alert ? s.alert : ""} ${sel?.id === c.items[0].id ? s.sel : ""}`} style={{ transform: `translate(${c.x - 6}px, ${c.y - 6}px)` }}
+          : <button key={c.items[0].id} type="button" data-kind={c.items[0].kind ?? "project"} data-quality={c.items[0].quality ?? "recorded"} className={`${s.dot} ${c.items[0].alert ? s.alert : ""} ${sel?.id === c.items[0].id ? s.sel : ""}`} style={{ transform: `translate(${c.x - 6}px, ${c.y - 6}px)` }}
               aria-label={c.items[0].name} title={c.items[0].name} onClick={() => { if (!drag.current?.moved) setSel(c.items[0]); }} />)}
         <div className={s.zoom}><button type="button" onClick={() => zoomAt(1)} aria-label="Zoom in">+</button><button type="button" onClick={() => zoomAt(-1)} aria-label="Zoom out">−</button></div>
         <span className={s.attr}>Esri, HERE, Garmin, © OpenStreetMap</span>
-        {points.length === 0 && <p className={s.empty}>No projects with a location yet.</p>}
+        {points.length === 0 && <p className={s.empty}>{all.length ? "Everything is filtered out." : "No projects, prospects or partners with a location yet."}</p>}
       </div>
       {sel && (
         <div className={s.preview}>
-          <div><b>{sel.name}</b><span>{[sel.stage, sel.sub].filter(Boolean).join(" · ")}</span>{sel.alert && <span className={s.flag}>Needs attention</span>}</div>
-          <div className={s.actions}><Link href={`/projects/${sel.id}`}>Open project</Link><Link href={`/map?project=${sel.id}`}>Open in Atlas</Link><button type="button" onClick={() => setSel(null)} aria-label="Close">×</button></div>
+          <div><b>{sel.name}</b><span>{[sel.kind ? KIND_LABEL[sel.kind].replace(/s$/, "") : "Project", sel.stage, sel.sub].filter(Boolean).join(" · ")}</span>
+            {sel.next && <span>Next: {sel.next}</span>}
+            <span>Location: {QUALITY_LABEL[sel.quality ?? "recorded"]}</span>
+            {sel.alert && <span className={s.flag}>Needs attention</span>}</div>
+          <div className={s.actions}><Link href={sel.href ?? `/projects/${sel.id}`}>Open record</Link><Link href={sel.atlasHref ?? `/map?project=${sel.id}`}>Open in Atlas</Link><button type="button" onClick={() => setSel(null)} aria-label="Close">×</button></div>
         </div>
       )}
+      {missing && missing.count > 0 && <p className={s.missing}>{missing.count} relevant record{missing.count === 1 ? " has" : "s have"} no location. <Link href={missing.href}>Review missing locations</Link></p>}
     </div>
   );
 }

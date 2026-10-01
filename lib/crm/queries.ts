@@ -1,13 +1,13 @@
 // Read models for People, Companies, Lists and records. Every query is mandate-scoped.
 import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
-import { activities, contacts, deals, dossiers, listMembers, lists, organizations, scores, segments, triggers } from "@/db/schema";
+import { accountQualifications, activities, contacts, deals, dossiers, listMembers, lists, organizations, scores, segments, triggers } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { freshnessSince } from "@/lib/freshness";
 
 const PAGE = 50;
 const like_ = (q: string) => `%${q.toLowerCase()}%`;
 
-export type OrgFilters = { q?: string; sector?: string; country?: string; segment?: string; source?: string; trigger?: string; list?: string; sort?: string; page?: number };
+export type OrgFilters = { q?: string; sector?: string; country?: string; segment?: string; source?: string; trigger?: string; list?: string; sort?: string; page?: number; qualification?: string; missing?: string; tests?: string };
 
 export async function listOrganizations(scope: Scope, f: OrgFilters) {
   const db = appDb();
@@ -24,6 +24,9 @@ export async function listOrganizations(scope: Scope, f: OrgFilters) {
     f.source ? eq(organizations.source, f.source as never) : undefined,
     f.trigger === "yes" ? sql`${triggerCount} > 0` : undefined,
     f.list ? inArray(organizations.id, db.select({ id: listMembers.entityId }).from(listMembers).where(eq(listMembers.listId, f.list))) : undefined,
+    f.qualification ? inArray(organizations.id, db.select({ id: accountQualifications.orgId }).from(accountQualifications).where(eq(accountQualifications.status, f.qualification as never))) : undefined,
+    f.missing === "location" ? or(isNull(organizations.lat), isNull(organizations.lng)) : f.missing === "website" ? and(isNull(organizations.website), isNull(organizations.domain)) : undefined,
+    f.tests === "1" ? undefined : eq(organizations.testRecord, false),
   ];
   const where = and(...conds);
   const order = f.sort === "name" ? asc(organizations.name) : f.sort === "recent" ? desc(organizations.createdAt) : desc(triggerCount);

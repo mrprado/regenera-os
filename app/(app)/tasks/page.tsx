@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const view = sp.view === "done" ? "done" : "open";
   const rows = await openTasks(user.scope, view);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Merida" }).format(new Date());
   const back = `/tasks${view === "done" ? "?view=done" : ""}`;
   return (
     <>
@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
               {rows.map(({ t, contactName, linkedinUrl, orgName }) => {
                 const due = t.dueAt.slice(0, 10);
                 return (
-                  <tr key={t.id}>
+                  <tr key={t.id} id={`task-${t.id}`} aria-current={sp.focus === t.id ? "true" : undefined} style={sp.focus === t.id ? { background: "color-mix(in srgb, var(--gold) 12%, transparent)" } : undefined}>
                     <td style={{ whiteSpace: "nowrap", color: view === "open" && due < today ? "#b0432f" : undefined }}>{due}</td>
                     <td><span className={ui.primary}>{t.title}</span><span className={ui.sub}>{TYPE[t.type]}</span></td>
                     <td>{t.contactId ? <Link href={`/people/${t.contactId}`}>{contactName}</Link> : "—"}<span className={ui.sub}>{orgName ?? ""}</span>

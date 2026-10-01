@@ -4,6 +4,7 @@
 // award → post-award program and the project's capital stack. Every step writes an audit row; nothing is sent or
 // submitted without a person.
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { currentCall } from "./queries";
 import type { Db } from "@/db";
 import {
   activities, allocations, applicationTasks, bidReviews, capitalStackLayers, capitalStructures, consortiumMembers, contacts, engagements, expansionOpportunities,
@@ -419,27 +420,34 @@ export async function opportunityToPathway(db: Db, opportunityId: string, projec
 export async function fundingForOrg(db: Db, orgId: string, limit = 25) {
   const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId));
   if (!org) return [];
-  const opps = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, org.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed"))).orderBy(asc(fundingOpportunities.deadline)).limit(400);
+  const today = new Date().toISOString().slice(0, 10);
+  const opps = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, org.mandateId), currentCall(today), ne(fundingOpportunities.decision, "dismissed"))).orderBy(asc(fundingOpportunities.deadline)).limit(400);
   const pros = await db.select().from(fundingProspects).where(eq(fundingProspects.orgId, orgId));
   return opps.map(o => {
     const m = profileMatch(o.applicantProfile ?? inferredProfile(o, "system:preview"), org);
     const p = pros.find(x => x.opportunityId === o.id);
     const label: "confirmed" | "potential" | "review" = p?.eligibility === "confirmed" ? "confirmed" : m.classMatch === "match" && m.geo !== "mismatch" ? "potential" : "review";
     return { o, m, p, label };
-  }).filter(x => x.p || (x.m.classMatch !== "mismatch" && x.m.geo !== "mismatch" && x.m.sector !== "mismatch" && (x.m.geo === "match" || x.m.sector === "match"))).slice(0, limit);
+  // A suggestion needs no mismatch AND confirmed geography AND a second confirmed fit (sector or applicant type):
+  // one keyword-level overlap was surfacing loosely related calls.
+  }).filter(x => x.p || (x.m.classMatch !== "mismatch" && x.m.geo !== "mismatch" && x.m.sector !== "mismatch" && x.m.geo === "match" && (x.m.sector === "match" || x.m.classMatch === "match"))).slice(0, limit);
 }
 
 export async function fundingForProject(db: Db, projectId: string, limit = 25) {
   const [p] = await db.select().from(projects).where(eq(projects.id, projectId));
   if (!p) return [];
-  const opps = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, p.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed"))).orderBy(asc(fundingOpportunities.deadline)).limit(400);
+  const today = new Date().toISOString().slice(0, 10);
+  const opps = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, p.mandateId), currentCall(today), ne(fundingOpportunities.decision, "dismissed"))).orderBy(asc(fundingOpportunities.deadline)).limit(400);
   const place = `${p.country ?? ""} ${p.subdivision ?? ""}`.toLowerCase();
   const sector = p.sector;
   return opps.filter(o => {
     const c = o.countries ?? [];
-    const geo = !c.length || c.some(x => /global|worldwide/i.test(x) || (place && place.includes(x.toLowerCase())) || (p.country && x.toLowerCase().includes(p.country.toLowerCase())));
-    const sec = !sector || !(o.sectors ?? []).length || (o.sectors ?? []).includes(sector);
-    return geo && sec && (c.length > 0 || (o.sectors ?? []).length > 0);
+    const specificGeo = c.some(x => (place && place.includes(x.toLowerCase())) || (p.country && x.toLowerCase().includes(p.country.toLowerCase())));
+    const geo = !c.length || specificGeo || c.some(x => /global|worldwide/i.test(x));
+    const specificSector = !!sector && (o.sectors ?? []).includes(sector);
+    const sec = !sector || !(o.sectors ?? []).length || specificSector;
+    // At least one specific confirmation (the project's country or sector named by the call); "global" alone is not a fit.
+    return geo && sec && (specificGeo || specificSector);
   }).slice(0, limit).map(o => ({ o, kind: kindOf(o) }));
 }
 

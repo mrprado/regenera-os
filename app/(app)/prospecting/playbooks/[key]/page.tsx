@@ -87,7 +87,7 @@ export default async function PlaybookPage({ params, searchParams }: { params: P
             <p className={r.panelTitle}><span>Open funding for this playbook</span><Link href={`/funding?q=${encodeURIComponent(pb.keywords.topics[0] ?? "")}`}>Funding</Link></p>
             {funding.length === 0 ? <p className={r.empty}>No open grants, calls or tenders match these keywords yet.</p> : (
               <ul className={r.timeline}>{funding.map(f => (
-                <li key={f.id}><span className={r.when}>{f.deadline ?? "rolling"}</span><span><Link href={`/funding/${f.id}`}>{f.title}</Link>{f.funder ? ` · ${f.funder}` : ""}</span></li>
+                <li key={f.id}><span className={r.when}>{f.deadline ?? "deadline unknown"}</span><span><Link href={`/funding/${f.id}`}>{f.title}</Link>{f.funder ? ` · ${f.funder}` : ""}</span></li>
               ))}</ul>
             )}
           </section>

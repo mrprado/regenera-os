@@ -8,6 +8,14 @@ export const PROJECT_STAGES = {
   decommissioning: "Decommissioning",
 } as const;
 export type ProjectStage = keyof typeof PROJECT_STAGES;
+/** The detailed stages grouped into five phases for selectors and summaries (every detailed stage is kept). */
+export const STAGE_PHASES: { label: string; stages: ProjectStage[] }[] = [
+  { label: "Origination", stages: ["opportunity", "screening", "diagnostic"] },
+  { label: "Development", stages: ["readiness", "development", "structuring", "capital_alignment", "diligence", "financial_close"] },
+  { label: "Delivery", stages: ["engineering", "procurement", "construction", "commissioning", "cod"] },
+  { label: "Operations", stages: ["operations", "repowering"] },
+  { label: "Exit", stages: ["exit", "decommissioning"] },
+];
 export const STAGE_ORDER = Object.keys(PROJECT_STAGES) as ProjectStage[];
 
 export const PROJECT_STATUSES = { active: "Active", on_hold: "On hold", dropped: "Dropped", operating: "Operating" } as const;

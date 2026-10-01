@@ -4,8 +4,8 @@
 
 export type TemplateField = { key: string; label: string; area?: boolean };
 export type TemplateDef = {
-  key: string; name: string; group: "Confidentiality" | "Engagement" | "Introducers and partners" | "Capital" | "Information" | "Reports";
-  legal: boolean; entity: "project" | "organization" | "broker" | "none"; fields: TemplateField[]; body: string;
+  key: string; name: string; group: "Confidentiality" | "Engagement" | "Introducers and partners" | "Capital" | "Information" | "Reports" | "Commercial";
+  legal: boolean; entity: "project" | "organization" | "broker" | "deal" | "objective" | "none"; fields: TemplateField[]; body: string;
 };
 
 const F = (key: string, label: string, area = false): TemplateField => ({ key, label, area });
@@ -62,6 +62,13 @@ export const TEMPLATES: TemplateDef[] = [
   { key: "systems-assessment-report", name: "Systems Assessment", group: "Reports", legal: false, entity: "project", fields: [], body: "" },
   { key: "monthly-update", name: "Monthly Project Update", group: "Reports", legal: false, entity: "project", fields: [], body: "" },
   { key: "commission-statement", name: "Commission Statement", group: "Reports", legal: false, entity: "broker", fields: [], body: "" },
+  // Commercial documents built from records (lib/documents/commercial.ts), opened from a record's Generate menu.
+  { key: "account-brief", name: "Account brief", group: "Commercial", legal: false, entity: "organization", fields: [], body: "" },
+  { key: "meeting-brief", name: "Meeting brief", group: "Commercial", legal: false, entity: "organization", fields: [], body: "" },
+  { key: "opportunity-shortlist", name: "Opportunity / partner shortlist", group: "Commercial", legal: false, entity: "objective", fields: [], body: "" },
+  { key: "capital-matching-brief", name: "Capital matching brief", group: "Commercial", legal: false, entity: "objective", fields: [], body: "" },
+  { key: "bid-no-bid", name: "Bid / no-bid memo", group: "Commercial", legal: false, entity: "deal", fields: [], body: "" },
+  { key: "proposal", name: "Proposal (from the offer catalogue)", group: "Commercial", legal: false, entity: "deal", fields: [], body: "" },
 ];
 
 /** Replaces {{placeholders}}; anything empty becomes [TO CONFIRM: label]. */

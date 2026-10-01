@@ -1,5 +1,5 @@
 // Read models for the Phase 2 screens. Every query is mandate-scoped.
-import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, sql, isNull, or } from "drizzle-orm";
 import { contacts, deliverabilityChecks, meetingBriefs, dossiers, enrollments, mailboxState, messages, oauthAccounts, organizations, replies, scores, sequences, tasks, triggers } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { freshnessSince } from "@/lib/freshness";
@@ -13,7 +13,7 @@ export type QueueItem = {
   firstEmail: boolean;
 };
 
-export async function queueItems(scope: Scope, tier?: string): Promise<QueueItem[]> {
+export async function queueItems(scope: Scope, tier?: string, includeTests = false): Promise<QueueItem[]> {
   const db = appDb();
   const rows = await db.select({
     m: messages, contactName: contacts.fullName, contactTitle: contacts.title, email: contacts.email, emailStatus: contacts.emailStatus,
@@ -23,7 +23,7 @@ export async function queueItems(scope: Scope, tier?: string): Promise<QueueItem
     .leftJoin(organizations, eq(organizations.id, contacts.orgId))
     .leftJoin(enrollments, eq(enrollments.id, messages.enrollmentId))
     .leftJoin(sequences, eq(sequences.id, enrollments.sequenceId))
-    .where(and(mandateCondition(scope, messages.mandateId), inArray(messages.status, ["pending_approval", "style_failed"]), tier ? eq(messages.tier, tier as "mass") : undefined))
+    .where(and(mandateCondition(scope, messages.mandateId), inArray(messages.status, ["pending_approval", "style_failed"]), tier ? eq(messages.tier, tier as "mass") : undefined, includeTests ? undefined : eq(contacts.testRecord, false)))
     .orderBy(asc(messages.tier), asc(organizations.name), asc(messages.enrollmentId), asc(messages.step)).limit(200);
   const orgIds = [...new Set(rows.map(r => r.orgId).filter((x): x is string => !!x))];
   const contactIds = [...new Set(rows.map(r => r.m.contactId))];
@@ -72,19 +72,19 @@ export async function activeSequencesForPicker(scope: Scope) {
     .where(and(mandateCondition(scope, sequences.mandateId), eq(sequences.active, true))).orderBy(asc(sequences.tier));
 }
 
-export async function openTasks(scope: Scope, status: "open" | "done" = "open") {
+export async function openTasks(scope: Scope, status: "open" | "done" = "open", includeTests = false) {
   return appDb().select({
     t: tasks, contactName: contacts.fullName, linkedinUrl: contacts.linkedinUrl, orgName: organizations.name,
   }).from(tasks).leftJoin(contacts, eq(contacts.id, tasks.contactId)).leftJoin(organizations, eq(organizations.id, tasks.orgId))
-    .where(and(mandateCondition(scope, tasks.mandateId), status === "open" ? eq(tasks.status, "open") : inArray(tasks.status, ["done", "skipped"])))
+    .where(and(mandateCondition(scope, tasks.mandateId), status === "open" ? eq(tasks.status, "open") : inArray(tasks.status, ["done", "skipped"]), includeTests ? undefined : eq(tasks.testRecord, false)))
     .orderBy(status === "open" ? asc(tasks.dueAt) : desc(tasks.updatedAt)).limit(200);
 }
 
-export async function inboxReplies(scope: Scope, view: "open" | "all" = "open") {
+export async function inboxReplies(scope: Scope, view: "open" | "all" = "open", includeTests = false) {
   return appDb().select({
     r: replies, contactName: contacts.fullName, contactTitle: contacts.title, orgName: organizations.name, orgId: contacts.orgId,
   }).from(replies).leftJoin(contacts, eq(contacts.id, replies.contactId)).leftJoin(organizations, eq(organizations.id, replies.orgId))
-    .where(and(mandateCondition(scope, replies.mandateId), view === "open" ? eq(replies.handled, false) : undefined))
+    .where(and(mandateCondition(scope, replies.mandateId), view === "open" ? eq(replies.handled, false) : undefined, includeTests ? undefined : and(eq(replies.testRecord, false), or(isNull(contacts.testRecord), eq(contacts.testRecord, false)))))
     .orderBy(desc(replies.receivedAt)).limit(100);
 }
 

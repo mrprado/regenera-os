@@ -89,13 +89,16 @@ export const ROUTE_MODULES: [string, ModuleKey][] = [
   ["/capital", "capital"], ["/funding", "capital"],
   ["/benchmarks", "markets"],
   ["/people", "network"], ["/companies", "network"], ["/partners", "network"], ["/relationships", "network"], ["/network", "network"], ["/lists", "network"],
-  ["/prospecting", "network"], ["/sequences", "network"], ["/queue", "network"], ["/inbox", "network"], ["/searches", "network"],
+  ["/prospecting", "network"], ["/scans", "network"], ["/objectives", "network"], ["/sequences", "network"], ["/queue", "network"], ["/inbox", "network"], ["/searches", "network"],
   ["/deals", "deals"], ["/contracts", "deals"], ["/mandates", "deals"], ["/pursuits", "deals"], ["/approvals", "deals"],
   ["/triggers", "intelligence"], ["/intelligence", "intelligence"], ["/workbench", "intelligence"], ["/knowledge", "intelligence"],
   ["/documents", "documents"], ["/tasks", "automations"], ["/playbooks", "automations"], ["/workflows", "automations"], ["/meetings", "automations"],
   ["/reports", "reporting"],
   ["/commercial", "clients"], ["/clients", "clients"], ["/portals", "deals"], ["/capacity", "clients"], ["/specialists", "clients"],
   ["/connect/mcp", "api"],
+  // Landing pages (phase 15 §5): each needs its group's main module; Operations mixes modules and filters inside.
+  ["/overview/mandates", "deals"], ["/overview/projects", "projects"], ["/overview/systems", "projects"], ["/overview/capital", "capital"],
+  ["/overview/deals", "deals"], ["/overview/relationships", "network"], ["/overview/intelligence", "intelligence"], ["/overview/clients", "clients"],
 ];
 
 export function moduleForPath(path: string): ModuleKey | null {

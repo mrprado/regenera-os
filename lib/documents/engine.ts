@@ -8,6 +8,7 @@ import { contractPdf } from "@/lib/contracts/pdf";
 import { docxFromMarkdown } from "./docx";
 import { fillTemplate, openPlaceholders, TEMPLATES } from "./library";
 import { reportMarkdown } from "./reports";
+import { commercialMarkdown } from "./commercial";
 
 export const DRAFT_MARK = "DRAFT — COUNSEL REVIEW REQUIRED";
 type Doc = typeof generatedDocuments.$inferSelect;
@@ -16,9 +17,9 @@ export async function generateDocument(db: Db, input: { mandateId: string; templ
   const t = TEMPLATES.find(x => x.key === input.templateKey);
   if (!t) throw new Error("Unknown template");
   let title = t.name, body: string;
-  if (t.group === "Reports") {
+  if (t.group === "Reports" || t.group === "Commercial") {
     if (!input.entityId) throw new Error(`${t.name} needs a ${t.entity}`);
-    const r = await reportMarkdown(db, t.key, input.entityId, today);
+    const r = t.group === "Commercial" ? await commercialMarkdown(db, t.key, input.entityId, today) : await reportMarkdown(db, t.key, input.entityId, today);
     if (!r) throw new Error("Nothing to report on");
     title = r.title; body = r.md;
   } else {

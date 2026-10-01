@@ -20,7 +20,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const user = await requireOsUser("/inbox");
   const sp = await searchParams;
   const view = sp.view === "all" ? "all" : "open";
-  const rows = await inboxReplies(user.scope, view);
+  const rows = await inboxReplies(user.scope, view, sp.tests === "1");
   const selected = rows.find(r => r.r.id === sp.id) ?? rows[0];
 
   return (

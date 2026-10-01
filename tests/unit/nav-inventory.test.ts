@@ -15,6 +15,7 @@ const CONTEXTUAL: Record<string, string> = {
   "/people/new": "People → Add person", "/people/import": "People → Import", "/companies/new": "Organizations → Add",
   "/contracts/[id]/print": "Contract → Print", "/prospecting/playbooks/[key]": "Prospecting → playbook cards", "/playbooks/runs/[id]": "Playbook → run",
   "/documents/generator/[id]": "Document generator → document",
+  "/map/briefs": "Atlas → Site briefs (project page and Projects landing)",
   "/settings": "Sidebar footer → Settings (redirects to its first section)",
 };
 
@@ -31,12 +32,14 @@ describe("navigation inventory", () => {
 
   it("every navigation link points at an existing page", () => {
     const existing = new Set(routes);
-    const dead = [...navPaths].filter(p => !existing.has(p));
+    // Dynamic routes (/overview/[key]) match any single segment in their place.
+    const patterns = routes.filter(r => r.includes("[")).map(r => new RegExp(`^${r.replace(/\[[^\]]+\]/g, "[^/]+")}$`));
+    const dead = [...navPaths].filter(p => !existing.has(p) && !patterns.some(re => re.test(p)));
     expect(dead).toEqual([]);
   });
 
   it("the sidebar keeps the frozen top-level set", () => {
-    expect(NAV.map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Projects", "Systems", "Capital", "Deals", "Relationships", "Intelligence", "Clients", "Operations"]);
+    expect(NAV.map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Projects", "Systems", "Capital", "Opportunities", "Relationships", "Intelligence", "Clients", "Operations"]);
   });
 
   it("clients see only entitled modules and never Regenera-internal groups", () => {

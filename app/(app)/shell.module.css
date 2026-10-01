@@ -139,3 +139,14 @@
   .brand b { display: none; }
   .account { gap: 8px; }
 }
+
+/* Split nav row (phase 15 §5): the label is a link to the landing page, the chevron a separate submenu button. */
+.navSplit { position: relative; display: flex; align-items: stretch; }
+.navSplit > a { flex: 1; min-width: 0; }
+.navChevron { flex: none; width: 30px; display: grid; place-items: center; border: 0; background: none; color: var(--shell-icon); cursor: pointer; border-radius: var(--radius-control); }
+.navChevron:hover { background: var(--shell-hover); color: var(--text-on-dark); }
+.navChevron[aria-expanded="true"] { background: rgba(255, 255, 255, .06); color: var(--text-on-dark); }
+.navChevron .chev { margin-left: 0; opacity: .8; }
+.navChevron:focus-visible, .navSplit > a:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+/* Icon rail: no room for a chevron; the label opens the landing page, which lists every tool in the group. */
+@media (max-width: 1100px) and (min-width: 821px) { .navChevron { display: none; } }

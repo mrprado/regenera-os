@@ -13,19 +13,25 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Systems" };
 
 /** Portfolio view of system capacity and interventions (§20–21): where places are constrained, what would fix it, what it costs, who could fund it. */
-export default async function SystemsPage() {
+export default async function SystemsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/systems");
+  const sp = await searchParams;
   const db = appDb();
   const [ps, as, ints] = await Promise.all([
     db.select({ id: projects.id, name: projects.name }).from(projects).where(and(mandateCondition(user.scope, projects.mandateId), isNull(projects.archivedAt))).orderBy(asc(projects.name)),
     db.select().from(systemAssessments).where(mandateCondition(user.scope, systemAssessments.mandateId)),
     db.select().from(interventions).where(mandateCondition(user.scope, interventions.mandateId)),
   ]);
-  const cats = Object.keys(SYSTEM_CATEGORIES) as (keyof typeof SYSTEM_CATEGORIES)[];
+  // ?focus=land,soil,water narrows the matrix to the categories a menu entry is about (each menu label is a filter, not
+  // a duplicate link to the same unfiltered page).
+  const all = Object.keys(SYSTEM_CATEGORIES) as (keyof typeof SYSTEM_CATEGORIES)[];
+  const focus = (sp.focus ?? "").split(",").filter((c): c is keyof typeof SYSTEM_CATEGORIES => c in SYSTEM_CATEGORIES);
+  const cats = focus.length ? all.filter(c => focus.includes(c)) : all;
   const name = (id: string) => ps.find(p => p.id === id)?.name ?? "Project";
   return (
     <>
       <PageHeader title="Systems" />
+      {focus.length > 0 && <p className={ui.notice}>Showing {cats.map(c => SYSTEM_CATEGORIES[c]).join(", ")}. <Link href="/systems">Show all categories</Link></p>}
       <p className={ui.sub} style={{ marginTop: -4 }}>Capacity → risk → intervention → capital across the portfolio. A category is only shown as constrained when someone assessed it; blank means not assessed.</p>
       <section className={r.panel}>
         <p className={r.panelTitle}>Capacity by project</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StageOptions } from "@/components/stage-options";
 import { notFound } from "next/navigation";
 import { Notice } from "@/components/crm-bits";
 import r from "@/components/record.module.css";
@@ -88,7 +89,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <p className={ph.kicker}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not set"].filter(Boolean).join("  ·  ")}</p>
         <div className={ph.titleRow}>
           <h1 className={ph.title}>{p.name}</h1>
-          <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link>}<Link className="btn" href="/projects">All projects</Link></div>
+          <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <><Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link><Link className="btn" href={`/map/briefs?project=${p.id}`}>Site brief</Link></>}<Link className="btn" href="/projects">All projects</Link></div>
         </div>
         <dl className={ph.strip}>
           <div><dt>Stage</dt><dd><span className={ph.dot} data-tone={blockedDims.length ? "critical" : p.stage === "operations" || p.status === "operating" ? "lichen" : "copper"} aria-hidden />{stageLabel(p.stage)}</dd></div>
@@ -192,7 +193,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <p className={r.panelTitle}>Move stage</p>
               <form action={setStageAction} className={styles.stack}>
                 <input type="hidden" name="id" value={p.id} />
-                <select name="stage" defaultValue={p.stage} aria-label="Stage">{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                <select name="stage" defaultValue={p.stage} aria-label="Stage"><StageOptions /></select>
                 <input name="reason" placeholder="Why (kept in the history)" aria-label="Reason" />
                 <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}><input type="checkbox" name="override" /> Owner override of a stage gate (reason required)</label>
                 <button className="btn" type="submit">Set stage</button>
@@ -352,7 +353,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <input type="hidden" name="id" value={p.id} />
                 <label>Purpose<input name="purpose" required placeholder="e.g. Pre-development, Senior debt" /></label>
                 <label>Instrument<select name="instrument" required>{Object.entries(INSTRUMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                <label>Stage<select name="stage" defaultValue=""><option value="">Not set</option>{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                <label>Stage<select name="stage" defaultValue=""><option value="">Not set</option><StageOptions /></select></label>
                 <label>Target<input name="target" inputMode="decimal" /></label>
                 <label>Minimum<input name="minimum" inputMode="decimal" /></label>
                 <label>Maximum<input name="maximum" inputMode="decimal" /></label>
@@ -452,7 +453,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <p className={ui.sub} style={{ marginTop: 0 }}>Public funding, grants, incentives, guarantees, concessional debt, tax credits and DFI programs matched by sector and country (or open to any country). Eligibility still needs reading: open each call. A pathway can then be added to a capital stack scenario once, without double counting.</p>
           {funding.length === 0 ? <p className={r.empty}>No open calls match this project&apos;s sector and country yet{!p.sector || !p.country ? " (set sector and country on the Overview tab)" : ""}.</p> : (
             <table className={ui.table}><tbody>{funding.map(f => (
-              <tr key={f.id}><td><Link href={`/funding/${f.id}`}>{f.title}</Link><span className={ui.sub}>{f.funder ?? ""}</span></td><td>{f.deadline ?? "Rolling"}</td><td>{FUNDING_KINDS[kindOf({ kind: f.kind, type: f.type, title: f.title }).kind].label}</td><td className={ui.num}>{f.amountMax ? compactMoney(f.amountMax, f.currency ?? "USD") : "—"}</td>
+              <tr key={f.id}><td><Link href={`/funding/${f.id}`}>{f.title}</Link><span className={ui.sub}>{f.funder ?? ""}</span></td><td>{f.deadline ?? "Unknown"}</td><td>{FUNDING_KINDS[kindOf({ kind: f.kind, type: f.type, title: f.title }).kind].label}</td><td className={ui.num}>{f.amountMax ? compactMoney(f.amountMax, f.currency ?? "USD") : "—"}</td>
                 <td><form action={opportunityToPathwayAction}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="opportunityId" value={f.id} /><input type="hidden" name="back" value={`/projects/${p.id}?tab=pathways`} /><button className={ui.miniBtn} type="submit">Start pathway</button></form></td></tr>
             ))}</tbody></table>
           )}

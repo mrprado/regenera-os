@@ -60,6 +60,7 @@ export const replies = sqliteTable("replies", {
   suggestedResponse: text("suggested_response"),
   needsHuman: integer("needs_human", { mode: "boolean" }).notNull().default(true),
   handled: integer("handled", { mode: "boolean" }).notNull().default(false),
+  testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   ...timestamps,
 }, t => [uniqueIndex("replies_gmail").on(t.gmailMessageId), index("replies_handled").on(t.handled, t.receivedAt)]);
 
@@ -78,6 +79,9 @@ export const tasks = sqliteTable("tasks", {
   dueAt: text("due_at").notNull(),
   status: text("status", { enum: ["open", "done", "skipped"] }).notNull().default("open"),
   completedAt: text("completed_at"),
+  owner: text("owner"),                       // member email; null = unassigned
+  workstream: text("workstream"),             // groups related tasks (one bid = one workstream)
+  testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   ...timestamps,
 }, t => [index("tasks_status_due").on(t.status, t.dueAt)]);
 

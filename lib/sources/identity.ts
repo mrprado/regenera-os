@@ -45,6 +45,19 @@ export async function gleifSearch(db: Db, name: string, fetchImpl?: typeof fetch
   return res.data.map(toEntity);
 }
 
+/** Discovery over the public LEI register (scan provider "gleif"): issued registrations whose record matches a term,
+ *  optionally in one legal-address country (ISO 3166 alpha-2). One page per call; cached a week. Legal identity only. */
+export async function gleifDiscover(db: Db, term: string, iso2: string | null, page = 1, size = 50, fetchImpl?: typeof fetch): Promise<{ entities: LegalEntity[]; url: string }> {
+  const q = new URLSearchParams({ "filter[fulltext]": term, "filter[registration.status]": "ISSUED", "page[size]": String(size), "page[number]": String(page) });
+  if (iso2) q.set("filter[entity.legalAddress.country]", iso2);
+  const url = `https://api.gleif.org/api/v1/lei-records?${q}`;
+  const res = await fetchJson(db, {
+    provider: "gleif", endpoint: "lei_discover", url,
+    schema: zGleifList, cacheKey: `discover:${q}`, cacheTtlMs: 7 * DAY, fetchImpl,
+  });
+  return { entities: res.data.map(toEntity), url };
+}
+
 /** Direct or ultimate parent from GLEIF relationship records (fund to GP, subsidiary to group). */
 export async function gleifParent(db: Db, lei: string, level: "direct" | "ultimate" = "ultimate", fetchImpl?: typeof fetch): Promise<LegalEntity | null> {
   try {

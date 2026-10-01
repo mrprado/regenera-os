@@ -115,7 +115,7 @@ async function OpenTab({ sp, scope, last }: { sp: SP; scope: Scope; last: { at: 
                           <td>{FUNDING_KINDS[k.kind].label}{k.derived && <span className={ui.sub}>derived</span>}</td>
                           <td className={ui.wrap}>{(o.countries ?? []).slice(0, 2).join(", ") || "Not stated"}{(o.countries ?? []).length > 2 && <span className={ui.sub}>+{(o.countries ?? []).length - 2}</span>}</td>
                           <td>{amount(o.amountMin, o.amountMax, o.currency)}</td>
-                          <td style={{ whiteSpace: "nowrap" }} className={d !== null && d <= 14 ? f.warn : undefined}>{o.deadline ?? "Rolling"}{d !== null && <span className={ui.sub}>{daysLabel(d)}</span>}</td>
+                          <td style={{ whiteSpace: "nowrap" }} className={d !== null && d <= 14 ? f.warn : undefined}>{o.deadline ?? (o.rolling ? "Rolling (per source)" : "Deadline unknown")}{d !== null && <span className={ui.sub}>{daysLabel(d)}</span>}</td>
                           <td>{best ? <span className={f.state} data-s={best}>{APPLICANT_ELIGIBILITY[best].label}</span> : <span className={f.muted}>Needs review</span>}{e && <span className={ui.sub}>{e.n} applicant{e.n === 1 ? "" : "s"}</span>}</td>
                           <td>{o.route ? ROUTE_LABEL[o.route] : <span className={f.muted}>Not read</span>}</td>
                           <td>{DECISION_LABEL[o.decision]}</td>
@@ -219,7 +219,7 @@ async function ApplicantsTab({ scope, stage }: { scope: Scope; stage?: string })
             <tbody>{rows.map(r => (
               <tr key={r.p.id}>
                 <td className={ui.wrap}><Link className={ui.primary} href={`/companies/${r.p.orgId}`}>{r.orgName}</Link><span className={ui.sub}>{r.p.origin === "external" ? "External prospect" : "From the CRM"}</span></td>
-                <td className={ui.wrap}><Link href={`/funding/${r.p.opportunityId}?tab=applicants`}>{r.title}</Link><span className={ui.sub}>{r.deadline ? `Deadline ${r.deadline}` : "Rolling"}</span></td>
+                <td className={ui.wrap}><Link href={`/funding/${r.p.opportunityId}?tab=applicants`}>{r.title}</Link><span className={ui.sub}>{r.deadline ? `Deadline ${r.deadline}` : "Deadline unknown"}</span></td>
                 <td><span className={f.state} data-s={r.p.eligibility}>{APPLICANT_ELIGIBILITY[r.p.eligibility as keyof typeof APPLICANT_ELIGIBILITY]?.label ?? r.p.eligibility}</span></td>
                 <td>{PROSPECT_STAGES[r.p.stage as keyof typeof PROSPECT_STAGES] ?? r.p.stage}</td>
                 <td>{r.p.engagementId ? <Link href={`/commercial/engagements/${r.p.engagementId}`}>{r.engStatus ?? "Open"}{r.fee ? ` · ${compactMoney(r.fee, "USD")}` : ""}</Link> : "—"}</td>

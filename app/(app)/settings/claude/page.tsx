@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import ui from "@/components/ui.module.css";
 import { mcpClients, mcpTokens } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
+import { CONTRACTS } from "@/lib/ai/contracts";
+import { aiConfig } from "@/lib/config";
 import { outreachConfig } from "@/lib/config";
 import { appDb } from "@/lib/db/scoped";
 import { issueMcpTokenAction, revokeMcpAction } from "../../mcp-actions";
@@ -50,6 +52,25 @@ export default async function ClaudeSettingsPage() {
           </tbody>
         </table>
       </div>
+
+      <h2 style={{ fontSize: 16, margin: "28px 0 6px" }}>AI action contracts</h2>
+      <p className={ui.sub} style={{ maxWidth: 820, marginTop: 0 }}>
+        {aiConfig() ? `Claude is configured (monthly budget ${aiConfig()!.monthlyBudgetUsd}).` : "Claude is not configured: set ANTHROPIC_API_KEY (npx wrangler secret put ANTHROPIC_API_KEY --name regenera-os). Until then no wired action below runs."}
+        {" "}Each action&apos;s inputs, required evidence, unknown handling, human boundary and prohibited side effects. &quot;Wired&quot; means a screen calls it today; &quot;defined&quot; means the contract exists and code still does the work deterministically. Prompt text is versioned in the prompts table; authorization, arithmetic, deduplication, state changes and budgets are code, never model output.
+      </p>
+      <div className={ui.tableWrap}><table className={ui.table}>
+        <thead><tr><th>Contract</th><th>Status</th><th>Returns</th><th>Evidence and unknowns</th><th>Human boundary</th><th>Budget</th></tr></thead>
+        <tbody>{CONTRACTS.map(c => (
+          <tr key={c.key}>
+            <td className={ui.primary}>{c.key}<span className={ui.sub}>v{c.version}{c.promptKey ? ` · prompt ${c.promptKey}` : ""} · {c.purpose}</span></td>
+            <td><span className={ui.chip}>{c.status}</span></td>
+            <td className={ui.sub}>{c.output.join(", ")}</td>
+            <td className={ui.sub}>{c.evidence}. {c.unknowns}.</td>
+            <td className={ui.sub}>{c.humanBoundary}. Never: {c.prohibited.join("; ").toLowerCase()}.</td>
+            <td className={ui.sub}>{c.budget.maxTokens.toLocaleString("en-US")} tokens · ≤ ${c.budget.maxUsdPerRun}</td>
+          </tr>
+        ))}</tbody>
+      </table></div>
     </>
   );
 }

@@ -169,6 +169,14 @@ function MapClient() {
     return () => { live = false; };
   }, [mapReady, deepProject, data]);
 
+  // ?lat=&lng=&z= opens Atlas at a point (Command map "Open in Atlas" for organizations, which have no project page).
+  const [deepPoint] = useState(() => { const q = new URLSearchParams(window.location.search); const lat = Number(q.get("lat")), lng = Number(q.get("lng")); return q.get("lat") && q.get("lng") && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng, z: Math.min(18, Math.max(2, Number(q.get("z")) || 10)) } : null; });
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !deepPoint || deepProject) return;
+    flyToCoordinates(map, deepPoint.lat, deepPoint.lng, deepPoint.z);
+  }, [mapReady, deepPoint, deepProject]);
+
   const records = useMemo(() => data ? mapRecords(data) : [], [data]);
   const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);
   const onSelectProject = useCallback((props: Record<string, unknown>, lngLat: [number, number]) => setSelected({ layer: "projects", props, lngLat }), []);

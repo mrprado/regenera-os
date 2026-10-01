@@ -15,6 +15,10 @@ import { compactMoney } from "@/lib/projects/labels";
 import { PARTY_ROLES } from "@/lib/projects/vocab";
 import { DEAL_STAGES, ENGAGEMENTS, FEE_TYPES, LEAD_SOURCES } from "@/lib/vocab";
 import { moveDeal, setNextAction } from "../actions";
+import { createContractAction } from "../../contract-actions";
+import { createProjectFromDealAction } from "../../project-actions";
+import { GenerateMenu } from "@/components/generate-menu";
+import { DealFlowPanels } from "./panels";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Opportunity" };
@@ -49,7 +53,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <PageHeader title={d.name} actions={<Link className="btn" href="/deals">All opportunities</Link>} />
+      <PageHeader title={d.name} actions={<><GenerateMenu entity="deal" id={d.id} /><Link className="btn" href="/deals">All opportunities</Link></>} />
       <Notice text={sp.notice} />
       {sp.gate && gates.find(g => g.stage === sp.gate && !g.gate.passed) && (
         <p className={ui.notice} role="alert">Not moved to {DEAL_STAGES[sp.gate as keyof typeof DEAL_STAGES]}: the stage conditions below are not met yet.{owner ? " An owner can override with a reason; the override is audited." : ""}</p>
@@ -78,10 +82,10 @@ export default async function DealPage({ params, searchParams }: { params: Promi
 
           <section className={r.panel}>
             <p className={r.panelTitle}>Stage conditions</p>
-            <p className={ui.sub}>Advancing needs verifiable conditions, checked against records (§12). Conditions marked &quot;project&quot; are read from the linked project.</p>
+            <p className={ui.sub}>Each stage lists the conditions checked against records before a move. Where a stage shows &quot;No conditions&quot;, nothing is checked: the move is recorded with who and when.</p>
             {gates.map(({ stage, gate }) => (
               <div key={stage} style={{ marginTop: 10 }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>To {DEAL_STAGES[stage as keyof typeof DEAL_STAGES]} {gate.gated ? (gate.passed ? <span className={ui.chipReed}>ready</span> : <span className={ui.chipEmber}>{gate.results.filter(x => !x.pass).length} open</span>) : <span className={ui.chipMuted}>no gate</span>}</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>To {DEAL_STAGES[stage as keyof typeof DEAL_STAGES]} {gate.gated ? (gate.passed ? <span className={ui.chipReed}>ready</span> : <span className={ui.chipEmber}>{gate.results.filter(x => !x.pass).length} open</span>) : <span className={ui.chipMuted}>No conditions for this stage</span>}</p>
                 {gate.results.length > 0 && <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 13 }}>{gate.results.map(x => <li key={x.id}>{x.pass ? "✓" : "✗"} {x.text} <span className={ui.sub} style={{ display: "inline" }}>({x.detail})</span></li>)}</ul>}
                 <form action={moveDeal} style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
                   <input type="hidden" name="id" value={d.id} /><input type="hidden" name="stage" value={stage} /><input type="hidden" name="back" value={back} />
@@ -97,6 +101,8 @@ export default async function DealPage({ params, searchParams }: { params: Promi
             </form>
           </section>
 
+          <DealFlowPanels db={db} d={{ id: d.id, mandateId: d.mandateId, name: d.name, orgId: d.orgId }} />
+
           <section className={r.panel}>
             <p className={r.panelTitle}>Activity</p>
             {log.length === 0 ? <p className={r.empty}>No activity recorded.</p> : (
@@ -111,7 +117,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
             <dl className={r.kv}>
               <dt>Organization</dt><dd>{org ? <Link href={`/companies/${org.id}`}>{org.name}</Link> : "Not linked"}</dd>
               <dt>Contact</dt><dd>{contact ? <Link href={`/people/${contact.id}`}>{contact.name}</Link> : "Not linked"}{contact?.title ? ` · ${contact.title}` : ""}</dd>
-              <dt>Project</dt><dd>{project ? <Link href={`/projects/${project.id}`}>{project.name}</Link> : "Not linked (create one from the table view)"}{project?.country ? ` · ${project.country}` : ""}</dd>
+              <dt>Project</dt><dd>{project ? <Link href={`/projects/${project.id}`}>{project.name}</Link> : <form action={createProjectFromDealAction} style={{ display: "inline" }}><input type="hidden" name="dealId" value={d.id} /><button className={ui.miniBtn} type="submit">Create and link project</button></form>}{project?.country ? ` · ${project.country}` : ""}</dd>
             </dl>
             {parties.length > 0 && <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 13 }}>{parties.map((p, i) => <li key={i}>{PARTY_ROLES[p.role]}: {p.orgId ? <Link href={`/companies/${p.orgId}`}>{p.orgName}</Link> : "—"} {p.confirmed === "confirmed" ? "(confirmed)" : "(proposed)"}</li>)}</ul>}
           </section>
@@ -127,7 +133,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
 
           <section className={r.panel}>
             <p className={r.panelTitle}>Agreements</p>
-            {agreements.length === 0 ? <p className={r.empty}>No engagement agreement yet. Draft one from the Opportunities table view.</p> : <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{agreements.map(c => <li key={c.id}><Link href={`/contracts/${c.id}`}>{c.title}</Link> · {c.lifecycle.replace(/_/g, " ")}</li>)}</ul>}
+            {agreements.length === 0 ? <><p className={r.empty}>No engagement agreement yet.</p><form action={createContractAction}><input type="hidden" name="kind" value="engagement_letter" /><input type="hidden" name="source" value={`deal:${d.id}`} /><button className={ui.miniBtn} type="submit">Draft engagement letter</button></form><p className={ui.sub}>Drafts come from the counsel template with [TO CONFIRM] placeholders; nothing is sent.</p></> : <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{agreements.map(c => <li key={c.id}><Link href={`/contracts/${c.id}`}>{c.title}</Link> · {c.lifecycle.replace(/_/g, " ")}</li>)}</ul>}
           </section>
         </aside>
       </div>

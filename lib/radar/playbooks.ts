@@ -10,6 +10,7 @@ import { playbookDrafts, segments, sequences, type SequenceStep } from "@/db/sch
 import { runStructured, type AiConfig } from "@/lib/ai/run";
 import { checkDraft } from "@/lib/outreach/sequences";
 import { ENGAGEMENTS, PRACTICES, SECTORS } from "@/lib/vocab";
+import { audienceForSegment, uniqueTitles } from "@/lib/scan/audiences";
 
 // Service keywords, from the site's own vocabulary (practices, sectors, territorial systems).
 const SECTOR_TERMS: Record<string, string[]> = {
@@ -24,13 +25,23 @@ const PRACTICE_TERMS: Record<string, string[]> = {
   development_strategy: ["project development", "development strategy"],
   capital_partnerships: ["impact investing", "blended finance", "real assets"],
 };
-const GROUP_COMPANY_TERMS: Record<string, string[]> = {
-  capital: ["family office", "impact fund", "development finance", "foundation", "pension"],
-  corporate: ["developer", "utility", "agribusiness", "resort", "manufacturer"],
-  public: ["municipality", "ministry", "development authority", "tourism board"],
-  channel: ["engineering", "EPC", "law firm", "architecture", "bank"],
-  community: ["land trust", "conservation", "cooperative"],
+// Company terms come from the audience definition for the segment (lib/scan/audiences.ts), with a per-segment fallback;
+// never per group, so a bank segment cannot inherit "EPC" or "law firm" and a real-estate playbook stays real estate.
+const SEGMENT_COMPANY_TERMS: Record<string, string[]> = {
+  pensions_insurers: ["pension fund", "insurance company", "institutional investor"],
+  sovereign_funds_mena: ["sovereign wealth fund", "state investment fund"],
+  post_industrial_land: ["mining company", "industrial site owner", "brownfield redevelopment"],
+  agribusiness: ["agribusiness", "agricultural producer", "agri-food company"],
+  food_consumer_brands: ["food company", "beverage company", "consumer goods"],
+  hospitality_tourism: ["resort developer", "hotel developer", "hospitality group"],
+  national_ministries: ["ministry", "national agency"],
+  sezs_development_authorities: ["special economic zone", "development authority"],
+  tourism_authorities: ["tourism board", "tourism authority"],
+  big4_sustainability: ["sustainability consulting", "climate advisory"],
 };
+export function companyTermsFor(segmentKey: string): string[] {
+  return audienceForSegment(segmentKey)?.orgTerms ?? SEGMENT_COMPANY_TERMS[segmentKey] ?? [];
+}
 
 export const REGIONS: Record<string, string[]> = {
   latam: ["Mexico", "Colombia", "Peru", "Chile", "Brazil", "Argentina", "Costa Rica", "Panama"],
@@ -48,12 +59,12 @@ const or = (terms: string[]) => (terms.length === 1 ? q(terms[0]) : `(${terms.ma
 export type Playbook = ReturnType<typeof buildPlaybook>;
 
 export function buildPlaybook(s: Segment, region?: string) {
-  const titles = [...new Set([...(s.titles ?? []), ...(((s.apolloFilters as { person_titles?: string[] }).person_titles) ?? [])])]
+  const titles = uniqueTitles([...(s.titles ?? []), ...(((s.apolloFilters as { person_titles?: string[] }).person_titles) ?? [])])
     .map(t => t.replace(/\b\w/g, c => c.toUpperCase())).slice(0, 6);
   const sectorTerms = [...new Set(s.sectors.flatMap(k => SECTOR_TERMS[k] ?? []))].slice(0, 5);
   const practiceTerms = [...new Set(s.practices.flatMap(k => PRACTICE_TERMS[k] ?? []))].slice(0, 3);
   const topics = [...new Set([...sectorTerms, ...practiceTerms])].slice(0, 6);
-  const companyTerms = GROUP_COMPANY_TERMS[s.group] ?? [];
+  const companyTerms = companyTermsFor(s.key);
   const places = region ? REGIONS[region] ?? [] : [];
   const where = places.length ? ` ${or(places)}` : "";
   const peopleBoolean = `${or(titles)} AND ${or(topics.slice(0, 4))}`;

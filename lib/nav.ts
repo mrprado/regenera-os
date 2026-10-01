@@ -1,6 +1,7 @@
 // Navigation map (docs/plans/phase-10-client-os.md §3). One definition feeds the sidebar, the Systems flyout, the
 // menu search and Cmd+K, and tests/unit/nav-inventory.test.ts checks that every page route is reachable from it.
 // URLs never change here: consolidation is visual only, so bookmarks and deep links keep working.
+// Every top-level label opens its own landing page (href); the chevron beside it opens the submenu (phase 15 §5).
 import { pathAllowed } from "@/lib/tenancy/vocab";
 
 export type NavLeaf = { label: string; href: string; keywords?: string };
@@ -11,7 +12,7 @@ export const NAV: NavGroup[] = [
   { key: "command", label: "Command", icon: "house", href: "/today", sections: [] },
   { key: "atlas", label: "Atlas", icon: "earth", href: "/map", sections: [] },
   {
-    key: "mandates", label: "Mandates", icon: "target", sections: [{ items: [
+    key: "mandates", label: "Mandates", icon: "target", href: "/overview/mandates", sections: [{ items: [
       { label: "Live mandates", href: "/mandates", keywords: "mandate portfolio origination epc capital funding offtake land delivery floor" },
       { label: "New mandate", href: "/mandates?new=epc_origination", keywords: "create mandate builder" },
       { label: "Pursuits", href: "/pursuits", keywords: "epc pursuit rfp rfq bid bafo award capital raise" },
@@ -21,7 +22,7 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "projects", label: "Projects", icon: "landmark", sections: [{ items: [
+    key: "projects", label: "Projects", icon: "landmark", href: "/overview/projects", sections: [{ items: [
       { label: "All projects", href: "/projects" },
       { label: "Pipeline board", href: "/projects?view=board", keywords: "stages kanban" },
       { label: "Opportunities & screening", href: "/projects?stage=opportunity" },
@@ -35,16 +36,16 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "systems", label: "Systems", icon: "sprout", mega: true, sections: [
-      { label: "Land systems", items: [{ label: "Land pipeline", href: "/land", keywords: "acquisition" }, { label: "Land & agriculture capacity", href: "/systems", keywords: "soils water agriculture forestry agroforestry" }] },
-      { label: "Built environment", items: [{ label: "Built environment intelligence", href: "/intelligence/built?tab=fit", keywords: "construction materials technologies solution stack" }, { label: "Settlement & community systems", href: "/systems", keywords: "housing hospitality masterplan" }] },
+    key: "systems", label: "Systems", icon: "sprout", href: "/overview/systems", mega: true, sections: [
+      { label: "Land systems", items: [{ label: "Land pipeline", href: "/land", keywords: "acquisition" }, { label: "Land & agriculture capacity", href: "/systems?focus=land,soil,water", keywords: "soils water agriculture forestry agroforestry" }] },
+      { label: "Built environment", items: [{ label: "Built environment intelligence", href: "/intelligence/built?tab=fit", keywords: "construction materials technologies solution stack" }, { label: "Settlement & community systems", href: "/systems?focus=community,cultural,local_economy", keywords: "housing hospitality masterplan" }] },
       { label: "Energy", items: [{ label: "Power & large loads", href: "/power", keywords: "solar wind bess grid ppa interconnection data centers" }, { label: "Tech & cost benchmarks", href: "/benchmarks", keywords: "capex lcoe" }] },
-      { label: "Infrastructure & connectivity", items: [{ label: "Large loads & grid", href: "/power", keywords: "transmission substations data centers" }, { label: "Infrastructure capacity", href: "/systems", keywords: "water roads logistics" }] },
-      { label: "Nature", items: [{ label: "Community & rights", href: "/community", keywords: "biodiversity restoration" }, { label: "Nature & capital transition", href: "/capital/alignment", keywords: "natural capital carbon" }, { label: "System capacity & interventions", href: "/systems" }] },
+      { label: "Infrastructure & connectivity", items: [{ label: "Large loads & grid", href: "/power", keywords: "transmission substations data centers" }, { label: "Infrastructure capacity", href: "/systems?focus=system_capacity,resources,resilience", keywords: "water roads logistics" }] },
+      { label: "Nature", items: [{ label: "Community & rights", href: "/community", keywords: "biodiversity restoration" }, { label: "Nature & capital transition", href: "/capital/alignment", keywords: "natural capital carbon" }, { label: "System capacity & interventions", href: "/systems" }, { label: "Biodiversity & climate", href: "/systems?focus=biodiversity,climate,resilience", keywords: "nature dependencies impacts tnfd" }] },
     ],
   },
   {
-    key: "capital", label: "Capital", icon: "banknote", sections: [{ items: [
+    key: "capital", label: "Capital", icon: "banknote", href: "/overview/capital", sections: [{ items: [
       { label: "Capital partners", href: "/capital", keywords: "investors mandates lps funds" },
       { label: "Private investors", href: "/capital?tab=private" },
       { label: "Capital opportunities", href: "/capital?tab=opportunities", keywords: "capital match readiness" },
@@ -66,9 +67,10 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "deals", label: "Deals", icon: "kanban", sections: [{ items: [
-      { label: "All deals", href: "/deals", keywords: "opportunities pipeline" },
-      { label: "Deal table", href: "/deals?view=table" },
+    key: "deals", label: "Opportunities", icon: "kanban", href: "/overview/deals", sections: [{ items: [
+      { label: "Pipeline board", href: "/deals", keywords: "deals opportunities pipeline kanban" },
+      { label: "Opportunity table", href: "/deals?view=table", keywords: "deals forecast" },
+      { label: "Proposals awaiting decision", href: "/deals?view=table&stage=proposal", keywords: "deals proposal" },
       { label: "Capital mandates", href: "/deals?path=capital_mandate" },
       { label: "Project diagnostics", href: "/deals?path=project_diagnostic" },
       { label: "Contracts & term sheets", href: "/contracts", keywords: "nda agreements" },
@@ -77,7 +79,11 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "relationships", label: "Relationships", icon: "network", sections: [{ items: [
+    key: "relationships", label: "Relationships", icon: "network", href: "/overview/relationships", sections: [{ items: [
+      { label: "Scans", href: "/scans", keywords: "find organizations decision makers discover prospects scan presets" },
+      { label: "Scan runs & review", href: "/scans?tab=runs", keywords: "review prospects results" },
+      { label: "Objectives", href: "/objectives", keywords: "party objective find contracts matching opportunities epc developer fund shortlist" },
+      { label: "Campaign economics", href: "/scans?tab=economics", keywords: "attribution cost meetings proposals signed collected revenue" },
       { label: "People", href: "/people", keywords: "contacts" },
       { label: "Organizations", href: "/companies", keywords: "companies" },
       { label: "Partner network", href: "/partners" },
@@ -93,7 +99,7 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "intelligence", label: "Intelligence", icon: "radar", sections: [{ items: [
+    key: "intelligence", label: "Intelligence", icon: "radar", href: "/overview/intelligence", sections: [{ items: [
       { label: "Analyst workbench", href: "/workbench", keywords: "analysis issue tree evidence memo ic diligence research question" },
       { label: "Signals & triggers", href: "/triggers", keywords: "intelligence" },
       { label: "All current signals", href: "/triggers?tab=signals" },
@@ -107,7 +113,7 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "clients", label: "Clients", icon: "briefcase", internal: true, sections: [{ items: [
+    key: "clients", label: "Clients", icon: "briefcase", href: "/overview/clients", internal: true, sections: [{ items: [
       { label: "Accounts", href: "/clients", keywords: "tenants client health organizations" },
       { label: "Commercial overview", href: "/commercial", keywords: "arr mrr pipeline revenue" },
       { label: "Engagements", href: "/commercial?tab=engagements", keywords: "mandates workstreams deliverables" },
@@ -120,7 +126,7 @@ export const NAV: NavGroup[] = [
     ] }],
   },
   {
-    key: "operations", label: "Operations", icon: "check", sections: [{ items: [
+    key: "operations", label: "Operations", icon: "check", href: "/overview/operations", sections: [{ items: [
       { label: "Actions & tasks", href: "/tasks" },
       { label: "Capacity", href: "/capacity", keywords: "utilization allocation team cost rates hiring" },
       { label: "Playbooks", href: "/playbooks", keywords: "workflows" },
@@ -154,10 +160,14 @@ export type NavUser = { modules?: readonly string[] | "all"; internal: boolean }
 
 /** The navigation this user may use: modules they are entitled to; Regenera-internal groups only for staff. */
 export function navFor(u: NavUser): NavGroup[] {
-  return NAV.filter(g => !g.internal || u.internal).map(g => ({
-    ...g,
-    sections: g.sections.map(s => ({ ...s, items: s.items.filter(i => pathAllowed(u.modules, i.href)) })).filter(s => s.items.length),
-  })).filter(g => (g.href ? pathAllowed(u.modules, g.href) : g.sections.length > 0));
+  return NAV.filter(g => !g.internal || u.internal).flatMap(g => {
+    const sections = g.sections.map(s => ({ ...s, items: s.items.filter(i => pathAllowed(u.modules, i.href)) })).filter(s => s.items.length);
+    // A group with a submenu is shown when any leaf is allowed; a single-page group when its page is.
+    if (g.sections.length ? !sections.length : !(g.href && pathAllowed(u.modules, g.href))) return [];
+    // The label opens the landing page when the user may open it, otherwise the first leaf they may open.
+    const href = g.href && pathAllowed(u.modules, g.href) ? g.href : sections[0]?.items[0]?.href;
+    return [{ ...g, href, sections }];
+  });
 }
 
 export const settingsFor = (u: NavUser) => (u.internal ? SETTINGS_NAV : SETTINGS_NAV.filter(i => i.href === "/org" || (i.href === "/connect/mcp" && pathAllowed(u.modules, i.href))));

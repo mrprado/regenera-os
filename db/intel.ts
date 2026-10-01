@@ -33,7 +33,7 @@ export const proposals = sqliteTable("proposals", {
   id: id(),
   mandateId: text("mandate_id").notNull(),
   kind: text("kind", { enum: PROPOSAL_KINDS }).notNull(),
-  source: text("source", { enum: ["learning", "ask", "mcp"] }).notNull(),
+  source: text("source", { enum: ["learning", "ask", "mcp", "meeting"] }).notNull(),
   title: text("title").notNull(),
   evidence: text("evidence", { mode: "json" }).$type<Record<string, unknown>>(),
   change: text("change", { mode: "json" }).$type<{ action: string; args: Record<string, unknown> }>().notNull(),

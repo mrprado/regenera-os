@@ -2,7 +2,8 @@
 // public queues, qualify with recorded checks, client responses (attribution), pursuits, approvals, signals, delivery
 // floors, economics. Every function takes `db` so it is testable; scope filtering happens in queries.ts and actions.
 // People decide: client responses, human checks, approvals, bid decisions and pursuit outcomes refuse non-human actors.
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { currentCall } from "@/lib/funding/queries";
 import type { Db } from "@/db";
 import { approvals, capitalMandates, capitalProfiles, commercialMandates, fundingOpportunities, largeLoads, mandateCandidates, mandateDeliveries, mandateSignals, organizations, projects, pursuits, queueProjects, tasks, teamMembers, notifications } from "@/db/schema";
 import type { CriterionCheck, StageEvent } from "@/db/mandates";
@@ -90,7 +91,7 @@ async function capitalSources(db: Db, m: Cm): Promise<Source[]> {
 }
 
 async function fundingSources(db: Db, m: Cm): Promise<Source[]> {
-  const rows = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, m.mandateId), ne(fundingOpportunities.status, "closed"))).limit(400);
+  const rows = await db.select().from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, m.mandateId), currentCall(new Date().toISOString().slice(0, 10)))).limit(400);
   return rows.map(o => ({
     entityType: "funding_opportunity", entityId: o.id, name: o.title,
     attrs: { geographies: o.countries ?? [], value: o.amountMax ?? o.amountMin, technology: (o.sectors ?? "").toString(), sponsorKnown: true, cod: o.deadline, source: o.source },

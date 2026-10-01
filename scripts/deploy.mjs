@@ -27,7 +27,13 @@ export default {
     return app.fetch(request, env, ctx);
   },
   async scheduled(event, env, ctx) {
-    if (!env.JOBS_TICK_TOKEN) return;
+    // Heartbeat on every firing, so Command and Settings can tell "cron never fires" from "fires but cannot run jobs".
+    const beat = (status) => env.DB.batch([
+      env.DB.prepare("INSERT INTO system_state (key, value, updated_at) VALUES ('cron_last_fired_at', ?1, ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at").bind(new Date().toISOString()),
+      env.DB.prepare("INSERT INTO system_state (key, value, updated_at) VALUES ('cron_status', ?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at").bind(status, new Date().toISOString()),
+    ]).catch(() => {});
+    if (!env.JOBS_TICK_TOKEN) { ctx.waitUntil(beat("skipped_no_token")); return; }
+    ctx.waitUntil(beat("fired"));
     const tick = new Request(env.APP_BASE_URL + "/api/jobs/tick", { method: "POST", headers: { authorization: "Bearer " + env.JOBS_TICK_TOKEN } });
     ctx.waitUntil(app.fetch(tick, env, ctx).then(r => r.text()));
   },
