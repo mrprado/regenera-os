@@ -11,8 +11,8 @@ The Place screen now exposes a deeper land-evidence checklist and links to the e
 constraints and planning workflows. Parcel databases, geometry tools and offline sync are specified, not yet built.
 
 ## Runtime
-One Cloudflare Worker (`regenera-os`) serves regenera.bio/os: Next 16 (App Router, React 19) built with vinext,
-basePath `/os`, Worker routes in front of the public site. D1 (SQLite, Drizzle) holds all data; R2 is planned for
+One Cloudflare Worker (`regenera-os`) serves os.regenera.bio: Next 16 (App Router, React 19) built with vinext,
+no base path, Worker Custom Domain (regenera.bio/os redirects). D1 (SQLite, Drizzle) holds all data; R2 is planned for
 file storage. A cron trigger (every 5 minutes) runs the job tick; jobs live in the D1 `jobs` table with cadences,
 retries and budgets. See docs/DEPLOYMENT.md.
 

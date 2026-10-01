@@ -11,7 +11,7 @@ import path from "node:path";
 
 const [dir, ...rest] = process.argv.slice(2);
 if (!dir) { console.error("Usage: node scripts/mail-import.mjs <import-dir> [--base url] [--from-start]"); process.exit(1); }
-const base = (rest.includes("--base") ? rest[rest.indexOf("--base") + 1] : "http://localhost:5180/os").replace(/\/$/, "");
+const base = (rest.includes("--base") ? rest[rest.indexOf("--base") + 1] : "http://localhost:5180").replace(/\/$/, "");
 const vars = existsSync(".dev.vars") ? Object.fromEntries(readFileSync(".dev.vars", "utf8").split(/\r?\n/).filter(l => /^\w+=/.test(l)).map(l => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).replace(/^"|"$/g, "")])) : {};
 const token = process.env.MAIL_IMPORT_TOKEN ?? vars.MAIL_IMPORT_TOKEN ?? process.env.JOBS_TICK_TOKEN ?? vars.JOBS_TICK_TOKEN;
 if (!token) { console.error("No MAIL_IMPORT_TOKEN / JOBS_TICK_TOKEN available."); process.exit(1); }

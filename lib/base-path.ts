@@ -1,4 +1,4 @@
-// The OS is served at regenera.bio/os (next.config.ts basePath). next/link, redirect() and router.push add it
-// themselves; plain <a href>, <form action> strings, fetch() and absolute URLs built by hand use withBase().
-export const BASE_PATH = "/os";
+// The OS is served at the root of os.regenera.bio, so there is no base path. Plain <a href>, <form action> strings,
+// fetch() and cookie paths still go through withBase() so a base path can return in one place (next.config.ts too).
+export const BASE_PATH = "";
 export const withBase = (path: string) => `${BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;

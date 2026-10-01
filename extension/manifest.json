@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Capture the LinkedIn profile you are viewing into Regenera OS, copy the queued note, and mark it sent. Acts only when you click.",
   "permissions": ["storage", "sidePanel", "scripting", "tabs"],
-  "host_permissions": ["https://www.linkedin.com/in/*", "https://regenera.bio/os/*", "http://localhost:5180/*"],
+  "host_permissions": ["https://www.linkedin.com/in/*", "https://os.regenera.bio/*", "http://localhost:5180/*"],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "Regenera OS" },
   "side_panel": { "default_path": "panel.html" },

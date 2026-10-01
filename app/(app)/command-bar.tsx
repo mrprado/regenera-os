@@ -7,7 +7,7 @@ import { flatNav, type NavUser } from "@/lib/nav";
 import { pathAllowed } from "@/lib/tenancy/vocab";
 import { confirmProposalAction, rejectProposalAction } from "./intel-actions";
 import styles from "./command-bar.module.css";
-import { withBase } from "@/lib/base-path";
+import { BASE_PATH, withBase } from "@/lib/base-path";
 
 type Turn = { role: "user" | "assistant"; text: string; proposals?: { id: string; title: string }[] };
 
@@ -49,7 +49,7 @@ export default function CommandBar({ nav }: { nav: NavUser }) {
   const recent = useMemo(() => (open ? readRecent() : []), [open]);
   // Recents are a per-browser convenience (localStorage); they never leave the device.
   useEffect(() => {
-    const href = window.location.pathname.replace(/^\/os/, "") + window.location.search;
+    const href = window.location.pathname.slice(BASE_PATH.length) + window.location.search;
     const title = document.title.replace(/\s*[·|–-]\s*Regenera.*$/, "") || href;
     try {
       const prev = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") as { href: string; title: string }[];

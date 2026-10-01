@@ -51,7 +51,7 @@ export default async function PortalsPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader title="Portals" actions={<Link className="btn" href="/documents">Documents</Link>} />
       <Notice text={sp.notice} />
-      {flashParts && flashParts[1] && <p className={ui.notice}>Invitation link for {flashParts[0]} (shown once): <code style={{ userSelect: "all" }}>{`${env.APP_BASE_URL ?? "https://regenera.bio/os"}${flashParts[1]}`}</code></p>}
+      {flashParts && flashParts[1] && <p className={ui.notice}>Invitation link for {flashParts[0]} (shown once): <code style={{ userSelect: "all" }}>{`${env.APP_BASE_URL ?? "https://os.regenera.bio"}${flashParts[1]}`}</code></p>}
       <p className={ui.sub} style={{ marginTop: -4 }}>External users see only what a grant names, and only through the gates: broker standing, capital compliance gate, NDA, distribution approval. Public intake: <a href="../intake/project">/intake/project</a> · <a href="../intake/capital">capital</a> · <a href="../intake/broker">broker</a> · <a href="../intake/partner">partner</a>. Portal sign-in: <a href="../portal/signin">/portal/signin</a>.</p>
       <nav className={ui.tabs} aria-label="Portal sections">{TABS.map(([k, l]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/portals?tab=${k}`}>{l}</Link>)}</nav>
 

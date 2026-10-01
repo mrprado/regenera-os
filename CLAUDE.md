@@ -7,15 +7,16 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 ## Stack
 - Next.js 16 App Router + React 19, TypeScript strict, built with vinext for
   Cloudflare Workers (same toolchain as regenera-development-office)
-- Hosted on Cloudflare as the Worker regenera-os at regenera.bio/os (docs/DEPLOY.md): routes in front of the
-  public site's Custom Domain, basePath "/os", D1 (binding DB) with Drizzle, R2 (BUCKET, not yet enabled).
+- Hosted on Cloudflare as the Worker regenera-os at https://os.regenera.bio (docs/DEPLOY.md): Worker Custom
+  Domain, no basePath (regenera.bio/os/* 308-redirects there), D1 (binding DB) with Drizzle, R2 (BUCKET, not yet
+  enabled). Workers Paid is required (Free's 10 ms CPU cap gives error 1102).
   Jobs live in the D1 jobs table; a cron trigger in scripts/deploy.mjs's entry runs POST /api/jobs/tick
 - Auth: email + password sign-in (lib/session.ts, app/api/auth/*; password = the tracker's, checked by the
   site's /api/pipeline/auth, never stored) + membership (lib/auth.ts requireOsUser).
   Never trust identity headers. Every (app) route and server action calls the guard; anonymous routes are
   listed in tests/unit/route-guard.test.ts
-- basePath: next/link, redirect() and router.push add /os; plain <a href>, <form action>, fetch() and cookie
-  paths use withBase() from lib/base-path.ts
+- Base path is empty (lib/base-path.ts BASE_PATH = ""); plain <a href>, <form action>, fetch() and cookie paths
+  still use withBase() so a base path can return in one place
 - NO Supabase, ever
 - Anthropic API server-side only. Models: claude-sonnet-5 for research,
   scoring, drafting, reports; claude-haiku-4-5 for reply
@@ -27,9 +28,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - zod for all external and AI payloads
 
 ## Commands
-- npm run dev (vinext, port 5180 via -- --port 5180; open http://localhost:5180/os. Locally
+- npm run dev (vinext, port 5180 via -- --port 5180; open http://localhost:5180. Locally
   OS_PASSWORD in .dev.vars is the password) / build / start / lint / typecheck / test
-- npm run deploy: build, apply D1 migrations, deploy to regenera.bio/os (wrangler login first)
+- npm run deploy: build, apply D1 migrations, deploy to os.regenera.bio (wrangler login first)
 - npm run db:generate (drizzle-kit) after editing db/schema.ts
 - npm run build once, then npm run db:migrate:local and npm run db:seed:local for the
   local preview D1 (.wrangler/state). Production migrations apply on npm run deploy
@@ -73,7 +74,7 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:
-  curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/os/api/jobs/tick
+  curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/api/jobs/tick
 - If a dev route 500s with "Network connection lost" right after startup, it is a stale
   module from dependency optimization; touch the file or restart the dev server
 
