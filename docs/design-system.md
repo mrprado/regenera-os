@@ -1,39 +1,49 @@
-# Regenera OS design system — Systems intelligence grounded in place (2026-09-30)
+# Regenera OS design system — Systems intelligence grounded in place (2026-09-30 final lock)
 
 Supersedes the fern/gold styling copied from regenera.bio and the interim "Territorial intelligence" palette
-(2026-09-29). Final direction from Prado: a deep forest-carbon shell, the Regenera wordmark in gold, light mineral
-analytical surfaces, and semantic colour only where data means it. Not generic ESG green, not another firm's palette.
+(2026-09-29) and the forest-black / antique-brass lock. Current direction from Prado: a blackened-eucalyptus shell,
+the Regenera wordmark in mineral gold, light warm-mineral analytical surfaces, and semantic colour only where data
+means it. Not generic ESG green, not another firm's palette.
 
 Tokens live in `styles/tokens.css` (the only place colours are defined). Legacy and interim names are remapped there.
 
-## Colour (LOCKED 2026-09-30)
+## Colour (2026-09-30 final lock: Graphite Moss + Saffron Gold + Oxidized Rust + Warm Ivory)
 
-Dark forest + aged brass + limestone + iron + earth. Green and brass establish the identity; the working environment
-stays limestone, charcoal and semantic data colour. Sophistication comes from typography, spacing, data visualization,
-motion and layout — not further colour changes. No blue, purple, orange or pure black as the primary architecture.
+Supersedes the blackened-eucalyptus / mineral-gold palette of earlier the same day. Graphite Moss for the shell, Warm
+Ivory for the working environment, Saffron Gold almost exclusively for the Regenera identity and key selected states,
+and Oxidized Rust as the distinctive secondary accent. The logo is REGENERA in Saffron Gold #D9A61C on Graphite Moss
+#252D27. No gradients, no pills in navigation, gold never a button fill.
 
-| Role | Token | Hex | Use |
+| Role | Name | Token | Hex |
 |---|---|---|---|
-| Forest black | `--forest-carbon` | #0D1511 | sidebar, header, primary buttons |
-| Pine carbon | `--deep-moss` | #16201A | hover, active navigation, elevated dark surface |
-| Moss graphite | `--canopy` | #263028 | secondary dark panel, button hover |
-| Shell metadata | `--sage-ash` | #7C877E | inactive labels on dark |
-| Atlas base | `--atlas-base` | #0A110D | immersive spatial workspace |
-| Antique brass | `--brass` | #8F6B24 | the Regenera wordmark |
-| Old gold | `--gold` / `--accent` | #A37C2D | nav and tab markers, selected high-level object, opportunity, important signal — never a button fill |
-| Limestone | `--limestone` | #F1EEE6 | main workspace |
-| Bone | `--chalk` | #FAF8F2 | analysis, tables, reports |
-| Parchment | `--warm-ash` | #E4DED1 | secondary surface |
-| Ink / Stone | `--text-1` / `--text-2` | #191C19 / #6B6D67 | primary / secondary text |
-| Land / development | `--copper` | #9B6248 | semantic |
-| Nature / agriculture | `--lichen` | #6F8062 | semantic |
-| Water | `--water` | #557F7C | semantic |
-| Capital | `--plum` | #655468 | semantic |
-| Infrastructure | `--steel` | #6D7573 | semantic |
-| Energy | `--energy` | #B17B2E | semantic |
-| Risk | `--critical` | #A84B40 | status, always with a label or symbol |
+| Primary shell / sidebar | Graphite Moss | `--forest-carbon` (`--action`) | #252D27 |
+| Deep background (Atlas, immersive) | Carbon Moss | `--atlas-base` | #1B211D |
+| Shell hover / secondary dark | | `--deep-moss` / `--canopy` | #2E3830 / #3A463E |
+| Main workspace | Warm Ivory | `--limestone` | #F3F0E9 |
+| Cards / panels | Soft White | `--chalk` | #FBFAF7 |
+| Secondary surface | | `--warm-ash` | #E8E5DE |
+| Primary text | Near Black | `--text-1` | #191D1A |
+| Secondary text | Mineral Grey | `--text-2` | #747A74 |
+| Borders / dividers | Warm Stone | `--ash` | #D8D5CE |
+| Logo / primary brand accent | Saffron Gold | `--gold`, `--brass`, `--accent` | #D9A61C |
+| Saffron as text on ivory | | `--gold-ink` | #87660C |
+| Secondary accent (land, development) | Oxidized Rust | `--copper` | #A45F3F |
+| Dark rust | Iron Oxide | `--copper-ink` | #7D4633 |
+| Secondary green (nature, inactive icons) | Muted Sage | `--lichen`, `--sage-ash` | #7B887E |
+| Cool data accent (infrastructure) | Blue Grey | `--steel` | #728087 |
+| Water / capital / energy / risk | semantic | `--water` / `--plum` / `--energy` / `--critical` | #4E7F7D / #67566D / #B17B2E / #AC4D43 |
 
-Proportion: 65–75% light surfaces, 15–20% forest shell, 5–8% brass/gold accents, the rest semantic.
+Proportion: 65–75% light surfaces, 15–20% shell, 5–8% gold accents, the rest semantic.
+
+### Sidebar treatment
+
+- Active item: a thin gold rail (2 px, `--accent`) and a near-invisible tonal lift (`rgba(255,255,255,.025)`); white
+  label, gold icon. Never a filled block.
+- Hover: slight tonal lift (`rgba(255,255,255,.03)`), icon brightens from muted stone.
+- Icons: muted stone (`--sage-ash`), not white.
+- Wordmark: `--brass` with breathing room (letter-spacing .26em, 6 px inset).
+- Section labels: 9.5 px uppercase, .2em tracking, muted stone.
+- Separators: nearly invisible (`rgba(255,255,255,.025–.04)`); the menu search is an underline, not a pill.
 
 ## Type
 

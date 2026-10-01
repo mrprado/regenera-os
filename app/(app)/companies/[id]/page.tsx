@@ -9,6 +9,12 @@ import { aiConfig } from "@/lib/config";
 import { getOrganization } from "@/lib/crm/queries";
 import { DEAL_STAGES, SECTORS } from "@/lib/vocab";
 import { addNote, publicEnrichOne, researchOne } from "../../crm-actions";
+import { addProspectAction } from "../../funding-origination-actions";
+import { appDb } from "@/lib/db/scoped";
+import { fundingForOrg } from "@/lib/funding/pipeline";
+import { kindOf } from "@/lib/funding/origination";
+import { expansionsFor } from "@/lib/funding/origination-queries";
+import { EXPANSION_KINDS, EXPANSION_STATUSES, FUNDING_KINDS, PROSPECT_STAGES } from "@/lib/funding/vocab";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Company" };
@@ -25,6 +31,8 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
   const fs = org.fieldSources ?? {};
   const prov = (f: string) => (fs[f] ? <span className={r.prov}> · {SOURCE_NAME[fs[f].source] ?? fs[f].source}</span> : null);
   const hasAi = aiConfig() !== null;
+  const [pathways, expansions] = await Promise.all([fundingForOrg(appDb(), org.id, 12), expansionsFor(user.scope, org.id)]);
+  const PATH_LABEL = { confirmed: "Confirmed eligibility", potential: "Potential fit", review: "Needs review" } as const;
 
   return (
     <>
@@ -64,6 +72,28 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
                   {t.decisionRead && <p className={r.read}>{t.decisionRead}</p>}
                 </div>
               ))}
+            </section>
+          )}
+
+          <section className={r.panel}>
+            <p className={r.panelTitle}><span>Funding pathways</span><Link href="/funding">Funding</Link></p>
+            <p className={r.why} style={{ marginTop: 0 }}>Open calls matched to this organization&apos;s type, geography and sector. Eligibility is claimed only when confirmed with a basis.</p>
+            {pathways.length === 0 ? <p className={r.empty}>No open call currently matches. Record the organization&apos;s country and sector to improve matching.</p> : (
+              <table className={ui.table}><tbody>{pathways.map(x => (
+                <tr key={x.o.id}>
+                  <td><Link className={ui.primary} href={`/funding/${x.o.id}`}>{x.o.title}</Link><span className={ui.sub}>{[x.o.funder, FUNDING_KINDS[kindOf(x.o).kind].label, x.o.deadline ? `closes ${x.o.deadline}` : "rolling"].filter(Boolean).join(" · ")}</span></td>
+                  <td><span className={ui.chip}>{PATH_LABEL[x.label]}</span></td>
+                  <td>{x.p ? <span className={ui.sub}>{PROSPECT_STAGES[x.p.stage as keyof typeof PROSPECT_STAGES]}</span> : (
+                    <form action={addProspectAction}><input type="hidden" name="opportunityId" value={x.o.id} /><input type="hidden" name="orgId" value={org.id} /><input type="hidden" name="mode" value="client_first" /><input type="hidden" name="eligibility" value={x.m.eligibility} /><input type="hidden" name="back" value={`/companies/${org.id}`} /><button className={ui.miniBtn} type="submit">Open funding workstream</button></form>)}</td>
+                </tr>
+              ))}</tbody></table>
+            )}
+          </section>
+
+          {expansions.length > 0 && (
+            <section className={r.panel}>
+              <p className={r.panelTitle}>Expansion opportunities</p>
+              <table className={ui.table}><tbody>{expansions.map(({ x }) => <tr key={x.id}><td>{EXPANSION_KINDS[x.kind as keyof typeof EXPANSION_KINDS] ?? x.kind}<span className={ui.sub}>{x.relevance}</span></td><td>{EXPANSION_STATUSES[x.status as keyof typeof EXPANSION_STATUSES] ?? x.status}</td></tr>)}</tbody></table>
             </section>
           )}
 

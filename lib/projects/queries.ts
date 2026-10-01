@@ -79,10 +79,10 @@ export async function projectPickers(scope: Scope) {
 /** Open funding opportunities that fit a project by country and sector, for the Funding tab. */
 export async function fundingForProject(scope: Scope, p: { country: string | null; sector: string | null }) {
   const db = appDb();
-  return db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline, fit: fundingOpportunities.fit, countries: fundingOpportunities.countries })
+  return db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline, fit: fundingOpportunities.fit, countries: fundingOpportunities.countries, type: fundingOpportunities.type, kind: fundingOpportunities.kind, amountMax: fundingOpportunities.amountMax, currency: fundingOpportunities.currency })
     .from(fundingOpportunities)
     .where(and(mandateCondition(scope, fundingOpportunities.mandateId), sql`${fundingOpportunities.status} != 'closed'`, sql`${fundingOpportunities.decision} != 'dismissed'`,
       p.sector ? like(sql`coalesce(${fundingOpportunities.sectors}, '')`, `%${p.sector}%`) : undefined,
       p.country ? or(like(sql`lower(coalesce(${fundingOpportunities.countries}, ''))`, `%${p.country.toLowerCase()}%`), sql`${fundingOpportunities.countries} = '[]'`) : undefined))
-    .orderBy(desc(sql`coalesce(${fundingOpportunities.fit}, 0)`)).limit(15);
+    .orderBy(asc(sql`coalesce(${fundingOpportunities.deadline}, '9999')`)).limit(25);
 }

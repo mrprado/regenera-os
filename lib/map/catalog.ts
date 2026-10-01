@@ -124,6 +124,8 @@ export function tileUrl(layer: Pick<CatalogLayer, "tiles">, date: string, key = 
 export type OfferedLayer = Omit<CatalogLayer, "needsEnv" | "keyEnv" | "keyedTiles"> & {
   /** Added by /api/map/catalog: tier and provenance (lib/map/provenance.ts), licence terms from the registry, measured freshness. */
   provenance?: Provenance | null;
+  /** The data-catalogue record behind the layer (lib/data-providers): platform, version, analytical role, limitation. */
+  dataset?: { id: string; provider: string; platform: string | null; name: string; version: string | null; role: string; limitation: string | null; evidenceLevel: number; localValidation: boolean } | null;
   terms?: { license: string; licenseUrl: string | null; commercialUse: string; redistribution: string; attribution: string } | null;
   freshness?: { status: Freshness; ageH: number | null; lastOk: string | null };
 };

@@ -100,7 +100,7 @@ export async function scanFundingNowAction() {
 
 export async function saveLibraryAction(formData: FormData) {
   const id = zId.optional().catch(undefined).parse(formData.get("id") || undefined);
-  const kind = z.enum(["profile", "methodology", "cv", "past_performance", "other"]).parse(formData.get("kind"));
+  const kind = z.enum(["profile", "methodology", "cv", "past_performance", "other", "narrative", "boilerplate", "project", "impact", "mande", "risk", "budgeting", "prior_response", "study"]).parse(formData.get("kind"));
   const title = z.string().trim().min(1).max(200).parse(formData.get("title"));
   const body = z.string().trim().min(1).max(8000).parse(formData.get("body"));
   const caseRecordId = zId.optional().catch(undefined).parse(formData.get("caseRecordId") || undefined) ?? null;
@@ -108,7 +108,7 @@ export async function saveLibraryAction(formData: FormData) {
     const db = appDb();
     const mandateId = user.scope.ownerOf[0] ?? user.scope.mandateIds[0];
     if (id) await db.update(bidLibrary).set({ kind, title, body, caseRecordId, updatedAt: new Date().toISOString() }).where(and(eq(bidLibrary.id, id), mandateCondition(user.scope, bidLibrary.mandateId)));
-    else await db.insert(bidLibrary).values({ mandateId, kind, title, body, caseRecordId });
+    else await db.insert(bidLibrary).values({ mandateId, kind, title, body, caseRecordId, approved: true, approvedBy: user.email, owner: user.email });
   });
   redirect(note("/funding?tab=library", "Saved."));
 }

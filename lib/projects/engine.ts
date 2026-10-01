@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { READINESS_DIMENSIONS, STAGE_ORDER, type ProjectStage, type ReadinessDimension } from "./vocab";
+import { linkDefaultDatasets } from "@/lib/data-providers/site";
 
 type NewProject = typeof projects.$inferInsert;
 
@@ -17,6 +18,7 @@ export async function createProject(db: Db, input: Omit<NewProject, "id">, actor
   const [p] = await db.insert(projects).values(input).returning();
   await db.insert(projectReadiness).values((Object.keys(READINESS_DIMENSIONS) as ReadinessDimension[]).map(dimension => ({ projectId: p.id, mandateId: p.mandateId, dimension })));
   await db.insert(projectStageHistory).values({ projectId: p.id, mandateId: p.mandateId, toStage: p.stage, reason: "Created", actor });
+  await linkDefaultDatasets(db, p.id, p.mandateId); // applicable WRI / institutional screening sources (§11)
   await audit(db, { actor, action: "project_created", entity: "projects", entityId: p.id, after: { name: p.name, stage: p.stage } });
   await emitEvent(db, { mandateId: p.mandateId, type: "PROJECT_CREATED", entityType: "project", entityId: p.id, payload: { name: p.name, stage: p.stage }, actor });
   return p;

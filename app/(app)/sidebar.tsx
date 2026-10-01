@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Banknote, BriefcaseBusiness, ChevronRight, Earth, House, Landmark, Network, Radar, Search, Settings, Sprout, SquareCheckBig, SquareKanban, type LucideIcon,
-} from "lucide-react";
+  Banknote, BriefcaseBusiness, ChevronRight, Earth, House, Landmark, Network, Radar, Search, Settings, Sprout, SquareCheckBig, SquareKanban, type LucideIcon, Crosshair } from "lucide-react";
 import { flatNav, navFor, type NavGroup, type NavLeaf, type NavUser, settingsFor } from "@/lib/nav";
 import styles from "./shell.module.css";
 
-const ICONS: Record<string, LucideIcon> = { house: House, earth: Earth, landmark: Landmark, sprout: Sprout, banknote: Banknote, kanban: SquareKanban, network: Network, radar: Radar, briefcase: BriefcaseBusiness, check: SquareCheckBig };
+const ICONS: Record<string, LucideIcon> = { house: House, earth: Earth, landmark: Landmark, sprout: Sprout, banknote: Banknote, kanban: SquareKanban, network: Network, radar: Radar, briefcase: BriefcaseBusiness, check: SquareCheckBig, target: Crosshair };
 
 /** A leaf is active when the path matches and every query param it names matches too (so /capital?tab=bonds ≠ /capital). */
 function leafActive(href: string, pathname: string, params: URLSearchParams) {

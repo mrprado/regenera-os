@@ -90,7 +90,7 @@ describe("classify and read", () => {
 
   it("stops at the monthly AI budget without calling the model", async () => {
     await t.db.insert(signals).values({ source: "gdelt", externalId: "x", title: "x", url: "https://x", publishedAt: "2026-09-22T00:00:00Z" });
-    await t.db.insert(aiRuns).values({ promptKey: "trigger.classify", promptVersion: 1, model: "claude-haiku-4-5", costUsd: 60, status: "ok", createdAt: "2026-09-10T00:00:00.000Z" });
+    await t.db.insert(aiRuns).values({ promptKey: "trigger.classify", promptVersion: 1, model: "claude-haiku-4-5", costUsd: 60, status: "ok", createdAt: new Date().toISOString() }); // the guard reads the real current month
     const { client, calls } = fakeAnthropic([]);
     await expect(classifyNewSignals(t.db, CFG, 15, NOW, client)).rejects.toThrow(/budget/);
     expect(calls).toHaveLength(0);

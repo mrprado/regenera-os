@@ -53,6 +53,12 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
               <dt>Freshness</dt><dd>{l.freshness ? FRESHNESS[l.freshness.status] : "Not tracked"}{l.freshness?.lastOk ? ` · last successful load ${l.freshness.lastOk.slice(0, 16).replace("T", " ")} UTC` : ""}</dd>
               <dt>Licence</dt><dd>{l.terms ? <>{l.terms.licenseUrl ? <a href={l.terms.licenseUrl} target="_blank" rel="noreferrer">{l.terms.license}</a> : l.terms.license} · commercial use: {l.terms.commercialUse}{l.terms.redistribution ? ` · redistribution: ${l.terms.redistribution}` : ""}</> : l.license}</dd>
               <dt>Attribution</dt><dd>{l.attribution}</dd>
+              {l.dataset && <>
+                <dt>Source</dt><dd>{l.dataset.provider}{l.dataset.platform ? ` · ${l.dataset.platform}` : ""}</dd>
+                <dt>Dataset</dt><dd>{l.dataset.name}{l.dataset.version ? ` · ${l.dataset.version}` : ""}</dd>
+                <dt>Analytical role</dt><dd>{l.dataset.role} · evidence level {l.dataset.evidenceLevel} (global screening)</dd>
+                {l.dataset.limitation && <><dt>Limitation</dt><dd>{l.dataset.limitation}{l.dataset.localValidation ? ". Local validation required." : ""}</dd></>}
+              </>}
             </dl>
           ) : <p className={styles.error}>Provenance unknown: do not rely on this layer for a decision.</p>}
           <p>{[`refresh: ${l.refresh}`, status?.source && `via ${status.source}`, status?.updated && `loaded ${status.updated.slice(11, 16)} UTC`].filter(Boolean).join(" · ")}</p>

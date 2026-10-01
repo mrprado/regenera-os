@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
   brokerProfiles, capitalMandates, capitalStackLayers, capitalStructures, fundingPathways, capitalProfiles, capitalRequirements, capitalTranches, constraints, contacts, dataRoomDocuments, dataRooms, documentRequests,
-  documents, events, mandateMembers, mandates, notifications, organizations, playbooks, stageGates, triggerRules, portalUsers, projectParties, projectUpdates, projects, referralRegistrations, risks, spatialLayers, tasks,
+  bids, documents, events, mandateMembers, networkProfiles, procurementPackages, mandates, notifications, organizations, playbooks, stageGates, triggerRules, portalUsers, projectParties, projectUpdates, projects, referralRegistrations, risks, spatialLayers, tasks,
 } from "@/db/schema";
 import { addMilestone } from "@/lib/delivery/engine";
 import { normalizeOrgName } from "@/lib/dedupe/normalize";
@@ -15,6 +15,7 @@ import { ensurePlaybooks } from "@/lib/playbooks/engine";
 import { createProject, setReadiness } from "@/lib/projects/engine";
 import { createPathway } from "@/lib/capital/pathways";
 import { createStructure, saveStructure } from "@/lib/capital/stack";
+import { BUILT_DEMO_TABLES, seedBuiltDemo } from "@/lib/built/seed";
 
 export const DEMO_MANDATE = "mandate_demo";
 const D = (s: string) => `DEMO — ${s}`;
@@ -115,12 +116,13 @@ export async function seedDemo(db: Db, ownerEmail: string) {
   await sample("sample cenote zone", "water", { type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [[[-89.72, 20.9], [-89.66, 20.9], [-89.66, 20.94], [-89.72, 20.94], [-89.72, 20.9]]] }, properties: { name: "Sample karst / cenote sensitivity zone" } }] });
   await ensurePlaybooks(db, M);
   await ensureRulesAndGates(db, M);
+  await seedBuiltDemo(db, M, [eco.id, solar.id, nz.id, kenya.id]);
   return { created: true, projects: [solar.id, eco.id, nz.id, kenya.id] };
 }
 
 /** Removes every demo record by deleting the demo entity's rows (tables are mandate-scoped). */
 export async function removeDemo(db: Db) {
-  const scoped = [fundingPathways, capitalStackLayers, capitalStructures, notifications, events, triggerRules, stageGates, playbooks, referralRegistrations, brokerProfiles, portalUsers, spatialLayers, projectUpdates, documentRequests, dataRooms, documents, tasks, capitalMandates, capitalProfiles, risks, constraints, projectParties, capitalTranches, capitalRequirements, projects, contacts, organizations];
+  const scoped = [...BUILT_DEMO_TABLES, bids, procurementPackages, networkProfiles, fundingPathways, capitalStackLayers, capitalStructures, notifications, events, triggerRules, stageGates, playbooks, referralRegistrations, brokerProfiles, portalUsers, spatialLayers, projectUpdates, documentRequests, dataRooms, documents, tasks, capitalMandates, capitalProfiles, risks, constraints, projectParties, capitalTranches, capitalRequirements, projects, contacts, organizations];
   for (const t of scoped) await db.delete(t).where(inArray((t as unknown as { mandateId: typeof projects.mandateId }).mandateId, [DEMO_MANDATE]));
   await db.delete(mandateMembers).where(eq(mandateMembers.mandateId, DEMO_MANDATE));
   await db.delete(mandates).where(eq(mandates.id, DEMO_MANDATE));

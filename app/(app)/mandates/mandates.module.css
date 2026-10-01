@@ -1,0 +1,58 @@
+/* Mandates: a live portfolio of hairline tiles, categorical fit readings with their basis, evidence markers that never
+   let an inference look like a source fact. Colours only from tokens; data colours are semantic. */
+.portfolio { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin: 0 0 20px; }
+.tile { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 16px 12px; display: grid; gap: 8px; align-content: start; }
+.tile h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.tile h3 a { color: var(--heading); }
+.tileMeta { font-size: 11.5px; color: var(--text-3); letter-spacing: .02em; }
+.tileStats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 11px; color: var(--text-3); }
+.tileStats b { display: block; font-size: 15px; font-weight: 500; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.next { font-size: 12.5px; color: var(--text-2); border-left: 2px solid var(--gold); padding-left: 8px; }
+.reading { display: inline-block; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; white-space: nowrap; color: var(--text-2); }
+.reading[data-r="strong"], .reading[data-r="yes"], .reading[data-r="ready"], .reading[data-r="on_track"], .reading[data-r="approved"] { color: var(--lichen); border-color: color-mix(in srgb, var(--lichen) 45%, transparent); }
+.reading[data-r="partial"], .reading[data-r="conditional"], .reading[data-r="watch"], .reading[data-r="approved_conditions"], .reading[data-r="pending"] { color: var(--water); border-color: color-mix(in srgb, var(--water) 45%, transparent); }
+.reading[data-r="weak"], .reading[data-r="unknown"], .reading[data-r="not_started"] { color: var(--copper-ink); border-color: color-mix(in srgb, var(--copper) 40%, transparent); }
+.reading[data-r="fail"], .reading[data-r="no"], .reading[data-r="not_ready"], .reading[data-r="at_risk"], .reading[data-r="off_track"], .reading[data-r="rejected"] { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, transparent); }
+.fitGrid { display: grid; grid-template-columns: 150px 92px 1fr; gap: 0; font-size: 12.5px; border-top: 1px solid var(--line); }
+.fitGrid > * { padding: 7px 8px 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.fitDots { display: inline-flex; gap: 3px; vertical-align: middle; }
+.fitDots i { width: 7px; height: 7px; border-radius: 1px; background: var(--warm-ash); }
+.fitDots i[data-r="strong"] { background: var(--lichen); }
+.fitDots i[data-r="partial"] { background: var(--water); }
+.fitDots i[data-r="weak"] { background: var(--copper); }
+.fitDots i[data-r="fail"] { background: var(--critical); }
+.evidence { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.evidence li { font-size: 12.5px; line-height: 1.45; padding-left: 10px; border-left: 2px solid var(--ash); }
+.evidence li[data-k="source"], .evidence li[data-k="verified"] { border-left-color: var(--lichen); }
+.evidence li[data-k="internal"], .evidence li[data-k="client"] { border-left-color: var(--water); }
+.evidence li[data-k="inference"], .evidence li[data-k="analyst"] { border-left-color: var(--copper); }
+.ek { display: inline-block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); margin-right: 6px; }
+.ek[data-k="inference"] { color: var(--copper-ink); }
+.ek[data-k="source"], .ek[data-k="verified"] { color: var(--lichen); }
+.checks { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.check { display: grid; grid-template-columns: 60px minmax(180px, 1fr) 2fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); font-size: 12.5px; }
+.check form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.check input[type="text"] { flex: 1 1 200px; font: inherit; font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--ash); border-radius: var(--radius-control); background: var(--chalk); }
+.check select { font: inherit; font-size: 12.5px; padding: 3px 4px; border: 1px solid var(--ash); border-radius: var(--radius-control); background: var(--chalk); }
+.respond { display: flex; flex-wrap: wrap; gap: 6px; }
+.respond form { display: contents; }
+.stagebar { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 0 14px; }
+.stagebar span { flex: 1 1 90px; font-size: 11px; padding: 8px 8px; color: var(--text-3); border-right: 1px solid var(--line); letter-spacing: .02em; }
+.stagebar span:last-child { border-right: 0; }
+.stagebar span[data-on="done"] { color: var(--text-1); }
+.stagebar span[data-on="current"] { color: var(--heading); font-weight: 600; box-shadow: inset 0 -2px 0 var(--gold); }
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); margin: 0 0 16px; }
+.levels > div { padding: 10px 14px 10px 0; }
+.levels > div + div { padding-left: 14px; border-left: 1px solid var(--line); }
+.levels h4 { margin: 0 0 6px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+.levels p { margin: 0; font-size: 12.5px; }
+.levels b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.report { font-size: 13px; line-height: 1.55; max-width: 860px; }
+.report h3 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin: 18px 0 6px; }
+.report ul { margin: 0; padding-left: 18px; }
+.lens { border-top: 1px solid var(--line); padding: 10px 0; display: grid; grid-template-columns: 180px 1fr; gap: 12px; font-size: 12.5px; }
+.lens h4 { margin: 0 0 4px; font-size: 13px; }
+.lens ul { margin: 2px 0 0; padding-left: 16px; }
+.caution { font-size: 12px; color: var(--copper-ink); border-left: 2px solid var(--copper); padding-left: 8px; margin: 8px 0; }
+@media (max-width: 900px) { .fitGrid { grid-template-columns: 110px 80px 1fr; } .levels { grid-template-columns: 1fr 1fr; } .check { grid-template-columns: 50px 1fr; } .check > :last-child { grid-column: 1 / -1; } .lens { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .portfolio { grid-template-columns: 1fr; } .tileStats { grid-template-columns: repeat(2, 1fr); } .levels { grid-template-columns: 1fr; } .levels > div + div { border-left: 0; padding-left: 0; } }

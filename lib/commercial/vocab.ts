@@ -2,7 +2,7 @@
 
 export const SERVICE_FAMILIES = {
   strategy: "Strategy & origination", spatial: "Spatial & site intelligence", development: "Project development", financial: "Financial & underwriting",
-  capital: "Capital", environmental: "Environmental / natural capital", intelligence: "Intelligence", transaction: "Transaction / execution", portfolio: "Portfolio / ongoing",
+  capital: "Capital", funding: "Funding & capital strategy", environmental: "Environmental / natural capital", intelligence: "Intelligence", transaction: "Transaction / execution", portfolio: "Portfolio / ongoing",
 } as const;
 export const DEPTHS = { screen: "Screen", assess: "Assess", execute: "Execute", standard: "Standard" } as const;
 export const BILLING_TYPES = {
@@ -50,6 +50,7 @@ export type RevenueCategory = keyof typeof REVENUE_CATEGORIES;
 export const ENTRY_POINTS = {
   project: "A · A specific project", capital: "B · A capital problem", investment: "C · An investment-screening problem", operating: "D · An operating problem (spreadsheets, Drive, email)",
   development: "E · A development problem (land, grid, water, permits)", portfolio: "F · A portfolio problem", custom_system: "G · A custom-system request",
+  funding: "H · A funding call (funding-originated)",
 } as const;
 export const WORK_MANDATE_STATUSES = { draft: "Draft", active: "Active", paused: "Paused", complete: "Complete", expired: "Expired", cancelled: "Cancelled" } as const;
 export const WORKSTREAM_STATUSES = { planned: "Planned", active: "Active", blocked: "Blocked", review: "In review", complete: "Complete" } as const;

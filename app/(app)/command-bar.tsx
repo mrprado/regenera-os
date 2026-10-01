@@ -13,7 +13,7 @@ type Turn = { role: "user" | "assistant"; text: string; proposals?: { id: string
 
 /** Quick actions: each opens the screen where the action is completed (nothing is created from the palette itself). */
 const ACTIONS: [string, string][] = [
-  ["Create project", "/projects"], ["Add person", "/people/new"], ["Add organization", "/companies/new"], ["Import contacts", "/people/import"], ["Create deal", "/deals"],
+  ["Create analysis", "/workbench"], ["Create project", "/projects"], ["Add person", "/people/new"], ["Add organization", "/companies/new"], ["Import contacts", "/people/import"], ["Create deal", "/deals"],
   ["Create engagement", "/commercial?tab=engagements"], ["New client organization", "/clients"], ["Invite a member", "/org?tab=users"], ["Open Atlas", "/map"],
   ["Run site intelligence (choose a project in Atlas)", "/map"], ["Find capital for a project", "/capital?tab=opportunities"], ["Upload or register a document", "/documents"],
   ["Generate a document", "/documents/generator"], ["Create report", "/reports"], ["Record a large load", "/power"], ["Add a land candidate", "/land"],

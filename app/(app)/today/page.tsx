@@ -20,6 +20,10 @@ import { commercialOverview } from "@/lib/commercial/engine";
 import { commercialMetrics } from "@/lib/commercial/metrics";
 import { confirmProposalAction, rejectProposalAction } from "../intel-actions";
 import { fundingCounts } from "@/lib/funding/queries";
+import { fundingCommand } from "@/lib/funding/origination-queries";
+import { builtCommand } from "@/lib/built/engine";
+import { mandateCommand } from "@/lib/mandates/queries";
+import { mailCommand } from "@/lib/mail-intel/queries";
 import { contractTotals } from "@/lib/contracts/queries";
 import { DEAL_STAGES } from "@/lib/vocab";
 import { projectAlerts } from "@/lib/projects/engine";
@@ -69,26 +73,31 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 }
 
 async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof requireOsUser>>; sp: Record<string, string | undefined> }) {
-  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery, procurement] = await Promise.all([homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope), projectAlerts(appDb(), user.scope.mandateIds), obligationAlerts(appDb(), user.scope.mandateIds), regulatoryAlerts(appDb(), user.scope.mandateIds), deliveryAlerts(appDb(), user.scope.mandateIds), procurementAlerts(appDb(), user.scope.mandateIds)]);
-  const [attention, strip, changes] = await Promise.all([
-    needsAttention(appDb(), user.scope.mandateIds, user.email, new Date(), { pa: projectFlags, del: delivery, proc: procurement, reg: regFlags, obl: obligationFlags }),
-    operatingStrip(appDb(), user.scope.mandateIds),
-    changesSinceLastSession(appDb(), user.scope.mandateIds, user.email),
-  ]);
-  const showAll = sp.attention === "all";
+  // Every independent read runs in one parallel round (on D1 each read is a network round trip); only "needs attention"
+  // waits, because it consumes the alert sets.
+  const db = appDb(), ws = user.scope.mandateIds;
   // Regenera's own commercial position: internal staff only, never a client user (hardening §31; company model §30).
   const internal = isInternal(user.scope);
-  const comm = internal ? await commercialOverview(appDb(), user.scope.mandateIds) : null;
-  const cm = comm ? commercialMetrics(comm.rows) : null;
-  const [align, pending, [gateQueue], located] = await Promise.all([
-    capitalAlignment(appDb(), user.scope.mandateIds),
-    appDb().select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
+  const [d, engage, sending, meetings, funding, contractStats, projectFlags, obligationFlags, regFlags, delivery, procurement, strip, changes, comm, fc, be, mc, mail, align, pending, [gateQueue], located] = await Promise.all([
+    homeData(user.scope), engageCounts(user.scope), sendingOverview(), upcomingMeetings(user.scope), fundingCounts(user.scope), contractTotals(user.scope),
+    projectAlerts(db, ws), obligationAlerts(db, ws), regulatoryAlerts(db, ws), deliveryAlerts(db, ws), procurementAlerts(db, ws),
+    operatingStrip(db, ws), changesSinceLastSession(db, ws, user.email),
+    internal ? commercialOverview(db, ws) : Promise.resolve(null),
+    internal ? fundingCommand(user.scope) : Promise.resolve(null),
+    builtCommand(db, ws).catch(() => []),
+    mandateCommand(db, user.scope).catch(() => null),
+    mailCommand(db, user.scope).catch(() => null),
+    capitalAlignment(db, ws),
+    db.select({ id: proposals.id, title: proposals.title, source: proposals.source, createdAt: proposals.createdAt }).from(proposals)
       .where(and(mandateCondition(user.scope, proposals.mandateId), eq(proposals.status, "pending"), eq(proposals.kind, "action"))).orderBy(desc(proposals.createdAt)).limit(10),
-    appDb().select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
+    db.select({ n: sql<number>`count(*)` }).from(capitalOpportunities)
       .where(and(mandateCondition(user.scope, capitalOpportunities.mandateId), inArray(capitalOpportunities.gateState, ["review_required", "hold"]), sql`${capitalOpportunities.status} != 'closed'`)),
-    appDb().select({ id: projects.id, name: projects.name, lat: projects.lat, lng: projects.lng, stage: projects.stage, country: projects.country }).from(projects)
+    db.select({ id: projects.id, name: projects.name, lat: projects.lat, lng: projects.lng, stage: projects.stage, country: projects.country }).from(projects)
       .where(and(mandateCondition(user.scope, projects.mandateId), isNull(projects.archivedAt), isNotNull(projects.lat), isNotNull(projects.lng))).limit(500),
   ]);
+  const attention = await needsAttention(db, ws, user.email, new Date(), { pa: projectFlags, del: delivery, proc: procurement, reg: regFlags, obl: obligationFlags });
+  const showAll = sp.attention === "all";
+  const cm = comm ? commercialMetrics(comm.rows) : null;
   const flagged = new Set(attention.map(a => a.href.match(/^\/projects\/([^/?]+)/)?.[1]).filter(Boolean));
   const points = located.map(p => ({ id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, stage: stageLabel(p.stage as never) ?? p.stage, sub: p.country ?? undefined, alert: flagged.has(p.id) }));
   const critical = attention.filter(a => a.severity === "critical" || a.severity === "high").length;
@@ -117,6 +126,62 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
           <Stat n={compactMoney(m.weighted, m.currency)} label="Weighted pipeline" href="/commercial?tab=engagements" />
           <Stat n={compactMoney(m.renewals, m.currency)} label="Renewing in 120 days" href="/commercial" />
         </div>))}
+      {fc && (fc.activeBids + fc.fresh + fc.deadlines30 + fc.diagnostics + fc.awardsPending + fc.postAward + fc.pipelineCount > 0 || fc.capacity.length > 0) && (
+        <section className={r.panel} aria-label="Funding (internal)">
+          <p className={r.panelTitle}><span>Funding</span><Link href="/funding?tab=origination">Origination</Link></p>
+          <div className={ui.stats} style={{ margin: 0 }}>
+            <Stat n={fc.fresh} label="New relevant opportunities, 7 days" href="/funding" />
+            <Stat n={fc.deadlines30} label="Tracked deadlines in 30 days" href="/funding?tab=calendar" warn />
+            <Stat n={fc.activeBids} label="Active bids" href="/funding?tab=bids" />
+            <Stat n={fc.diagnostics} label="Diagnostics in progress" href="/funding?tab=applicants&stage=diagnostic_won" />
+            <Stat n={fc.awardsPending} label="Awards pending" href="/funding?tab=bids" />
+            <Stat n={fc.postAward} label="Post-award programs" href="/funding?tab=awards" />
+            <Stat n={compactMoney(fc.pipelineWeighted, fc.pipelineCurrency)} label={`Funding-originated pipeline, weighted (${fc.pipelineCount})`} href="/funding?tab=origination" />
+          </div>
+          {(fc.atRisk.length > 0 || fc.capacity.length > 0) && (
+            <ul className={r.timeline}>
+              {fc.atRisk.slice(0, 6).map(a => <li key={a.id}><span className={r.when} style={{ color: "var(--critical)" }}>At risk</span><span><Link href={`/funding/applications/${a.id}?tab=workplan`}>{a.name}</Link>: {a.why}</span></li>)}
+              {fc.capacity.slice(0, 5).map(w => <li key={w.key}><span className={r.when} style={{ color: w.severity === "high" ? "var(--critical)" : undefined }}>Capacity</span><span><Link href="/capacity">{w.issue}</Link></span></li>)}
+            </ul>
+          )}
+          {!fc.teamConfigured && fc.activeBids > 0 && <p className={ui.sub}>Proposal capacity is not measured until the team and cost rates are set in <Link href="/capacity?tab=team">Capacity</Link>.</p>}
+        </section>
+      )}
+      {mc && mc.mandates.length > 0 && (
+        <section className={r.panel} aria-label="Mandates">
+          <p className={r.panelTitle}><span>Mandates</span><Link href="/mandates">Live mandates</Link></p>
+          <div className={ui.stats} style={{ margin: 0 }}>
+            <Stat n={mc.active.length} label="Active mandates" href="/mandates?status=active" />
+            <Stat n={mc.awaitingClient} label="Awaiting client decision" href="/mandates" />
+            <Stat n={mc.pending.length} label="Approvals pending" href="/approvals" warn />
+            <Stat n={mc.pursuits.length} label="Open pursuits" href="/pursuits" />
+            <Stat n={compactMoney(mc.weighted, "USD")} label="Weighted pursuit pipeline" href="/pursuits" />
+            <Stat n={mc.stale.length} label="Stalled pursuits (14 days)" href="/pursuits" warn />
+          </div>
+          {(mc.pending.length > 0 || mc.signals.length > 0 || mc.atRisk.length > 0) && (
+            <ul className={r.timeline}>
+              {mc.atRisk.slice(0, 4).map(m => <li key={m.id}><span className={r.when} style={{ color: "var(--critical)" }}>At risk</span><span><Link href={"/mandates/" + m.id}>{m.name}</Link>: {m.healthNote}</span></li>)}
+              {mc.pending.slice(0, 5).map(a => <li key={a.id}><span className={r.when}>Approve</span><span><Link href="/approvals">{a.title}</Link></span></li>)}
+              {mc.signals.slice(0, 5).map(x => <li key={x.id}><span className={r.when}>{x.inference ? "Signal (inference)" : "Signal"}</span><span>{x.candidateId ? <Link href={"/mandates/candidates/" + x.candidateId}>{x.whatChanged}</Link> : x.whatChanged}<span className={ui.sub} style={{ display: "block" }}>{x.recommendedAction}</span></span></li>)}
+            </ul>
+          )}
+        </section>
+      )}
+      {mail && (mail.awaiting.length > 0 || mail.obligations.length > 0) && (
+        <section className={r.panel} aria-label="Email follow-ups">
+          <p className={r.panelTitle}><span>Email follow-ups</span><Link href="/intelligence/mail">Email intelligence</Link></p>
+          <ul className={r.timeline}>
+            {mail.obligations.slice(0, 5).map(o => <li key={o.id}><span className={r.when}>{o.kind === "commitment" ? (o.byMe ? "I committed" : "They committed") : (o.byMe ? "I asked" : "Asked of me")}</span><span><Link href="/intelligence/mail?tab=obligations">{o.text}</Link><span className={ui.sub} style={{ display: "block" }}>{o.actor} → {o.counterparty}{o.dueDate ? " · due " + o.dueDate.slice(0, 10) : ""}</span></span></li>)}
+            {mail.awaiting.slice(0, 5).map(t => <li key={t.key}><span className={r.when}>Reply owed</span><span><Link href="/intelligence/mail?tab=threads&awaiting=me">{t.subject || "(no subject)"}</Link><span className={ui.sub} style={{ display: "block" }}>last message {t.lastAt.slice(0, 10)}</span></span></li>)}
+          </ul>
+        </section>
+      )}
+      {be.length > 0 && (
+        <section className={r.panel} aria-label="Built environment">
+          <p className={r.panelTitle}><span>Built environment</span><Link href="/intelligence/built">Overview</Link></p>
+          <ul className={r.timeline}>{be.slice(0, 8).map(x => <li key={x.key}><span className={r.when}>{x.kind}</span><span><Link href={x.href}>{x.text}</Link><span className={ui.sub} style={{ display: "block" }}>{x.why}</span></span></li>)}</ul>
+        </section>
+      )}
       {align.total > 0 && <div className={ui.stats} aria-label="Capital alignment">
         {(["nature_positive", "transition", "unclassified"] as const).map(k => <Stat key={k} n={compactMoney(align.byAlignment[k], align.currency)} label={`${ALIGNMENT[k]} capital`} href="/capital/alignment" />)}
         <Stat n={compactMoney(align.materialRisk, align.currency)} label="Capital with material nature risk" href="/capital/alignment" />
@@ -179,7 +244,7 @@ async function TodayBody({ user, sp }: { user: Awaited<ReturnType<typeof require
         <Stat n={engage.queue} label="Drafts to approve" href="/queue" />
         <Stat n={engage.replies} label="Replies to handle" href="/inbox" warn />
         <Stat n={engage.tasksDue} label="Tasks due today" href="/tasks" />
-        <Stat n={funding.strong} label={`Strong-fit funding open (${funding.open} total)`} href="/funding?min=70" />
+        <Stat n={funding.open} label="Open funding opportunities" href="/funding" />
         <Stat n={funding.closing} label="Funding deadlines in 14 days" href="/funding?window=30" warn />
         <Stat n={contractStats.sent} label="Contracts awaiting signature" href="/contracts?status=sent" warn />
         <Stat n={gateQueue?.n ?? 0} label="Capital opportunities awaiting gate review" href="/capital?tab=opportunities" warn />

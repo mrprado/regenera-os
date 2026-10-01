@@ -288,6 +288,48 @@
       "when": 1790741160037,
       "tag": "0040_low_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1790742083881,
+      "tag": "0041_dear_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "6",
+      "when": 1790793151059,
+      "tag": "0042_rich_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1790796757040,
+      "tag": "0043_previous_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1790797611014,
+      "tag": "0044_smart_piledriver",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1790800414170,
+      "tag": "0045_furry_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1790821435223,
+      "tag": "0046_damp_sphinx",
+      "breakpoints": true
     }
   ]
 }

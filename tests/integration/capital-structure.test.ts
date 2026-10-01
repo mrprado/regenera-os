@@ -137,5 +137,6 @@ it("search finds pathways and structures in the user's entities", async () => {
   const scope: UserScope = { kind: "user", userId: "u", email: "u@example.com", mandateIds: [M], ownerOf: [] };
   const hits = await globalSearch(t.db, scope, "green");
   expect(hits.map(h => h.type)).toEqual(expect.arrayContaining(["Funding pathway", "Capital structure"]));
-  expect((await globalSearch(t.db, { ...scope, mandateIds: ["other"] }, "green")).length).toBe(0);
+  // Only workspace records are scoped; the dataset catalogue is global reference data.
+  expect((await globalSearch(t.db, { ...scope, mandateIds: ["other"] }, "green")).filter(h => h.type !== "Dataset").length).toBe(0);
 });

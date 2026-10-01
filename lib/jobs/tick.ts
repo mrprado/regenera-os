@@ -14,7 +14,7 @@ import { ensureSegments } from "@/lib/segments";
 import { getState, setState } from "@/lib/state";
 import { ensureTriggerQueries } from "@/lib/triggers/queries";
 import { DEFAULT_SCHEDULES, handlers as defaultHandlers, type JobHandler } from "./handlers";
-import { claim, complete, fail, reclaimStale } from "./queue";
+import { claim, claimTypes, complete, fail, reclaimStale } from "./queue";
 import { ensureSchedules, materializeDue } from "./schedules";
 import { ensureIntegrations } from "@/lib/integrations/engine";
 
@@ -66,7 +66,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-09-29.2";
+const REFERENCE_VERSION = "2026-10-01.1"; // bump: seeds the MISO / SPP queue integrations
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {
@@ -86,4 +86,25 @@ export async function ensureReferenceData(db: Db): Promise<void> {
   // Phase 5: EU TED and World Bank tenders now live in Funding, not Triggers.
   await db.update(triggerQueries).set({ enabled: false }).where(inArray(triggerQueries.source, ["ted", "worldbank"]));
   await setState(db, "reference_version", REFERENCE_VERSION);
+}
+
+/** Runs queued jobs of the given types for up to `budgetMs` (used by screens that drive their own background work while
+ *  open; the scheduler finishes anything left). Returns how many ran and whether any remain queued. */
+export async function runJobsOfTypes(db: Db, types: string[], opts: { budgetMs?: number; now?: () => Date; handlers?: Record<string, JobHandler> } = {}) {
+  const now = opts.now ?? (() => new Date());
+  const handlers = opts.handlers ?? defaultHandlers;
+  const started = Date.now();
+  let ran = 0, failed = 0;
+  while (Date.now() - started < (opts.budgetMs ?? 8_000)) {
+    const [job] = await claimTypes(db, now(), types, 1, 120_000);
+    if (!job) return { ran, failed, more: false };
+    try {
+      const handler = handlers[job.type];
+      if (!handler) throw new Error(`No handler registered for job type "${job.type}"`);
+      await handler({ db, job, now: now() });
+      await complete(db, job.id, now());
+      ran++;
+    } catch (error) { await fail(db, job, error, now()); failed++; }
+  }
+  return { ran, failed, more: true };
 }

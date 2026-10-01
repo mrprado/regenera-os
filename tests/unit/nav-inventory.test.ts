@@ -36,7 +36,7 @@ describe("navigation inventory", () => {
   });
 
   it("the sidebar keeps the frozen top-level set", () => {
-    expect(NAV.map(g => g.label)).toEqual(["Command", "Atlas", "Projects", "Systems", "Capital", "Deals", "Relationships", "Intelligence", "Clients", "Operations"]);
+    expect(NAV.map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Projects", "Systems", "Capital", "Deals", "Relationships", "Intelligence", "Clients", "Operations"]);
   });
 
   it("clients see only entitled modules and never Regenera-internal groups", () => {

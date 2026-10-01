@@ -7,6 +7,22 @@ import {
   interventions, organizations, permits, playbooks, privateCapitalProfiles, procurementPackages, projectMilestones, projects, spatialLayers, studies,
 } from "@/db/schema";
 import { isOwner, mandateCondition, type UserScope } from "@/lib/db/scoped";
+import { DATASETS, providerOf } from "@/lib/data-providers/catalog";
+import { builtSearch } from "@/lib/built/search";
+
+/** Datasets match on subject words; place words ("Mexico", "Ghana") match any dataset with global coverage. */
+export function datasetHits(q: string, limit = 5): SearchHit[] {
+  const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return [];
+  const scored = DATASETS.map(d => {
+    const text = `${d.name} ${d.category} ${d.subcategory ?? ""} ${d.analyticalRole} ${d.provider} ${d.platform ?? ""}`.toLowerCase();
+    const global = /global|tropics|selected|countries|per jurisdiction/i.test(d.geography); // coverage that may include the place
+    const hit = words.filter(w => text.includes(w) || (w.endsWith("s") && text.includes(w.slice(0, -1))));
+    const rest = words.filter(w => !hit.includes(w));
+    return { d, n: hit.length, ok: hit.length > 0 && (rest.length === 0 || global || rest.every(w => d.geography.toLowerCase().includes(w))) };
+  }).filter(x => x.ok).sort((a, b) => b.n - a.n).slice(0, limit);
+  return scored.map(({ d }) => ({ type: "Dataset", label: d.name, sub: `${providerOf(d.provider)?.name ?? d.provider} · ${d.geography}`, href: `/intelligence/data/${d.provider}` }));
+}
 
 export type SearchHit = { type: string; label: string; sub: string; href: string };
 
@@ -72,5 +88,7 @@ export async function globalSearch(db: Db, scope: UserScope, q: string): Promise
     ...funding.map(x => ({ type: "Funding", label: x.title, sub: x.deadline ? `closes ${x.deadline}` : "rolling", href: `/funding/${x.id}` })),
     ...docs.map(x => ({ type: "Document", label: x.title, sub: `v${x.version}`, href: x.url ?? "/documents" })),
     ...workspace,
+    ...datasetHits(term),
+    ...(await builtSearch(db, scope, term).catch(() => [])),
   ];
 }

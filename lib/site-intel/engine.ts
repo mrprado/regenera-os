@@ -14,6 +14,7 @@ import { nearestInfrastructure } from "@/lib/geo/osm";
 import { gbifBiodiversity, nasaPower, usgsSeismic, wbIndicators } from "@/lib/place/adapters";
 import { eeStatus } from "@/lib/providers/earth-engine";
 import { runEe, type EeAnalysis } from "@/lib/providers/ee-service";
+import { aqueductFacts, aqueductForSite, lossFacts, refreshScreening } from "@/lib/data-providers/site";
 
 export const STAGES = [
   ["spatial", "Spatial analysis"], ["energy", "Energy resource"], ["grid", "Grid"], ["water", "Water"], ["ecology", "Ecology"], ["land", "Land & terrain"], ["remote_sensing", "Remote sensing (Earth Engine)"],
@@ -89,13 +90,20 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
     if (precip) facts.push({ label: precip.label, value: precip.value, source: "NASA POWER climatology" });
     if (src) facts.push({ label: "Nearest river / named water body", value: src.status === "known" ? `${km(src.distanceM)}${src.name ? ` · ${src.name}` : ""}` : `None mapped within ${km(src.searchedRadiusM)}`, source: infra.source });
     facts.push({ label: "Surface-water history", value: "See Atlas layer: JRC surface water occurrence 1984–2021", source: "EC JRC / Google" });
+    // WRI Aqueduct (Tier 1, global screening): a failure leaves a visible "unavailable" line, never a guess.
+    try { const aq = await aqueductForSite(db, lat, lng, fetchImpl); facts.unshift(...aqueductFacts(aq)); if (!aq.readings.length) facts.push({ label: "Aqueduct water risk", value: "No sub-basin value at this point", source: "WRI Aqueduct 4.0 via Resource Watch", datasetId: "wri.aqueduct.baseline_water_stress" }); }
+    catch (e) { facts.push({ label: "Aqueduct water risk", value: `Unavailable: ${(e as Error).message.slice(0, 120)}. Source link: wri.org/aqueduct`, source: "WRI Aqueduct 4.0", datasetId: "wri.aqueduct.baseline_water_stress" }); }
+    facts.push({ label: "Diligence requirement", value: "Local hydrological and regulatory diligence required; Aqueduct is not project-level hydrological proof", source: "Regenera evidence policy (Level 1 → 2/3)", kind: "inference" });
     return { summary: facts.slice(0, 2).map(f => `${f.label}: ${f.value}`).join(" · "), facts };
   },
-  async ecology({ db, g, lat, lng, fetchImpl }) {
+  async ecology({ db, g, lat, lng, fetchImpl, env }) {
     const facts: StageFact[] = [];
     if (g) {
       const c = await landCoverComposition(g);
       facts.push({ label: "Natural cover", value: `${c.naturalHa} ha (${c.naturalPct}%) of ${c.siteHa} ha`, source: c.source }, ...c.classes.slice(0, 4).map(x => ({ label: x.label, value: `${x.ha} ha · ${x.pct}%`, source: c.source })));
+      // WRI Global Forest Watch zonal statistics over the boundary (needs a free GFW_API_KEY).
+      try { facts.push(...await lossFacts(db, env.GFW_API_KEY, g as { type: "Polygon" | "MultiPolygon"; coordinates: unknown }, fetchImpl)); }
+      catch (e) { facts.push({ label: "Tree cover loss (GFW)", value: `Unavailable: ${(e as Error).message.slice(0, 120)}. See the Atlas forest-loss layer.`, source: "WRI Global Forest Watch", datasetId: "wri.gfw.tree_cover_loss" }); }
     }
     const b = await gbifBiodiversity(db, lat, lng, fetchImpl);
     facts.push(...b.map(x => ({ label: x.label, value: x.value, source: "GBIF (aggregate counts)" })));
@@ -199,6 +207,8 @@ export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fet
   const remaining = stages.some(s => s.status === "queued");
   const status = remaining ? "running" : stages.some(s => s.status === "failed") ? "partial" : "complete";
   await db.update(siteIntelRuns).set({ stages, status, updatedAt: new Date().toISOString(), finishedAt: remaining ? null : new Date().toISOString() }).where(eq(siteIntelRuns.id, runId));
+  // A finished run refreshes the project's screening flags and dataset links (sources, not conclusions).
+  if (!remaining) await refreshScreening(db, run.projectId).catch(() => undefined);
   return { ...run, stages, status };
 }
 

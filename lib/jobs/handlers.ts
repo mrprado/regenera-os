@@ -15,7 +15,7 @@ import { placeFunding, readFunding, scanFunding } from "@/lib/funding/engine";
 import { draftProposal } from "@/lib/funding/bids";
 import { ensureCaseRecords, ladderSummary, proposeOutreachChanges, proposeWeights } from "@/lib/learning/loop";
 import { savedSearches } from "@/db/schema";
-import { and as andOp, asc as ascOp } from "drizzle-orm";
+import { and as andOp, asc as ascOp, inArray as inArrayOp } from "drizzle-orm";
 import { buildWeeklyReport, renderWeekly, type WeeklyBody } from "@/lib/reports/weekly";
 import type { Metrics } from "@/lib/reports/metrics";
 import { reports } from "@/db/schema";
@@ -43,6 +43,9 @@ import { expirePermissions } from "@/lib/community/engine";
 import { continueAbandonedRuns } from "@/lib/site-intel/engine";
 import { expirePermits } from "@/lib/regulatory/engine";
 import { buildPlaceProfile, projectsNeedingPlace } from "@/lib/place/engine";
+import { syncQueue } from "@/lib/mandates/queues";
+import { buildUniverseSlice, getWork, mandateAutomation, setWork, signalsFromQueueChanges } from "@/lib/mandates/engine";
+import { commercialMandates } from "@/db/schema";
 
 export type JobContext = { db: Db; job: Job; now: Date };
 export type JobHandler = (ctx: JobContext) => Promise<void>;
@@ -279,12 +282,43 @@ export const handlers: Record<string, JobHandler> = {
     if (more) await enqueue(db, "funding.place", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `funding-place:${now.toISOString().slice(0, 16)}` });
   },
   "funding.draft": async ctx => {
-    await deferOnBudget(ctx, () => draftProposal(ctx.db, requireAi(), String(ctx.job.payload.opportunityId)));
+    await deferOnBudget(ctx, () => draftProposal(ctx.db, requireAi(), String(ctx.job.payload.opportunityId), undefined, ctx.job.payload.applicationId ? String(ctx.job.payload.applicationId) : undefined));
   },
   "lists.diff": async ({ db, now }) => {
     const sources = await db.select({ key: listSources.key }).from(listSources).where(eq(listSources.enabled, true));
     for (const src of sources) await enqueue(db, "lists.diff.source", { key: src.key }, { dedupeKey: `listdiff:${src.key}:${now.toISOString().slice(0, 10)}`, now });
   },
+  // Phase 14, background work in short jobs (each well inside a Worker request): a daily fan-out, one job per public
+  // queue, then one job per universe slice. Screens drive the same jobs while open (runJobsOfTypes); the tick finishes them.
+  "mandates.queues": async ({ db, now }) => {
+    const live = await db.select({ id: commercialMandates.id }).from(commercialMandates).where(andOp(eq(commercialMandates.type, "epc_origination"), inArrayOp(commercialMandates.status, ["active", "pilot", "proposed", "draft"])));
+    const day = now.toISOString().slice(0, 10);
+    for (const iso of ["miso", "spp"] as const) await enqueue(db, "mandates.queue.sync", { iso }, { dedupeKey: `queue-sync:${iso}:${day}`, now });
+    for (const m of live) await enqueue(db, "mandates.universe", { id: m.id, offset: 0, actor: "system:mandates" }, { dedupeKey: `universe:${m.id}:${day}:0`, now: new Date(now.getTime() + 1000) });
+  },
+  "mandates.queue.sync": async ({ db, job, now }) => {
+    const iso = job.payload.iso === "spp" ? "spp" : "miso";
+    const mandateId = typeof job.payload.mandateId === "string" ? job.payload.mandateId : null;
+    if (mandateId) { const w = await getWork(db, mandateId); if (w) await setWork(db, mandateId, { ...w, phase: "syncing", label: `Syncing the ${iso.toUpperCase()} queue` }); }
+    const r = await syncQueue(db, iso, now);
+    await signalsFromQueueChanges(db, r.changes, now);
+  },
+  "mandates.universe": async ({ db, job, now }) => {
+    const id = String(job.payload.id);
+    const offset = Number(job.payload.offset ?? 0);
+    const actor = String(job.payload.actor ?? "system:mandates");
+    const prev = offset ? await getWork(db, id) : null;
+    const r = await buildUniverseSlice(db, id, actor, now, { offset });
+    const started = prev?.startedAt ?? now.toISOString();
+    const created = (prev?.created ?? 0) + r.created, updated = (prev?.updated ?? 0) + r.updated;
+    if (r.next !== null) {
+      await setWork(db, id, { phase: "screening", label: "Screening the universe", done: r.processed, total: r.total, created, updated, startedAt: started });
+      await enqueue(db, "mandates.universe", { id, offset: r.next, actor }, { dedupeKey: `universe:${id}:${started}:${r.next}`, now });
+    } else {
+      await setWork(db, id, { phase: "done", label: "Universe up to date", done: r.total, total: r.total, created, updated, startedAt: started, finishedAt: now.toISOString() });
+    }
+  },
+  "mandates.automation": async ({ db, now }) => { await mandateAutomation(db, now); },
   "lists.diff.source": async ({ db, job, now }) => {
     await runListSource(db, String(job.payload.key), REGENERA_MANDATE_ID, now);
   },
@@ -330,4 +364,6 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "events.dispatch": "every:5m",
   "place.refresh": "daily:04:10",
   "site_intel.continue": "every:5m",
+  "mandates.queues": "daily:05:10",
+  "mandates.automation": "daily:06:15",
 };
