@@ -1,7 +1,7 @@
 "use client";
 
 // Command map (phase 10; Atlas §54; phase 15 §4): a small situational map without the Atlas engine. Keyless Esri
-// dark-gray raster tiles in Web Mercator, drag to pan, wheel or buttons to zoom, clustered points, click for a preview
+// light-gray raster tiles in Web Mercator, drag to pan, wheel or buttons to zoom, clustered points, click for a preview
 // with Open record / Open in Atlas. Points may be projects, prospects or partners; location quality is drawn (solid =
 // recorded point or site, ring = geocoded / approximate, dashed = country-level) and named in the preview, so a country
 // centroid never looks like a verified site. No aircraft, satellites or global feeds here. No MapLibre (tested).
@@ -16,7 +16,7 @@ const KIND_LABEL: Record<MiniKind, string> = { project: "Projects", prospect: "P
 const QUALITY_LABEL: Record<MiniQuality, string> = { exact: "Site geometry recorded", recorded: "Point recorded", approximate: "Approximate (geocoded headquarters)", country: "Country-level only, not a site location" };
 
 const T = 256;
-const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`;
+const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`;
 const wx = (lng: number, z: number) => ((lng + 180) / 360) * T * 2 ** z;
 const wy = (lat: number, z: number) => { const r = (Math.max(-85, Math.min(85, lat)) * Math.PI) / 180; return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * T * 2 ** z; };
 

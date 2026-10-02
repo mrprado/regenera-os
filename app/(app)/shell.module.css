@@ -170,3 +170,6 @@
 .sidebar .navSearch input, .mobilePanel .navSearch input { color: var(--volcanic); }
 .sidebar .navSearch input::placeholder, .mobilePanel .navSearch input::placeholder { color: var(--text-3); }
 .sidebar .switcher select, .mobilePanel .switcher select { border-color: var(--line); color: var(--volcanic); }
+/* Content area matches the white sidebar. */
+.content { background: var(--white, #fff); }
+.banner { background: var(--white, #fff); }
