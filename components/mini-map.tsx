@@ -30,7 +30,7 @@ function fit(points: MiniPoint[], w: number, h: number) {
   return { z: 1, cx: wx(0, 1), cy: wy(10, 1) };
 }
 
-export default function MiniMap({ points: all, height = 320, missing }: { points: MiniPoint[]; height?: number; missing?: { count: number; href: string } }) {
+export default function MiniMap({ points: all, height = 320, missing, emptyText }: { points: MiniPoint[]; height?: number; missing?: { count: number; href: string }; emptyText?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(520);
   const kinds = useMemo(() => [...new Set(all.map(p => p.kind ?? "project"))], [all]);
@@ -102,7 +102,7 @@ export default function MiniMap({ points: all, height = 320, missing }: { points
               aria-label={c.items[0].name} title={c.items[0].name} onClick={() => { if (!drag.current?.moved) setSel(c.items[0]); }} />)}
         <div className={s.zoom}><button type="button" onClick={() => zoomAt(1)} aria-label="Zoom in">+</button><button type="button" onClick={() => zoomAt(-1)} aria-label="Zoom out">−</button></div>
         <span className={s.attr}>Esri, HERE, Garmin, © OpenStreetMap</span>
-        {points.length === 0 && <p className={s.empty}>{all.length ? "Everything is filtered out." : "No projects, prospects or partners with a location yet."}</p>}
+        {points.length === 0 && <p className={s.empty}>{all.length ? "Everything is filtered out." : emptyText ?? "No projects, prospects or partners with a location yet."}</p>}
       </div>
       {sel && (
         <div className={s.preview}>

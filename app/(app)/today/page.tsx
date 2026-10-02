@@ -325,8 +325,7 @@ async function CommandMap({ ws, flagged, mode, since, focus }: { ws: string[]; f
   const empty = mode === "new" ? "No new projects, prospects, capital records or funding calls arrived today." : mode === "today" ? "No mapped records behind today's or overdue work." : "No mapped records yet.";
   return (
     <>
-      {points.length === 0 && unmapped.length === 0 ? <p className={t.mapEmpty}>{empty} <Link href="/today?map=all">Show all records</Link></p>
-        : <MiniMap points={points} height={200} missing={mode === "all" ? { count: missing, href: "/companies?missing=location" } : undefined} />}
+      <MiniMap points={points} height={200} emptyText={empty} missing={mode === "all" ? { count: missing, href: "/companies?missing=location" } : undefined} />
       {mode !== "all" && unmapped.length > 0 && (
         <details className={t.unmapped}><summary>{unmapped.length} item{unmapped.length === 1 ? "" : "s"} without a site location (listed, not pinned)</summary>
           <ul>{unmapped.slice(0, 12).map(u => <li key={u.key}><Link href={u.href}>{u.name}</Link> <span className={ui.sub}>{u.what}</span></li>)}</ul></details>
