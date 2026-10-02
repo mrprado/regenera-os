@@ -69,6 +69,10 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
             <Link className="btn" href="/deals?new=1">Add opportunity</Link>
           </nav>
         </div>
+        <div className={t.statement}>
+          <p className={t.statementTitle}>Measure what we restore.</p>
+          <p className={t.statementText}>Align projects, capital, and daily action with healthier ecosystems, stronger communities, and resilient livelihoods.</p>
+        </div>
       </header>
       <Notice text={sp.notice} />
       <Suspense fallback={<Loading />}>
@@ -83,6 +87,12 @@ const SHORTCUTS = [
   { label: "Review projects", body: "Readiness, blockers, evidence and next actions by stage.", href: "/projects" },
   { label: "Structure engagements", body: "Services, prices, pilots and agreed terms.", href: "/commercial" },
   { label: "Coordinate delivery", body: "Owners, tasks, milestones and client inputs.", href: "/tasks" },
+];
+// Decision dimensions, not measured results: no scores or totals are shown or implied.
+const LENS = [
+  { title: "Ecological renewal", body: "Soil, water, biodiversity, and ecosystem health." },
+  { title: "Community well-being", body: "Participation, equitable benefits, and community resilience." },
+  { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity." },
 ];
 const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
 
@@ -116,6 +126,11 @@ async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType
 
   return (
     <>
+      <section className={t.lens} aria-labelledby="lens-h">
+        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
+        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
+      </section>
+
       {mapMode === "off" ? (
         <p className={t.mapOff}><Link href="/today?map=today">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
       ) : (
