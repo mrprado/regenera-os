@@ -8,8 +8,8 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Next.js 16 App Router + React 19, TypeScript strict, built with vinext for
   Cloudflare Workers (same toolchain as regenera-development-office)
 - Hosted on Cloudflare as the Worker regenera-os at https://os.regenera.bio (docs/DEPLOY.md): Worker Custom
-  Domain, no basePath (regenera.bio/os/* 308-redirects there), D1 (binding DB) with Drizzle, R2 (BUCKET, not yet
-  enabled). Workers Paid is required (Free's 10 ms CPU cap gives error 1102).
+  Domain, no basePath (regenera.bio/os/* 308-redirects there), D1 (binding DB) with Drizzle, R2 (BUCKET =
+  regenera-os-backups, bound since 2026-10-01; nightly backup 02:30 Pacific). Workers Paid is required (Free's 10 ms CPU cap gives error 1102).
   Jobs live in the D1 jobs table; a cron trigger in scripts/deploy.mjs's entry runs POST /api/jobs/tick
 - Auth: email + password sign-in (lib/session.ts, app/api/auth/*; password = the tracker's, checked by the
   site's /api/pipeline/auth, never stored) + membership (lib/auth.ts requireOsUser).
@@ -134,3 +134,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Build phase by phase; write docs/plans/phase-N.md and wait for approval
   before building a phase.
 - Ask before adding paid services or changing the stack.
+- Phase 16 operational release (docs/plans/phase-16-operational-release.md): scan presets round-trip every field
+  (lib/scan/preset-form.ts), full ISO country reference with GCC inside MENA (lib/scan/countries.ts), re-screening has
+  its own allowance and never counts as discovery, per-source tallies; job health from completed jobs (lib/jobs/health.ts)
+  and readiness "configured, not verified" until a real call succeeds; pilot vs separately approved retainer, target-
+  margin checks, prelaunch delivery, price-floor overrides with an owner's reason (migration 0049); founder Command
+  (hero, map modes new/today/all, three decisions, shortcuts, full desk below). Workspace time zone: lib/time/zone.ts.

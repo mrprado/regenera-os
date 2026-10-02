@@ -20,7 +20,7 @@ check the plan first (Workers & Pages → Plans), then `npx wrangler tail regene
 | Worker, routes, cron (`*/5 * * * *` runs the job tick), D1 id, public vars | `deploy/cloudflare.json` |
 | Build patch + deploy | `scripts/deploy.mjs` always builds, then applies D1 migrations and deploys (`npm run deploy` runs the same) |
 | D1 | `regenera-os-d1` (migrations from `drizzle/`, applied on every deploy) |
-| R2 | not enabled on the account yet: imports and backups say "not available" until it is |
+| R2 | bucket regenera-os-backups bound as BUCKET (2026-10-01); nightly backup 02:30 Pacific, monthly read-back check. Restore tests go to a separate database with scripts/restore-backup.mjs, never production |
 
 ## Sign-in
 

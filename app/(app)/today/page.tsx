@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import Loading from "../loading";
 import { Notice } from "@/components/crm-bits";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import MiniMap from "@/components/mini-map";
-import { mandates, proposals, tenantMembers } from "@/db/schema";
+import { claims, mandates, proposals, tenantMembers } from "@/db/schema";
 import t from "./today.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
@@ -19,7 +19,8 @@ import { deliveryAlerts } from "@/lib/delivery/engine";
 import { procurementAlerts } from "@/lib/procurement/engine";
 import { changesSinceLastSession, needsAttention } from "@/lib/command/attention";
 import { commandDesk, COMMAND_TZ, localDate, type Bucket, type PriorityGroup } from "@/lib/command/desk";
-import { commandMapPoints } from "@/lib/command/map";
+import { commandMapPoints, type MapMode } from "@/lib/command/map";
+import { etToUtc } from "@/lib/time/et";
 import { compactMoney } from "@/lib/projects/labels";
 import { mandateCommand } from "@/lib/mandates/queries";
 import { mailCommand } from "@/lib/mail-intel/queries";
@@ -51,29 +52,42 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const date = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COMMAND_TZ }).format(now);
   const scope = ws.length === 1 ? ws[0].name : ws.length > 1 ? `${ws.length} workspaces` : "No workspace";
   const scanPreset = BUILT_IN_PRESETS[0];
+  const mapMode: MapMode | "off" = sp.map === "today" || sp.map === "all" || sp.map === "off" ? sp.map : "new";
   return (
     <>
-      <header className={t.head}>
-        <p className={t.date}>{date} · {scope}</p>
+      <header className={t.hero}>
+        <p className={t.brandLine}>REGENERA OS · ADVANCING A REGENERATIVE ECONOMY</p>
+        <h1 className={t.heroTitle}>Your workspace for projects, capital, and execution.</h1>
+        <span className={t.heroRule} aria-hidden="true" />
+        <p className={t.heroLead}>Connect intelligence, assess opportunities, structure engagements, and coordinate delivery.</p>
+        <p className={t.sectors}>Energy · Land · Infrastructure · Waste &amp; Resources</p>
+        <p className={t.purpose}>Track what each project contributes—and the evidence behind it.</p>
         <div className={t.row}>
-          <h1 className={t.hello}>Command{name ? <span className={t.helloName}> · {name}</span> : null}</h1>
+          <p className={t.date}>{date} · {scope}{name ? ` · ${name}` : ""}</p>
           <nav className={t.actions} aria-label="Command actions">
             <Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`} title={`Opens the scan launcher with "${scanPreset.name}" selected; you confirm scope before anything runs.`}>Scan prospects</Link>
             <Link className="btn" href="/queue">Review outreach</Link>
             <Link className="btn" href="/deals?new=1">Add opportunity</Link>
-            <Link className="btn" href="#meetings">Prepare meeting</Link>
           </nav>
         </div>
       </header>
       <Notice text={sp.notice} />
       <Suspense fallback={<Loading />}>
-        <Desk user={user} now={now} />
+        <Desk user={user} now={now} mapMode={mapMode} fullOpen={sp.full === "1"} />
       </Suspense>
     </>
   );
 }
 
-async function Desk({ user, now }: { user: Awaited<ReturnType<typeof requireOsUser>>; now: Date }) {
+const SHORTCUTS = [
+  { label: "Explore opportunities", body: "Scans, objectives and sourced signals to review.", href: "/scans" },
+  { label: "Review projects", body: "Readiness, blockers, evidence and next actions by stage.", href: "/projects" },
+  { label: "Structure engagements", body: "Services, prices, pilots and agreed terms.", href: "/commercial" },
+  { label: "Coordinate delivery", body: "Owners, tasks, milestones and client inputs.", href: "/tasks" },
+];
+const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "new", label: "New alerts" }, { key: "today", label: "Today's work" }, { key: "all", label: "All records" }];
+
+async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; mapMode: MapMode | "off"; fullOpen: boolean }) {
   const db = appDb(), ws = user.scope.mandateIds;
   const [pa, del, proc, reg, obl, changes, ready, mc, mail, pending] = await Promise.all([
     projectAlerts(db, ws), deliveryAlerts(db, ws), procurementAlerts(db, ws), regulatoryAlerts(db, ws), obligationAlerts(db, ws),
@@ -90,9 +104,69 @@ async function Desk({ user, now }: { user: Awaited<ReturnType<typeof requireOsUs
   const deliveryItems = attention.filter(a => ["Project", "Contract", "Compliance", "Document"].includes(a.category));
   const maxStage = Math.max(1, ...desk.pipeline.map(p => p.count));
   const totalPriorities = BUCKETS.reduce((n, b) => n + desk.priorities[b.key].length, 0);
+  // Up to three decisions: overdue, then due today, then blocked; each from an actual record with its reason and owner.
+  const decisions = [...desk.priorities.overdue, ...desk.priorities.today, ...desk.priorities.blocked].slice(0, 3);
+  // Today's work on the map: the records behind overdue and today's items and high-severity attention.
+  const idOf = (href: string) => href.match(/^\/(?:projects|companies)\/([^/?#]+)/)?.[1];
+  const focus = new Set([...desk.priorities.overdue, ...desk.priorities.today].flatMap(g => g.items.map(i => idOf(i.href))).concat(attention.map(a => idOf(a.href))).filter(Boolean) as string[]);
+  const today = localDate(now);
+  const [y, mo, d] = today.split("-").map(Number);
+  const since = etToUtc(y, mo, d, 0, 0).toISOString();
+  const [ev] = await db.select({ pending: sql<number>`sum(case when ${claims.status} in ('unverified','ai_inferred','assumption','source_provided') then 1 else 0 end)`, verified: sql<number>`sum(case when ${claims.status} = 'verified' then 1 else 0 end)`, disputed: sql<number>`sum(case when ${claims.status} = 'disputed' then 1 else 0 end)` })
+    .from(claims).where(inArray(claims.mandateId, ws.length ? ws : ["-"]));
 
   return (
     <>
+      {mapMode === "off" ? (
+        <p className={t.mapOff}><Link href="/today?map=new">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
+      ) : (
+        <section className={t.mapBand} aria-labelledby="map-h">
+          <div className={t.mapBar}>
+            <h2 id="map-h" className={t.sectionTitle}>Your global activity</h2>
+            <nav className={t.modes} aria-label="Map mode">{MAP_MODES.map(m => <Link key={m.key} href={`/today?map=${m.key}`} className={t.mode} aria-current={mapMode === m.key ? "page" : undefined}>{m.label}</Link>)}</nav>
+            <span className={t.mapLinks}><Link href="/map">Open Atlas</Link> · <Link href="/today?map=off">Hide map</Link></span>
+          </div>
+          <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading map" />}><CommandMap ws={ws} flagged={flagged} mode={mapMode} since={since} focus={focus} /></Suspense>
+        </section>
+      )}
+
+      <section className={t.decisions} aria-labelledby="dec-h">
+        <p className={r.panelTitle}><span id="dec-h">Needs your decision</span><Link href="/today?full=1#full-desk">All priorities ({totalPriorities})</Link></p>
+        {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
+          <ul className={t.decisionList}>
+            {decisions.map(g => { const it = g.items[0]; return (
+              <li key={g.key} className={t.decision}>
+                <div><b><Link href={g.href}>{g.label}</Link></b><span className={t.decisionWhy}>{g.items.length > 1 ? `${g.items.length} related items · ` : ""}{it.reason}</span>
+                  <span className={ui.sub}>{it.basis} · {it.due ? `due ${it.due}` : "no date"}{g.overdueDays ? ` · ${g.overdueDays} day${g.overdueDays === 1 ? "" : "s"} overdue` : ""} · owner {it.owner ?? "unassigned"}</span></div>
+                <Link className={t.decisionAction} href={it.href}>{it.action.length > 28 ? "Open" : it.action}</Link>
+              </li>); })}
+            {decisions.length < 3 && pending.slice(0, 3 - decisions.length).map(p => (
+              <li key={p.id} className={t.decision}><div><b>{p.title}</b><span className={t.decisionWhy}>Proposed {p.source === "mcp" ? "from Claude" : p.source === "meeting" ? "from meeting notes" : "by Ask the OS"}; nothing changes until you confirm.</span><span className={ui.sub}>{p.createdAt.slice(0, 10)}</span></div>
+                <form action={confirmProposalAction}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="back" value="/today" /><button className={t.decisionAction} type="submit">Confirm</button></form></li>))}
+          </ul>
+        )}
+      </section>
+
+      <nav className={t.shortcuts} aria-label="Move work forward">
+        {SHORTCUTS.map(x => <Link key={x.href} href={x.href} className={t.shortcut}><b>{x.label}</b><span>{x.body}</span></Link>)}
+      </nav>
+
+      <div className={t.compactCols}>
+        <section className={t.outcomes} aria-labelledby="out-h">
+          <p className={r.panelTitle}><span id="out-h">Outcomes &amp; evidence</span><Link href="/projects">Projects</Link></p>
+          {!(ev?.pending || ev?.verified || ev?.disputed) ? <p className={ui.sub}>No contribution claims recorded yet. An unassessed project is not a project with zero impact: record a baseline and intended contribution on the project before any outcome is reported.</p>
+            : <p className={ui.sub}>{ev?.verified ?? 0} claim{ev?.verified === 1 ? "" : "s"} verified by a person · {ev?.pending ?? 0} awaiting evidence or verification (source-provided, calculated, AI-inferred and assumptions are not verified) · {ev?.disputed ?? 0} disputed.</p>}
+        </section>
+        <section className={t.recent} aria-labelledby="rc-h">
+          <p className={r.panelTitle}><span id="rc-h">Recent changes</span><Link href="/notifications?tab=events">Full history</Link></p>
+          {changes.events.length === 0 ? <p className={ui.sub}>No recorded changes by others since your last session.</p> : (
+            <ul className={r.timeline}>{changes.events.slice(0, 3).map(e => <li key={e.id}><span className={r.when}>{e.at.slice(5, 10)}</span><span>{e.type.replace(/_/g, " ").toLowerCase()}{e.payload.name ? `: ${String(e.payload.name)}` : ""}</span></li>)}</ul>
+          )}
+        </section>
+      </div>
+
+      <details className={t.full} id="full-desk" open={fullOpen}>
+        <summary>Full desk: metrics, all priorities, conversations, opportunities, delivery, pipeline and system readiness{notReady.length ? ` (${notReady.length} readiness item${notReady.length === 1 ? "" : "s"} need attention)` : ""}</summary>
       <section className={t.summary} aria-label="Summary">
         <Metric label="Qualified fee pipeline" value={s.qualifiedPipeline.count ? compactMoney(s.qualifiedPipeline.value, "USD") : "None"}
           sub={s.qualifiedPipeline.count ? `${s.qualifiedPipeline.count} opportunities${s.qualifiedPipeline.valued < s.qualifiedPipeline.count ? `, ${s.qualifiedPipeline.count - s.qualifiedPipeline.valued} without a fee estimate` : ""}${s.weighted ? ` · weighted ${compactMoney(s.weighted.value, "USD")} (${s.weighted.basis} with a probability)` : ""}` : "No opportunity is past first contact"}
@@ -126,10 +200,6 @@ async function Desk({ user, now }: { user: Awaited<ReturnType<typeof requireOsUs
           )}
         </section>
         <aside className={t.side}>
-          <section aria-labelledby="map-h">
-            <p className={r.panelTitle}><span id="map-h">Map</span><Link href="/map">Open Atlas</Link></p>
-            <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading map" />}><CommandMap ws={ws} flagged={flagged} /></Suspense>
-          </section>
           <section aria-labelledby="ready-h" className={t.ready}>
             <p className={r.panelTitle}><span id="ready-h">System readiness</span><Link href="/settings/jobs">Jobs</Link></p>
             {notReady.length === 0 ? <p className={ui.sub}>Scheduler, providers, backups and sending are all working.</p> : (
@@ -203,6 +273,7 @@ async function Desk({ user, now }: { user: Awaited<ReturnType<typeof requireOsUs
           {mc && (mc.pending.length > 0 || mc.atRisk.length > 0) && <p className={ui.sub}>Mandates: {mc.pending.length ? <Link href="/approvals">{mc.pending.length} approval{mc.pending.length === 1 ? "" : "s"} pending</Link> : null}{mc.pending.length && mc.atRisk.length ? " · " : ""}{mc.atRisk.length ? <Link href="/mandates">{mc.atRisk.length} at risk</Link> : null}</p>}
         </section>
       </div>
+      </details>
     </>
   );
 }
@@ -250,7 +321,18 @@ function PriorityCard({ g, today }: { g: PriorityGroup; today: string }) {
   );
 }
 
-async function CommandMap({ ws, flagged }: { ws: string[]; flagged: Set<string> }) {
-  const { points, missing } = await commandMapPoints(appDb(), ws, flagged);
-  return <MiniMap points={points} height={260} missing={{ count: missing, href: "/companies?missing=location" }} />;
+async function CommandMap({ ws, flagged, mode, since, focus }: { ws: string[]; flagged: Set<string>; mode: MapMode; since: string; focus: Set<string> }) {
+  const { points, missing, unmapped } = await commandMapPoints(appDb(), ws, flagged, { mode, since, focus });
+  const empty = mode === "new" ? "No new projects, prospects, capital records or funding calls arrived today." : mode === "today" ? "No mapped records behind today's or overdue work." : "No mapped records yet.";
+  return (
+    <>
+      {points.length === 0 && unmapped.length === 0 ? <p className={t.mapEmpty}>{empty} <Link href="/today?map=all">Show all records</Link></p>
+        : <MiniMap points={points} height={200} missing={mode === "all" ? { count: missing, href: "/companies?missing=location" } : undefined} />}
+      {mode !== "all" && unmapped.length > 0 && (
+        <details className={t.unmapped}><summary>{unmapped.length} item{unmapped.length === 1 ? "" : "s"} without a site location (listed, not pinned)</summary>
+          <ul>{unmapped.slice(0, 12).map(u => <li key={u.key}><Link href={u.href}>{u.name}</Link> <span className={ui.sub}>{u.what}</span></li>)}</ul></details>
+      )}
+      <p className={t.mapNote}>Project sites are exact or recorded points; organizations are approximate (headquarters); capital is shown at its office, never as proof of where it invests. Test records are excluded.</p>
+    </>
+  );
 }

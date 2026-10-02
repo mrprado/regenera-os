@@ -84,3 +84,45 @@
   .metric { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); }
   .metric:first-child { border-top: 0; }
 }
+
+/* Founder Command (phase 16 §8): white canvas, hairlines, restrained gold and copper accents. */
+.hero { margin: 0 0 20px; max-width: 760px; }
+.brandLine { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .16em; color: var(--copper-ink); }
+.heroTitle { margin: 0; font-size: clamp(26px, 3.6vw, 34px); font-weight: 500; letter-spacing: -.02em; line-height: 1.15; color: var(--text-1); }
+.heroRule { display: block; width: 44px; height: 2px; margin: 14px 0 12px; background: var(--copper); }
+.heroLead { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-2); }
+.sectors { margin: 0 0 8px; font-size: 13px; color: var(--text-3); }
+.purpose { margin: 0 0 14px; font-size: 14px; color: var(--text-2); }
+.mapBand { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; margin: 0 0 22px; }
+.mapBar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
+.sectionTitle { margin: 0; font-size: 14px; font-weight: 600; }
+.modes { display: flex; gap: 4px; flex-wrap: wrap; }
+.mode { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; color: var(--text-2); text-decoration: none; }
+.mode[aria-current="page"] { background: var(--graphite, #252D27); border-color: var(--graphite, #252D27); color: var(--text-on-dark); }
+.mode:focus-visible, .decisionAction:focus-visible, .shortcut:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mapLinks { margin-left: auto; font-size: 13px; }
+.mapOff { margin: 0 0 18px; font-size: 13px; }
+.mapEmpty { margin: 0; padding: 18px 0; font-size: 14px; color: var(--text-2); }
+.mapNote { margin: 8px 0 0; font-size: 12px; color: var(--text-3); }
+.unmapped { margin-top: 8px; font-size: 13px; }
+.unmapped summary { cursor: pointer; color: var(--text-2); }
+.unmapped ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.decisions { margin: 0 0 22px; }
+.decisionList { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--white, #fff); }
+.decision { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 14px 16px; }
+.decision + .decision { border-top: 1px solid var(--line); }
+.decision > div { display: grid; gap: 3px; min-width: 0; }
+.decision b { font-size: 15px; font-weight: 600; }
+.decisionWhy { font-size: 14px; color: var(--text-2); }
+.decisionAction { flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--copper-tint, #e8d3c8); border-radius: 6px; background: transparent; color: var(--copper-ink); font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.decisionAction:hover { border-color: var(--copper); }
+.shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 22px; }
+.shortcut { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: inherit; background: var(--white, #fff); }
+.shortcut b { font-size: 15px; font-weight: 600; }
+.shortcut span { font-size: 13px; color: var(--text-2); }
+.shortcut:hover { border-color: var(--text-3); }
+.compactCols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin: 0 0 22px; }
+.full { border-top: 1px solid var(--line); padding-top: 12px; }
+.full > summary { cursor: pointer; font-size: 14px; color: var(--text-2); margin-bottom: 16px; min-height: 32px; }
+@media (max-width: 900px) { .shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .compactCols { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .shortcuts { grid-template-columns: 1fr; } .decision { flex-direction: column; align-items: flex-start; } .mapLinks { margin-left: 0; } }
