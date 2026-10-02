@@ -9,7 +9,9 @@ import { scanResults, scanRuns } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { audience } from "@/lib/scan/audiences";
-import { SCAN_PROVIDERS, SCAN_SECTIONS, SCAN_STATUS_LABEL, type ScanSection } from "@/lib/scan/config";
+import { SCAN_PROVIDERS, SCAN_SECTIONS, scanOutcome, zScanConfig, type ScanSection } from "@/lib/scan/config";
+import { geoLabel } from "@/lib/scan/countries";
+import { queryTerms } from "@/lib/scan/web";
 import { cancelScanAction, reviewResultAction } from "../../scan-actions";
 import { ScanProgress } from "../scan-progress";
 import s from "../scans.module.css";
@@ -35,18 +37,21 @@ export default async function ScanRunPage({ params, searchParams }: { params: Pr
   const active = run.status === "queued" || run.status === "running";
   const c = run.counts;
   const a = audience(run.audience);
+  const cfg = zScanConfig.safeParse(run.config);
+  const terms = cfg.success ? queryTerms(a, cfg.data) : null;
+  const PSTATUS: Record<string, string> = { ok: "Ran", not_connected: "Not connected", skipped: "Skipped (no calls)", failed: "Failed", limited: "Stopped at a limit" };
 
   return (
     <>
       <PageHeader title={run.presetName || a?.label || "Scan"} actions={<><Link className="btn" href="/scans?tab=runs">All scans</Link>{active && <form action={cancelScanAction}><input type="hidden" name="id" value={run.id} /><button className="btn" type="submit">Cancel scan</button></form>}</>} />
       <Notice text={sp.notice} />
-      <p className={s.lead}><span className={ui.chip}>{SCAN_STATUS_LABEL[run.status]}</span> {SCAN_SECTIONS[run.section as ScanSection] ?? run.section} · {a?.label} · requested by {run.requestedBy}{run.startedAt ? ` · started ${run.startedAt.slice(0, 16).replace("T", " ")} UTC` : ""}{run.completedAt ? ` · finished ${run.completedAt.slice(0, 16).replace("T", " ")} UTC` : ""}</p>
+      <p className={s.lead}><span className={ui.chip}>{scanOutcome(run)}</span> {SCAN_SECTIONS[run.section as ScanSection] ?? run.section} · {a?.label} · requested by {run.requestedBy}{run.startedAt ? ` · started ${run.startedAt.slice(0, 16).replace("T", " ")} UTC` : ""}{run.completedAt ? ` · finished ${run.completedAt.slice(0, 16).replace("T", " ")} UTC` : ""}</p>
       {active && <ScanProgress id={run.id} />}
       {run.error && <p className={ui.notice} role="alert">{run.error}</p>}
       {run.retryGuidance && <p className={ui.notice}>{run.retryGuidance}</p>}
 
       <section className={s.counts} aria-label="Results">
-        {([["Found", c.found], ["New records", c.new], ["Already in workspace", c.existing], ["Duplicates merged", c.duplicates], ["Match criteria", c.matching], ["Partial", c.partial], ["Excluded", c.excluded], ["Need review", c.needsReview], ["People found", c.people], ["Usable contact routes", c.usableRoutes], ["Provider failures", c.providerFailures]] as const).map(([k, v]) => <div key={k}><b>{v ?? 0}</b><span>{k}</span></div>)}
+        {([["Found", c.found], ["New records", c.new], ["Already held (external hit)", c.existing], ["Re-screened (workspace)", c.rescreened ?? 0], ["Duplicates merged", c.duplicates], ["Match criteria", c.matching], ["Partial", c.partial], ["Excluded", c.excluded], ["Need review", c.needsReview], ["People found", c.people], ["Usable contact routes", c.usableRoutes], ["Provider failures", c.providerFailures]] as const).map(([k, v]) => <div key={k}><b>{v ?? 0}</b><span>{k}</span></div>)}
         <div><b>{run.creditsUsed}/{run.creditCeiling}</b><span>Credits used / ceiling</span></div>
       </section>
 
@@ -88,8 +93,23 @@ export default async function ScanRunPage({ params, searchParams }: { params: Pr
           </section>
           <section className={r.panel}>
             <p className={r.panelTitle}>Providers</p>
-            <ul className={s.providers}>{run.providers.map(p => <li key={p.provider} data-status={p.status}><b>{SCAN_PROVIDERS[p.provider as keyof typeof SCAN_PROVIDERS]?.label ?? p.provider}</b> <span className={s.pstatus}>{p.status.replace("_", " ")}</span><span className={ui.sub}>{p.calls ?? 0} calls · {p.credits ?? 0} credits. {p.status === "ok" ? "" : p.detail}</span></li>)}</ul>
+            <ul className={s.providers}>{run.providers.map(p => <li key={p.provider} data-status={p.status}><b>{SCAN_PROVIDERS[p.provider as keyof typeof SCAN_PROVIDERS]?.label ?? p.provider}</b> <span className={s.pstatus}>{active && p.status === "ok" ? "Queued or running" : PSTATUS[p.status] ?? p.status}</span>
+              <span className={ui.sub}>{p.calls ?? 0} calls · {p.credits ?? 0} credits{p.raw != null ? ` · returned ${p.raw} · kept ${p.accepted ?? 0} · excluded ${p.rejected ?? 0} · duplicates ${p.duplicates ?? 0} · new ${p.created ?? 0} · already held ${p.matchedExisting ?? 0}` : ""}. {p.status === "ok" ? "" : p.detail}</span></li>)}</ul>
+            <p className={ui.sub}>Skipped means the source made no calls. Workspace sources re-read records already held and never count as new discovery.</p>
           </section>
+          {cfg.success && terms && (
+            <section className={r.panel}>
+              <p className={r.panelTitle}>Scope searched</p>
+              <dl className={r.kv}>
+                <dt>Mode</dt><dd>{cfg.data.mode === "opportunities" ? "Projects and opportunities" : "Organizations"}</dd>
+                <dt>Geography</dt><dd>{cfg.data.geography.map(geoLabel).join(", ") || "Worldwide"}</dd>
+                <dt>Terms sent</dt><dd>{terms.include.join(", ") || "None"}</dd>
+                <dt>Exclusions</dt><dd>{terms.exclude.join(", ") || "None"}</dd>
+                <dt>Freshness</dt><dd>{terms.freshnessDays} days</dd>
+                <dt>Allowance</dt><dd>{cfg.data.maxOrganizations} {cfg.data.mode === "opportunities" ? "items" : "new organizations"} · research budget USD {cfg.data.researchBudgetUsd}</dd>
+              </dl>
+            </section>
+          )}
           <section className={r.panel}>
             <p className={r.panelTitle}>What happens next</p>
             <p className={ui.sub}>Accepting marks an organization Human reviewed; it is not yet a qualified lead. Open it to record account fit, buying intent, access and contact readiness, then set it Ready for outreach. Nothing here sends a message or creates an opportunity.</p>

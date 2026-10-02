@@ -41,3 +41,17 @@
 .stages li span { color: var(--text-3); font-size: 12px; }
 .stages li[data-status="failed"] span { color: var(--critical); }
 .pick select:focus-visible, .start input:focus-visible, .start select:focus-visible, .reject input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.errors { padding: 10px 12px; border-left: 2px solid var(--critical); background: color-mix(in srgb, var(--critical) 7%, transparent); font-size: 13px; }
+.errors ul { margin: 4px 0 0; padding-left: 18px; }
+.hint { font-size: 12px; color: var(--text-3); font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; align-items: center; }
+.chip { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); font: inherit; font-size: 12px; padding: 3px 8px; cursor: pointer; min-height: 28px; }
+.chip:hover { border-color: var(--text-3); }
+.geoList { list-style: none; margin: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; max-height: 220px; overflow: auto; display: grid; gap: 2px; }
+.geoList label { display: flex !important; gap: 6px; align-items: center; min-height: 28px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.srcGroup { display: grid; gap: 4px; padding: 4px 0; }
+.srcGroup + .srcGroup { border-top: 1px solid var(--line); padding-top: 8px; }
+.inline { display: flex !important; gap: 6px; align-items: center; }
+.start textarea { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--paper); font: inherit; resize: vertical; }
+.chip:focus-visible, .start textarea:focus-visible, .geoList input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }

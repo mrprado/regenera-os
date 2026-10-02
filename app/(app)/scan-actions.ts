@@ -5,7 +5,7 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { organizations, scanResults, scanRuns, QUALIFICATION_STATUSES, type QualificationStatus } from "@/db/schema";
+import { objectives, organizations, scanResults, scanRuns, QUALIFICATION_STATUSES, type QualificationStatus } from "@/db/schema";
 import { withOsUser } from "@/lib/auth";
 import { aiConfig, apolloConfig } from "@/lib/config";
 import { appDb } from "@/lib/db/scoped";
@@ -13,6 +13,7 @@ import { runJobsOfTypes } from "@/lib/jobs/tick";
 import { zScanConfig, SCAN_SECTIONS, type ScanSection } from "@/lib/scan/config";
 import { cancelScan, ScanBlocked, startScan } from "@/lib/scan/engine";
 import { findPreset, savePreset } from "@/lib/scan/presets";
+import { presetFromForm, presetKey } from "@/lib/scan/preset-form";
 import { DIMENSIONS, qualificationFor, setAccountBrief, setDimension, setQualificationStatus, type DimensionKey } from "@/lib/scan/qualification";
 
 const note = (path: string, text: string) => `${path}${path.includes("?") ? "&" : "?"}notice=${encodeURIComponent(text)}`;
@@ -34,9 +35,12 @@ export async function startScanAction(formData: FormData) {
       if (!preset) throw new Error("Choose a scan preset.");
       const max = Number(str(formData, "maxOrganizations", 6)) || preset.config.maxOrganizations;
       const people = Number(str(formData, "maxPeoplePerOrg", 3));
-      const config = zScanConfig.parse({ ...preset.config, maxOrganizations: Math.min(500, Math.max(1, max)), maxPeoplePerOrg: Number.isFinite(people) ? Math.min(10, Math.max(0, people)) : preset.config.maxPeoplePerOrg,
-        providers: people > 0 && !preset.config.providers.includes("apollo_people") ? [...preset.config.providers, "apollo_people"] : preset.config.providers });
-      const { run, reused } = await startScan(db, { mandateId: ws, requestedBy: user.email, section, presetKey: preset.key, presetId: preset.id ?? null, presetName: preset.name, config, fallbackAccepted: formData.get("fallback") === "on" }, { apollo: apolloConfig(), ai: aiConfig() });
+      const orgMode = preset.config.mode === "organizations";
+      const config = zScanConfig.parse({ ...preset.config, maxOrganizations: Math.min(500, Math.max(1, max)),
+        maxPeoplePerOrg: orgMode && Number.isFinite(people) ? Math.min(10, Math.max(0, people)) : preset.config.maxPeoplePerOrg,
+        providers: orgMode && people > 0 && !preset.config.providers.includes("apollo_people") ? [...preset.config.providers, "apollo_people"] : preset.config.providers });
+      const { run, reused } = await startScan(db, { mandateId: ws, requestedBy: user.email, section, presetKey: preset.key, presetId: preset.id ?? null, presetName: preset.name, config,
+        fallbackAccepted: formData.get("fallback") === "on", fresh: formData.get("fresh") === "on" }, { apollo: apolloConfig(), ai: aiConfig() });
       // Drive the first steps now so the page opens with results; the scheduler finishes the rest.
       if (!reused) await runJobsOfTypes(db, ["scan.step"], { budgetMs: 4_000 });
       target = note(`/scans/${run.id}`, reused ? "This scan is already running or ran today with the same settings; showing it." : "Scan started.");
@@ -71,25 +75,32 @@ export async function cancelScanAction(formData: FormData) {
   redirect(note(`/scans/${id}`, msg));
 }
 
-export async function savePresetAction(formData: FormData) {
-  const name = z.string().trim().min(3).max(120).parse(formData.get("name"));
-  const section = z.enum(Object.keys(SCAN_SECTIONS) as [ScanSection, ...ScanSection[]]).parse(formData.get("section"));
-  const geography = str(formData, "geography", 400).split(/[,;\s]+/).filter(Boolean);
-  const terms = str(formData, "terms", 400).split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-  const excludeTerms = str(formData, "excludeTerms", 400).split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-  const providers = formData.getAll("providers").map(String);
-  const config = zScanConfig.parse({
-    audience: str(formData, "audience", 60), geography, terms, excludeTerms, providers: providers.length ? providers : ["existing"],
-    maxOrganizations: Number(str(formData, "maxOrganizations", 6)) || 50, maxPeoplePerOrg: Number(str(formData, "maxPeoplePerOrg", 3)) || 0,
-    enrichmentBudget: Number(str(formData, "enrichmentBudget", 6)) || 0, freshnessDays: Number(str(formData, "freshnessDays", 6)) || 365, signalCriteria: str(formData, "signalCriteria", 500),
-  });
-  const key = `custom_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 50)}`;
-  await withOsUser(async user => {
-    const ws = user.scope.mandateIds[0];
-    if (!ws) throw new Error("No workspace");
-    await savePreset(appDb(), ws, { key, name, section, note: str(formData, "note", 500), config }, user.email);
-  });
-  redirect(note("/scans?tab=presets", `Preset "${name}" saved.`));
+export type PresetFormState = { errors: string[]; values: Record<string, string | string[]> | null; seq: number };
+
+/** Saves a preset from the full form (lib/scan/preset-form.ts). On any problem nothing is saved, the errors are named and
+ *  the form is returned with what the person typed; settings are never silently dropped or cut short. */
+export async function savePresetAction(prev: PresetFormState, formData: FormData): Promise<PresetFormState> {
+  const parsed = presetFromForm(formData);
+  const typed = Object.fromEntries([...new Set([...formData.keys()])].filter(k => !k.startsWith("$")).map(k => {
+    const all = formData.getAll(k).map(String);
+    return [k, k === "providers" || k === "geography" ? all : all[0] ?? ""];
+  }));
+  if (!parsed.ok) return { errors: parsed.errors, values: typed, seq: prev.seq + 1 };
+  const key = presetKey(parsed.name);
+  try {
+    await withOsUser(async user => {
+      const ws = user.scope.mandateIds[0];
+      if (!ws) throw new Error("No workspace");
+      if (parsed.config.objectiveId) {
+        const [o] = await appDb().select({ id: objectives.id }).from(objectives).where(and(eq(objectives.id, parsed.config.objectiveId), eq(objectives.mandateId, ws)));
+        if (!o) throw new Error("The linked objective is not in this workspace.");
+      }
+      await savePreset(appDb(), ws, { key, name: parsed.name, section: parsed.section, note: parsed.note, config: parsed.config }, user.email);
+    });
+  } catch (e) {
+    return { errors: [err(e)], values: typed, seq: prev.seq + 1 };
+  }
+  redirect(note(`/scans?tab=presets&edit=${key}`, `Preset "${parsed.name}" saved. Reloaded below from what was stored.`));
 }
 
 async function orgInScope(user: { scope: { mandateIds: string[] } }, orgId: string) {

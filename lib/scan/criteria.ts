@@ -21,12 +21,14 @@ export function screenOrganization(org: OrgFacts, a: Audience, c: ScanConfig): S
   const haystack = `${org.name} ${text}`;
   const src = org.source;
 
-  // Geography: a stated country inside the scan geography supports it; outside contradicts; missing is unknown.
+  // Geography: a stated country inside the scan geography supports it; outside contradicts; missing is unknown. A value the
+  // country reference cannot resolve is unknown and needs review: an unrecognized spelling is never proof of a mismatch.
   const geo = expandGeography(c.geography);
   if (geo.length) {
-    const iso = country(org.country)?.iso3 ?? (org.country ? org.country.toUpperCase() : null);
+    const resolved = country(org.country)?.iso3 ?? null;
+    const iso = resolved ?? (org.country && geo.includes(org.country.trim().toUpperCase()) ? org.country.trim().toUpperCase() : null);
     criteria.push(!iso
-      ? { key: "geography", label: "Geography", result: "unknown", evidence: "No country recorded" }
+      ? { key: "geography", label: "Geography", result: "unknown", evidence: org.country ? `Recorded country "${org.country}" is not recognized; review the location` : "No country recorded" }
       : geo.includes(iso)
         ? { key: "geography", label: "Geography", result: "supported", evidence: `Recorded country ${countryName(iso)}`, source: src }
         : { key: "geography", label: "Geography", result: "contradicted", evidence: `Recorded country ${countryName(iso)} is outside the scan geography`, source: src });
@@ -42,8 +44,8 @@ export function screenOrganization(org: OrgFacts, a: Audience, c: ScanConfig): S
       ? { key: "audience", label: a.label, result: "unknown", evidence: "Only the organization name suggests it; no industry or description evidence yet" }
       : { key: "audience", label: a.label, result: "unknown", evidence: text ? "Recorded industry / description does not mention it" : "No industry or description recorded" });
 
-  // Exclusions: the audience's own, plus the scan's.
-  const excl = [a.exclude, c.excludeTerms.length ? new RegExp(`\\b(${c.excludeTerms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "i") : null].filter(Boolean) as RegExp[];
+  // Exclusions: the audience's own (unless the scan turns them off), plus the scan's.
+  const excl = [c.audienceExclusions === "ignore" ? null : a.exclude, c.excludeTerms.length ? new RegExp(`\\b(${c.excludeTerms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "i") : null].filter(Boolean) as RegExp[];
   const hit = excl.map(r => haystack.match(r)?.[0]).find(Boolean);
   if (hit) criteria.push({ key: "exclusion", label: "Exclusions", result: "contradicted", evidence: `Mentions "${hit}", which this audience excludes`, source: src });
 

@@ -15,7 +15,7 @@ import { upsertContact, upsertOrganization } from "@/lib/crm/entities";
 import { attribute } from "@/lib/flow/commercial";
 import { enqueue } from "@/lib/jobs/queue";
 import { audience as audienceOf, registryTermsFor, type Audience } from "./audiences";
-import { configFingerprint, creditCeiling, OPPORTUNITY_PROVIDERS, SCAN_PROVIDERS, zScanConfig, type ScanConfig, type ScanProvider, type ScanSection } from "./config";
+import { configFingerprint, configProblems, creditCeiling, OPPORTUNITY_PROVIDERS, SCAN_PROVIDERS, zScanConfig, type ScanConfig, type ScanProvider, type ScanSection } from "./config";
 import { opportunityPage, storeWebOpportunities, type OppProvider } from "./opportunities";
 import { country, expandGeography } from "./countries";
 import { RUBRIC_VERSION, screenOrganization, type OrgFacts } from "./criteria";
@@ -27,10 +27,14 @@ export class ScanBlocked extends Error {
 
 export type ScanDeps = { apollo: ApolloConfig | null; ai?: AiConfig | null; fetchImpl?: typeof fetch; aiClient?: import("@anthropic-ai/sdk").default };
 type Run = typeof scanRuns.$inferSelect;
-type Checkpoint = { stage?: "discover" | "people" | "finalize"; provider?: number; page?: number; term?: number; offset?: number; seen?: string[]; matched?: string[]; peopleOffset?: number; limited?: string[]; webCalls?: number; webNames?: string[] };
+// external = results taken from external sources (the new-discovery allowance, maxOrganizations); rescreened = workspace records
+// re-read by the "existing" source (bounded separately, so re-screening never uses up the discovery allowance).
+type Checkpoint = { stage?: "discover" | "people" | "finalize"; provider?: number; page?: number; term?: number; offset?: number; seen?: string[]; matched?: string[]; peopleOffset?: number; limited?: string[]; webCalls?: number; webNames?: string[]; external?: number; rescreened?: number };
 
 const EMPTY_COUNTS: ScanCounts = { found: 0, new: 0, existing: 0, duplicates: 0, matching: 0, partial: 0, excluded: 0, needsReview: 0, people: 0, usableRoutes: 0, providerFailures: 0 };
 const ORGS_PER_STEP = 100;
+/** Concurrent scans per workspace: each has its own budget, but this keeps a burst of launches from stacking spend. */
+export const MAX_ACTIVE_SCANS = 3;
 const PEOPLE_ORGS_PER_STEP = 5;
 
 /** Which requested providers can actually run, and why the others cannot. */
@@ -51,10 +55,14 @@ export function providerPlan(c: ScanConfig, deps: Pick<ScanDeps, "apollo" | "ai"
 export async function startScan(db: Db, input: {
   mandateId: string; requestedBy: string; section: ScanSection; presetKey?: string | null; presetId?: string | null; presetName: string;
   config: ScanConfig; fallbackAccepted?: boolean; now?: Date;
+  /** Run again even though the same configuration already ran today (after a connection or scope change). */
+  fresh?: boolean;
 }, deps: Pick<ScanDeps, "apollo" | "ai">): Promise<{ run: Run; reused: boolean }> {
   const now = input.now ?? new Date();
   const config = zScanConfig.parse(input.config);
   if (config.mode === "organizations" && !audienceOf(config.audience)) throw new Error(`Unknown audience "${config.audience}"`);
+  const problems = configProblems(config);
+  if (problems.length) throw new ScanBlocked(problems.join(" "), [{ label: "Edit the preset", href: "/scans?tab=presets" }]);
   const plan = providerPlan(config, deps);
   // External discovery (open web, Apollo) needs a connection; the public register, workspace records and opportunity
   // sources do not. When every requested external source is unavailable, the user must accept the fallback explicitly.
@@ -64,13 +72,18 @@ export async function startScan(db: Db, input: {
       [{ label: "Connect Claude", href: "/settings/claude" }, { label: "Connect Apollo", href: "/settings/connections" }]);
   }
 
-  // One active scan per workspace + section + audience: a second click returns the running one.
-  const [active] = await db.select().from(scanRuns).where(and(eq(scanRuns.mandateId, input.mandateId), eq(scanRuns.section, input.section), eq(scanRuns.audience, config.audience), config.objectiveId ? eq(scanRuns.objectiveId, config.objectiveId) : isNull(scanRuns.objectiveId), inArray(scanRuns.status, ["queued", "running"]))).limit(1);
-  if (active) return { run: active, reused: true };
-  // Idempotency: the same configuration on the same day is the same scan (failed or cancelled ones may be re-run).
-  const key = `${input.section}:${configFingerprint(config)}:${now.toISOString().slice(0, 10)}`;
+  // Reuse only an equivalent request: same section, objective and configuration fingerprint. A different preset never
+  // silently shares another scan's run.
+  const fp = configFingerprint(config);
+  const active = await db.select().from(scanRuns).where(and(eq(scanRuns.mandateId, input.mandateId), inArray(scanRuns.status, ["queued", "running"])));
+  const equivalent = active.find(r => r.section === input.section && (r.objectiveId ?? null) === (config.objectiveId ?? null) && configFingerprint(zScanConfig.parse(r.config)) === fp);
+  if (equivalent) return { run: equivalent, reused: true };
+  if (active.length >= MAX_ACTIVE_SCANS) throw new ScanBlocked(`${active.length} scans are already running in this workspace. Wait for one to finish or cancel one, then start this scan.`, [{ label: "Runs", href: "/scans?tab=runs" }]);
+  // Idempotency: the same configuration on the same day is the same scan unless the person asks for a fresh run (failed or
+  // cancelled ones may always be re-run). A fresh run gets its own key, so a double click still cannot start two.
+  const key = `${input.section}:${fp}:${now.toISOString().slice(0, 10)}`;
   const [same] = await db.select().from(scanRuns).where(and(eq(scanRuns.mandateId, input.mandateId), eq(scanRuns.idempotencyKey, key))).limit(1);
-  if (same && !["failed", "cancelled"].includes(same.status)) return { run: same, reused: true };
+  if (same && !["failed", "cancelled"].includes(same.status) && !input.fresh) return { run: same, reused: true };
   const idempotencyKey = same ? `${key}:${now.getTime()}` : key;
 
   const stages: ScanStage[] = [
@@ -81,7 +94,7 @@ export async function startScan(db: Db, input: {
   const [run] = await db.insert(scanRuns).values({
     mandateId: input.mandateId, presetId: input.presetId ?? null, presetName: input.presetName, section: input.section, audience: config.audience,
     objectiveId: config.objectiveId ?? null, config, status: "queued", stages, providers: plan.statuses, counts: EMPTY_COUNTS, creditCeiling: creditCeiling(config),
-    checkpoint: { stage: "discover", provider: 0, page: 1, term: 0, offset: 0, seen: [], matched: [] }, idempotencyKey,
+    checkpoint: { stage: "discover", provider: 0, page: 1, term: 0, offset: 0, seen: [], matched: [], external: 0, rescreened: 0 }, idempotencyKey,
     fallbackAccepted: !!input.fallbackAccepted, requestedBy: input.requestedBy,
   }).returning();
   await enqueue(db, "scan.step", { runId: run.id, seq: 0 }, { dedupeKey: `scan:${run.id}:0`, now });
@@ -154,7 +167,7 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
     } catch (err) {
       counts.providerFailures++;
       limited.add(src);
-      providers = bumpProvider(providers, src, { status: "failed", detail: (err as Error).message.slice(0, 300) });
+      providers = bumpProvider(providers, src, { status: "failed", detail: (err as Error).message.slice(0, 300), lastError: (err as Error).message.slice(0, 300) });
       next = { ...cp, provider: pi + 1, offset: 0 };
     }
     await save({ ...next, stage: "discover" });
@@ -173,9 +186,18 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
   if (!a) throw new Error(`Unknown audience "${config.audience}"`);
   if ((cp.stage ?? "discover") === "discover") {
     const seen = new Set(cp.seen ?? []), matched = new Set(cp.matched ?? []);
+    let external = cp.external ?? 0, rescreened = cp.rescreened ?? 0;
     const pi = cp.provider ?? 0;
     const provider = discoverers[pi];
-    if (!provider || seen.size >= config.maxOrganizations) {
+    // An external source stops once the new-discovery allowance is used; the workspace re-screen has its own equal bound.
+    const full = !!provider && (provider === "existing" ? rescreened >= config.maxOrganizations : external >= config.maxOrganizations);
+    if (provider && full) {
+      const ran = (providers.find(p => p.provider === provider)?.calls ?? 0) > 0;
+      providers = bumpProvider(providers, provider, ran ? {} : { status: "skipped", detail: provider === "existing" ? "Re-screen limit reached before this source ran." : `Discovery allowance (${config.maxOrganizations}) was used by earlier sources before this one ran.` });
+      await save({ ...cp, provider: pi + 1, page: 1, term: 0, offset: 0 });
+      return true;
+    }
+    if (!provider) {
       stages = setStage(stages, "discover", { status: "done", done: seen.size, total: seen.size });
       const nextStage = plan.usable.includes("apollo_people") && matched.size ? "people" : "finalize";
       if (nextStage === "people") stages = setStage(stages, "people", { status: "running", done: 0, total: matched.size });
@@ -250,12 +272,13 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
       // A provider failure ends that provider for this run (partial result), never the whole scan.
       counts.providerFailures++;
       limited.add(provider);
-      providers = bumpProvider(providers, provider, { status: "failed", detail: (err as Error).message.slice(0, 300) });
+      providers = bumpProvider(providers, provider, { status: "failed", detail: (err as Error).message.slice(0, 300), lastError: (err as Error).message.slice(0, 300) });
       exhausted = true;
     }
 
+    const tally = { raw: found.length, accepted: 0, rejected: 0, duplicates: 0, created: 0, matchedExisting: 0 };
     for (const f of found.slice(0, ORGS_PER_STEP)) {
-      if (seen.size >= config.maxOrganizations) break;
+      if (provider === "existing" ? rescreened >= config.maxOrganizations : external >= config.maxOrganizations) break;
       let orgId = f.existingId, outcome: "new" | "existing" | "duplicate" = "existing", conflicts: string[] = [];
       if (!orgId) {
         const r = await upsertOrganization(db, run.mandateId, f.input, f.provider === "apollo_orgs" ? "apollo" : "other", { source: f.provider === "gleif" ? "GLEIF" : f.provider === "web" ? "Open web" : "Apollo", url: f.url ?? undefined, confidence: f.provider === "gleif" ? "high" : f.provider === "web" ? "low" : "medium" });
@@ -264,8 +287,10 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
         if (r.created) await attribute(db, run.mandateId, { entityType: "organization", entityId: orgId, channel: "scan", campaign: run.presetName || null, scanRunId: runId }, run.requestedBy);
         f.facts = { ...f.facts, country: r.row.country, industry: r.row.industry, description: r.row.description, headcount: r.row.headcount, domain: r.row.domain, website: r.row.website };
       }
-      if (seen.has(orgId)) { counts.duplicates++; continue; }
+      if (seen.has(orgId)) { counts.duplicates++; tally.duplicates++; continue; }
       seen.add(orgId);
+      if (provider === "existing") { rescreened++; counts.rescreened = (counts.rescreened ?? 0) + 1; }
+      else { external++; if (outcome === "new") tally.created++; else tally.matchedExisting++; }
       const [testRow] = await db.select({ test: organizations.testRecord }).from(organizations).where(eq(organizations.id, orgId));
       const sc = screenOrganization(f.facts, a, config);
       const match = testRow?.test ? "excluded" : sc.match;
@@ -275,15 +300,20 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
         exclusionReason, provider: f.provider, sourceUrl: f.url, retrievedAt: t, identityConflicts: conflicts, review: match === "excluded" ? "rejected" : "needs_review",
       }).onConflictDoNothing();
       counts.found++;
-      counts[outcome === "new" ? "new" : "existing"]++;
+      // Re-screened workspace records are neither new nor "found existing by discovery": they are counted as rescreened only.
+      if (provider !== "existing") counts[outcome === "new" ? "new" : "existing"]++;
+      if (match === "excluded") tally.rejected++; else tally.accepted++;
       if (match === "matches") { counts.matching++; matched.add(orgId); }
       else if (match === "partial") { counts.partial++; matched.add(orgId); }
       else if (match === "excluded") counts.excluded++;
       if (match !== "excluded") counts.needsReview++;
     }
+    const cur = providers.find(p => p.provider === provider);
+    if (cur) providers = bumpProvider(providers, provider, { raw: (cur.raw ?? 0) + tally.raw, accepted: (cur.accepted ?? 0) + tally.accepted, rejected: (cur.rejected ?? 0) + tally.rejected,
+      duplicates: (cur.duplicates ?? 0) + tally.duplicates, created: (cur.created ?? 0) + tally.created, matchedExisting: (cur.matchedExisting ?? 0) + tally.matchedExisting });
     if (exhausted) next = { ...next, provider: pi + 1, page: 1, term: 0, offset: 0 };
     stages = setStage(stages, "discover", { status: "running", done: seen.size, total: null });
-    await save({ ...next, stage: "discover", seen: [...seen], matched: [...matched] });
+    await save({ ...next, stage: "discover", seen: [...seen], matched: [...matched], external, rescreened });
     return true;
   }
 

@@ -10,7 +10,17 @@ import { aiRuns } from "@/db/schema";
 import { runStructured, runWebResearch, type AiConfig } from "@/lib/ai/run";
 import type { Audience } from "./audiences";
 import type { ScanConfig } from "./config";
-import { countryName, expandGeography, REGION_LABELS } from "./countries";
+import { countryName, expandGeography, geoLabel } from "./countries";
+
+/** The audience's built-in exclusion words, as a list (its regex is written as \b(a|b|c)). */
+const audienceExclusionWords = (a: Audience | null) => (a?.exclude ? a.exclude.source.replace(/\\b|\(|\)|\//g, "").split("|").filter(Boolean) : []);
+
+/** The terms a scan actually sends to sources, shown in the preflight and on the run so a person can see what was searched. */
+export function queryTerms(a: Audience | null, c: ScanConfig) {
+  const exclude = [...c.excludeTerms, ...(c.audienceExclusions === "ignore" ? [] : audienceExclusionWords(a))];
+  const include = c.mode === "opportunities" ? [...c.capabilities, ...c.terms] : [...(a?.orgTerms ?? []), ...c.terms];
+  return { include, exclude, sector: c.sector ?? null, freshnessDays: c.freshnessDays };
+}
 
 const zCandidates = z.object({
   candidates: z.array(z.object({
@@ -39,13 +49,16 @@ export function keepSourced(cands: WebCandidate[], notes: string): WebCandidate[
 }
 
 export function discoveryBrief(a: Audience, c: ScanConfig, already: string[], want: number) {
-  const geo = c.geography.map(g => (g in REGION_LABELS ? REGION_LABELS[g as keyof typeof REGION_LABELS] : countryName(g)));
+  const geo = c.geography.map(geoLabel);
+  const t = queryTerms(a, c);
   return [
     `Audience: ${a.label}. ${a.purpose}`,
     `Geography: ${geo.length ? `${geo.join(", ")} (countries: ${expandGeography(c.geography).map(countryName).join(", ")})` : "any country"}.`,
-    `Organization terms (any of): ${[...a.orgTerms, ...c.terms].join(", ")}.`,
-    c.excludeTerms.length || a.exclude ? `Exclude organizations that are: ${[...c.excludeTerms, ...(a.exclude ? a.exclude.source.replace(/\\b|\(|\)|\//g, "").split("|") : [])].join(", ")}.` : "",
+    t.sector ? `Sector: ${t.sector}.` : "",
+    `Organization terms (any of): ${t.include.join(", ")}. Search in the local language of each country as well as English.`,
+    t.exclude.length ? `Exclude organizations that are: ${t.exclude.join(", ")}.` : "",
     c.signalCriteria ? `Prefer organizations with current evidence of: ${c.signalCriteria}.` : "",
+    `Use sources published or updated in the last ${c.freshnessDays} days where the evidence is time-sensitive; give each source's date when shown.`,
     `Find up to ${want} organizations.`,
     already.length ? `Already found (skip these): ${already.slice(-120).join("; ")}.` : "",
   ].filter(Boolean).join("\n");
@@ -62,10 +75,12 @@ const zOpps = z.object({
 export type WebOpportunity = z.infer<typeof zOpps>["items"][number];
 
 export function opportunityBrief(c: ScanConfig, already: string[], want: number) {
-  const geo = c.geography.map(g => (g in REGION_LABELS ? REGION_LABELS[g as keyof typeof REGION_LABELS] : countryName(g)));
+  const geo = c.geography.map(geoLabel);
   return [
     `Capabilities / scope the party delivers: ${c.capabilities.join(", ") || "not stated"}.`,
-    `Geography: ${geo.length ? geo.join(", ") : "any"}.`,
+    c.terms.length ? `Opportunity terms (any of): ${c.terms.join(", ")}. Search in the local language of each country as well as English.` : "",
+    `Geography: ${geo.length ? `${geo.join(", ")} (countries: ${expandGeography(c.geography).map(countryName).join(", ")})` : "any"}.`,
+    `Only items published or open within the last ${c.freshnessDays} days; give the publication date and any deadline. An interconnection queue entry or announcement is not an open tender: say which it is.`,
     c.sizeMin != null || c.sizeMax != null ? `Size range: ${c.sizeMin ?? 0}–${c.sizeMax ?? "any"} ${c.sizeUnit ?? ""}.` : "",
     c.stages.length ? `Stages: ${c.stages.join(", ")}.` : "",
     c.excludeTerms.length ? `Exclude: ${c.excludeTerms.join(", ")}.` : "",

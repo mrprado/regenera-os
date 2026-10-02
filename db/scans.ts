@@ -14,8 +14,14 @@ const timestamps = { createdAt: text("created_at").notNull().default(now), updat
 export const SCAN_STATUSES = ["queued", "running", "partial", "completed", "failed", "cancelled"] as const;
 export type ScanStatus = (typeof SCAN_STATUSES)[number];
 export type ScanStage = { key: string; label: string; status: "pending" | "running" | "done" | "skipped" | "failed"; detail?: string; done?: number; total?: number | null };
-export type ProviderStatus = { provider: string; status: "ok" | "not_connected" | "skipped" | "failed" | "limited"; detail: string; calls?: number; credits?: number };
-export type ScanCounts = { found: number; new: number; existing: number; duplicates: number; matching: number; partial: number; excluded: number; needsReview: number; people: number; usableRoutes: number; providerFailures: number };
+// Per-source truth for one run (JSON, no migration): status says whether it could run and how it ended; the tallies say what it
+// actually returned. raw = candidates the source returned; accepted = kept for review; rejected = excluded by screening;
+// duplicates = already seen in this run; created = new canonical records; matchedExisting = resolved to records already held.
+export type ProviderStatus = { provider: string; status: "ok" | "not_connected" | "skipped" | "failed" | "limited"; detail: string; calls?: number; credits?: number;
+  raw?: number; accepted?: number; rejected?: number; duplicates?: number; created?: number; matchedExisting?: number; lastError?: string | null };
+// new = canonical records this run created from external sources; existing = external results that resolved to records already in
+// the workspace; rescreened = workspace records re-read by the "existing" source (never counted as discovery).
+export type ScanCounts = { found: number; new: number; existing: number; duplicates: number; matching: number; partial: number; excluded: number; needsReview: number; people: number; usableRoutes: number; providerFailures: number; rescreened?: number };
 export type CriterionResult = { key: string; label: string; result: "supported" | "contradicted" | "unknown"; evidence: string; source?: string };
 
 export const scanPresets = sqliteTable("scan_presets", {
