@@ -52,7 +52,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const date = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COMMAND_TZ }).format(now);
   const scope = ws.length === 1 ? ws[0].name : ws.length > 1 ? `${ws.length} workspaces` : "No workspace";
   const scanPreset = BUILT_IN_PRESETS[0];
-  const mapMode: MapMode | "off" = sp.map === "today" || sp.map === "all" || sp.map === "off" ? sp.map : "new";
+  const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
   return (
     <>
       <header className={t.hero}>
@@ -85,7 +85,7 @@ const SHORTCUTS = [
   { label: "Structure engagements", body: "Services, prices, pilots and agreed terms.", href: "/commercial" },
   { label: "Coordinate delivery", body: "Owners, tasks, milestones and client inputs.", href: "/tasks" },
 ];
-const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "new", label: "New alerts" }, { key: "today", label: "Today's work" }, { key: "all", label: "All records" }];
+const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
 
 async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; mapMode: MapMode | "off"; fullOpen: boolean }) {
   const db = appDb(), ws = user.scope.mandateIds;
@@ -118,7 +118,7 @@ async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType
   return (
     <>
       {mapMode === "off" ? (
-        <p className={t.mapOff}><Link href="/today?map=new">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
+        <p className={t.mapOff}><Link href="/today?map=today">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
       ) : (
         <section className={t.mapBand} aria-labelledby="map-h">
           <div className={t.mapBar}>
