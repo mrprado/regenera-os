@@ -14,7 +14,7 @@
     "name": "regenera-os-d1",
     "id": "f4a65ebf-a0dd-4d6b-b960-1c125d073c46"
   },
-  "r2": null,
+  "r2": "regenera-os-backups",
   "vars": {
     "APP_BASE_URL": "https://os.regenera.bio",
     "SITE_BASE_URL": "https://regenera.bio",

@@ -4,6 +4,7 @@ import { Notice } from "@/components/crm-bits";
 import { EmptyState, PageHeader } from "@/components/page";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
+import { COMMAND_TZ } from "@/lib/command/desk";
 import { openTasks } from "@/lib/outreach/queries";
 import { completeTaskAction } from "../outreach-actions";
 
@@ -19,7 +20,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const view = sp.view === "done" ? "done" : "open";
   const rows = await openTasks(user.scope, view);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Merida" }).format(new Date());
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: COMMAND_TZ }).format(new Date());
   const back = `/tasks${view === "done" ? "?view=done" : ""}`;
   return (
     <>

@@ -32,7 +32,7 @@ export function capFor(role: MailboxRoleName, caps: SenderDeps["caps"], now: Dat
   return role === "primary" ? caps.primary : warmupCap(caps.warmupStartedOn, now, caps.sendingCeiling);
 }
 
-/** Reserves one send against the mailbox's daily cap. Resets the counter on a new ET day. */
+/** Reserves one send against the mailbox's daily cap. Resets the counter on a new workspace (Pacific) day. */
 export async function reserveMailboxSlot(db: Db, role: MailboxRoleName, cap: number, now: Date): Promise<"ok" | "paused" | "cap"> {
   const day = etDay(now);
   await db.insert(mailboxState).values({ role, day, sentToday: 0 }).onConflictDoNothing();

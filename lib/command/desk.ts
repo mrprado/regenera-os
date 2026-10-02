@@ -8,8 +8,9 @@ import type { Db } from "@/db";
 import { accountQualifications, contacts, contracts, deals, meetingBriefs, organizations, projects, replies, tasks } from "@/db/schema";
 import { DEAL_STAGES } from "@/lib/vocab";
 import type { AttentionItem } from "./attention";
+import { WORKSPACE_TZ } from "@/lib/time/zone";
 
-export const COMMAND_TZ = "America/Merida";
+export const COMMAND_TZ = WORKSPACE_TZ;
 /** Calendar date (YYYY-MM-DD) in the workspace time zone; "today" means this date, not a UTC slice. */
 export const localDate = (d: Date, tz = COMMAND_TZ) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);

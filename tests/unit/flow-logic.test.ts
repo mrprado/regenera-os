@@ -55,7 +55,7 @@ describe("Command priorities", () => {
     expect(g.overdue[0].overdueDays).toBe(10);
   });
   it("uses the workspace time zone for 'today'", () => {
-    expect(localDate(new Date("2026-10-02T03:00:00Z"), "America/Merida")).toBe("2026-10-01");
+    expect(localDate(new Date("2026-10-02T05:00:00Z"))).toBe("2026-10-01");
   });
 });
 
