@@ -18,7 +18,7 @@ check the plan first (Workers & Pages → Plans), then `npx wrangler tail regene
 | Piece | Where |
 |---|---|
 | Worker, routes, cron (`*/5 * * * *` runs the job tick), D1 id, public vars | `deploy/cloudflare.json` |
-| Build patch + deploy | `scripts/deploy.mjs` (`npm run deploy` = build, D1 migrations, deploy) |
+| Build patch + deploy | `scripts/deploy.mjs` always builds, then applies D1 migrations and deploys (`npm run deploy` runs the same) |
 | D1 | `regenera-os-d1` (migrations from `drizzle/`, applied on every deploy) |
 | R2 | not enabled on the account yet: imports and backups say "not available" until it is |
 
