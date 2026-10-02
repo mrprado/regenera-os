@@ -52,7 +52,9 @@ export function priceService(s: Pick<Service, "listPrice" | "minPrice" | "bandLo
   const marginFloor = expectedCost > 0 ? expectedCost / (1 - s.targetMarginPct / 100) : 0;
   if (marginFloor > suggested) { lines.push([`Raised to meet ${s.targetMarginPct}% target margin`, `${r2(marginFloor)}`]); suggested = marginFloor; }
   const minimum = Math.max(s.minPrice ?? 0, expectedCost);
-  suggested = Math.round(suggested / 500) * 500;
+  // Rounding must never undo the margin floor or undercut the configured minimum. Round to cents first so float
+  // noise (9000 / 0.45 = 20000.000000000004) does not push an exact price up a step.
+  suggested = Math.ceil(r2(Math.max(suggested, minimum)) / 500) * 500;
   const margin = suggested > 0 ? ((suggested - expectedCost) / suggested) * 100 : null;
   return { list: base, suggested, minimum, expectedCost: r2(expectedCost), expectedMarginPct: margin === null ? null : r2(margin), lowMargin: margin !== null && margin < s.targetMarginPct - 5, perMonth: s.perMonth, lines };
 }

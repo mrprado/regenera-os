@@ -31,7 +31,9 @@ test("country, sector, recorded topics, text and layer visibility intersect", ()
   assert.equal(filterRecords(all, empty, {}).length, 5);
 });
 test("options derive from canonical values without manufacturing classifications", () => {
-  assert.deepEqual(discoveryOptions(all, "country"), ["GBR", "MEX"]);
+  // Codes are normalized to one readable name per country; a code in the filter (old links) still matches.
+  assert.deepEqual(discoveryOptions(all, "country"), ["Mexico", "United Kingdom"]);
+  assert.equal(filterRecords(all, { ...empty, country: "Mexico" }, {}).length, 2);
   assert.deepEqual(discoveryOptions(all, "topic"), ["Biomaterials", "community_health", "energy_resource_flows"]);
   assert.equal(filterRecords(all, { ...empty, country: "MEX" }, {}).length, 2);
 });

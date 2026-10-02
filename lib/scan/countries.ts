@@ -30,6 +30,11 @@ export const COUNTRIES: Country[] = [
 
 const BY = new Map<string, Country>();
 for (const c of COUNTRIES) for (const k of [c.iso3, c.iso2, c.name.toLowerCase()]) BY.set(k.toUpperCase() === k ? k : k.toLowerCase(), c);
+// Common provider spellings must resolve before geography screening.
+for (const [alias, iso3] of Object.entries({
+  "united states of america": "USA", "u.s.": "USA", "u.s.a.": "USA",
+  "uk": "GBR", "great britain": "GBR", "uae": "ARE",
+})) BY.set(alias, BY.get(iso3)!);
 
 /** Resolves ISO3, ISO2 or an English name (any case) to a Country; null when unknown. */
 export function country(input: string | null | undefined): Country | null {

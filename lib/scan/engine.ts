@@ -19,6 +19,7 @@ import { configFingerprint, creditCeiling, OPPORTUNITY_PROVIDERS, SCAN_PROVIDERS
 import { opportunityPage, storeWebOpportunities, type OppProvider } from "./opportunities";
 import { country, expandGeography } from "./countries";
 import { RUBRIC_VERSION, screenOrganization, type OrgFacts } from "./criteria";
+import { completedProviders } from "./provider-reporting";
 
 export class ScanBlocked extends Error {
   constructor(message: string, public guidance: { label: string; href: string }[]) { super(message); }
@@ -163,6 +164,7 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
   if (config.mode === "opportunities") {
     // Opportunity scans store no organization results, so finalizing is only the status.
     stages = setStage(stages, "finalize", { status: "done" });
+    providers = completedProviders(providers);
     const anyFailed = providers.some(p => p.status === "failed") || limited.size > 0;
     await save(cp, { status: anyFailed ? "partial" : "completed", completedAt: t, retryGuidance: anyFailed ? "A source failed; results found are kept. Re-run later: existing results are not duplicated." : null });
     return false;
@@ -339,6 +341,7 @@ export async function scanStep(db: Db, runId: string, deps: ScanDeps, now = new 
     }
   }
   stages = setStage(stages, "finalize", { status: "done" });
+  providers = completedProviders(providers);
   const anyFailed = providers.some(p => p.status === "failed") || limited.size > 0;
   await save(cp, { status: anyFailed ? "partial" : "completed", completedAt: t,
     retryGuidance: anyFailed ? "Some providers failed or hit a limit; the records found are kept. Re-run after the limit resets or the connection is fixed: existing records are matched, not duplicated." : null });

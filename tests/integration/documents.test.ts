@@ -17,8 +17,8 @@ beforeEach(async () => {
 });
 
 describe("template library", () => {
-  it("has the 27 template types; empty placeholders never pass silently", () => {
-    expect(TEMPLATES).toHaveLength(27);
+  it("has the 33 template types (27 + 6 commercial); empty placeholders never pass silently", () => {
+    expect(TEMPLATES).toHaveLength(33);
     const nda = TEMPLATES.find(x => x.key === "mutual-nda")!;
     const md = fillTemplate(nda, { counterparty: "Acme SA" });
     expect(md).toContain("Acme SA");

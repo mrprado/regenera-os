@@ -1,5 +1,6 @@
 /** Shared map/directory filtering. It derives views of canonical records, never new entities. */
-import { country as resolveCountry } from "@/lib/scan/countries";
+// Relative with the extension: this module also runs under plain Node (tests/map-discovery.node.test.mjs).
+import { country as resolveCountry } from "../scan/countries.ts";
 export const RECORD_LAYERS = ["projects", "organizations", "deals", "triggers", "procurement"] as const;
 export type RecordLayer = (typeof RECORD_LAYERS)[number];
 export type MapPoint = {
@@ -57,7 +58,7 @@ export function filterRecords(records: MapRecord[], filters: DiscoveryFilters, v
     const p = r.feature.properties;
     const haystack = [r.label, r.location, p.orgName, p.description, p.sector, p.assetClass, ...r.topics].filter(Boolean).join(" ").replace(/_/g, " ").toLocaleLowerCase();
     return visible[r.layer] !== false
-      && (!filters.country || r.country === filters.country)
+      && (!filters.country || r.country === (resolveCountry(filters.country)?.name ?? filters.country))
       && (!filters.sector || p.sector === filters.sector)
       && (!filters.topic || r.topics.includes(filters.topic))
       && words.every(word => haystack.includes(word));
