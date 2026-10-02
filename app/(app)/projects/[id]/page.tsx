@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StageOptions } from "@/components/stage-options";
 import { notFound } from "next/navigation";
 import { Notice } from "@/components/crm-bits";
 import r from "@/components/record.module.css";
@@ -9,6 +10,11 @@ import { withBase } from "@/lib/base-path";
 import { kindLabel, lifecycleLabel } from "@/lib/contracts/labels";
 import { compactMoney, stageLabel } from "@/lib/projects/labels";
 import { fundingForProject, getProject, projectPickers } from "@/lib/projects/queries";
+import { kindOf } from "@/lib/funding/origination";
+import ScreeningTab from "../screening-tab";
+import BuiltTab from "../built-tab";
+import { FUNDING_KINDS } from "@/lib/funding/vocab";
+import { opportunityToPathwayAction } from "../../funding-origination-actions";
 import {
   ASSET_CLASSES, CAPITAL_STATUSES, CONSTRAINT_CATEGORIES, CONSTRAINT_STATUSES, INSTRUMENTS, PARTY_ROLES, PROJECT_STAGES,
   PROJECT_STATUSES, READINESS_DIMENSIONS, READINESS_STATUSES, REGENERA_ROLES, SEVERITIES,
@@ -30,9 +36,9 @@ import EconomicsTab from "../economics-tab";
 import MaterialsTab from "../materials-tab";
 import ProcurementTab from "../procurement-tab";
 import ClaimsPanel from "../claims-panel";
+import AnalysesPanel from "../analyses-panel";
 import SystemsTab from "../systems-tab";
 import StackTab from "../stack-tab";
-import { createPathwayAction } from "../../structure-actions";
 import PathwaysTab from "../pathways-tab";
 import FinancialsTab from "../financials-tab";
 import NaturalTab from "../natural-tab";
@@ -48,8 +54,8 @@ type TabKey = (typeof TABS)[number][0];
 /** Project 360 context groups (navigation prompt §9): what part of the project am I working on? */
 const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
   { label: "Overview", tabs: ["overview", "activity"] },
-  { label: "Site & land", tabs: ["place", "constraints", "systems", "natural"] },
-  { label: "Development", tabs: ["readiness", "plan", "engineering", "power", "materials", "procurement"] },
+  { label: "Site & land", tabs: ["place", "screening", "constraints", "systems", "natural"] },
+  { label: "Development", tabs: ["readiness", "plan", "engineering", "built", "power", "materials", "procurement"] },
   { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community"] },
   { label: "Capital", tabs: ["capital", "stack", "pathways", "funding"] },
   { label: "Economics", tabs: ["financials", "economics", "benchmarks"] },
@@ -57,7 +63,7 @@ const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
 ];
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["place", "Place"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["place", "Place"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -83,7 +89,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <p className={ph.kicker}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not set"].filter(Boolean).join("  ·  ")}</p>
         <div className={ph.titleRow}>
           <h1 className={ph.title}>{p.name}</h1>
-          <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link>}<Link className="btn" href="/projects">All projects</Link></div>
+          <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <><Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link><Link className="btn" href={`/map/briefs?project=${p.id}`}>Site brief</Link></>}<Link className="btn" href="/projects">All projects</Link></div>
         </div>
         <dl className={ph.strip}>
           <div><dt>Stage</dt><dd><span className={ph.dot} data-tone={blockedDims.length ? "critical" : p.stage === "operations" || p.status === "operating" ? "lichen" : "copper"} aria-hidden />{stageLabel(p.stage)}</dd></div>
@@ -139,6 +145,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 ))}</dl>
               )}
             </section>
+            <AnalysesPanel projectId={p.id} />
             <ClaimsPanel entityType="project" entityId={p.id} back={`/projects/${p.id}`} />
             <section className={r.panel}>
               <p className={r.panelTitle}>Identity and place</p>
@@ -186,7 +193,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <p className={r.panelTitle}>Move stage</p>
               <form action={setStageAction} className={styles.stack}>
                 <input type="hidden" name="id" value={p.id} />
-                <select name="stage" defaultValue={p.stage} aria-label="Stage">{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                <select name="stage" defaultValue={p.stage} aria-label="Stage"><StageOptions /></select>
                 <input name="reason" placeholder="Why (kept in the history)" aria-label="Reason" />
                 <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}><input type="checkbox" name="override" /> Owner override of a stage gate (reason required)</label>
                 <button className="btn" type="submit">Set stage</button>
@@ -346,7 +353,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <input type="hidden" name="id" value={p.id} />
                 <label>Purpose<input name="purpose" required placeholder="e.g. Pre-development, Senior debt" /></label>
                 <label>Instrument<select name="instrument" required>{Object.entries(INSTRUMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                <label>Stage<select name="stage" defaultValue=""><option value="">Not set</option>{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                <label>Stage<select name="stage" defaultValue=""><option value="">Not set</option><StageOptions /></select></label>
                 <label>Target<input name="target" inputMode="decimal" /></label>
                 <label>Minimum<input name="minimum" inputMode="decimal" /></label>
                 <label>Maximum<input name="maximum" inputMode="decimal" /></label>
@@ -438,14 +445,16 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         </div>
       )}
 
+      {tab === "built" && <BuiltTab projectId={p.id} />}
+      {tab === "screening" && <ScreeningTab project={{ id: p.id, mandateId: p.mandateId, name: p.name, country: p.country }} />}
       {tab === "funding" && (
         <section className={r.panel}>
           <p className={r.panelTitle}><span>Open funding that may fit</span><Link href="/funding">Funding</Link></p>
-          <p className={ui.sub} style={{ marginTop: 0 }}>Matched by sector and country (or calls open to any country). Eligibility still needs reading: open each call.</p>
+          <p className={ui.sub} style={{ marginTop: 0 }}>Public funding, grants, incentives, guarantees, concessional debt, tax credits and DFI programs matched by sector and country (or open to any country). Eligibility still needs reading: open each call. A pathway can then be added to a capital stack scenario once, without double counting.</p>
           {funding.length === 0 ? <p className={r.empty}>No open calls match this project&apos;s sector and country yet{!p.sector || !p.country ? " (set sector and country on the Overview tab)" : ""}.</p> : (
             <table className={ui.table}><tbody>{funding.map(f => (
-              <tr key={f.id}><td><Link href={`/funding/${f.id}`}>{f.title}</Link><span className={ui.sub}>{f.funder ?? ""}</span></td><td>{f.deadline ?? "Rolling"}</td><td className={ui.num}>{f.fit ?? "—"}</td>
-                <td><form action={createPathwayAction}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="fundingOpportunityId" value={f.id} /><input type="hidden" name="sourceType" value="grant" /><input type="hidden" name="name" value={f.title.slice(0, 200)} /><input type="hidden" name="provider" value={f.funder ?? ""} /><input type="hidden" name="deadline" value={f.deadline ?? ""} /><button className={ui.miniBtn} type="submit">Start pathway</button></form></td></tr>
+              <tr key={f.id}><td><Link href={`/funding/${f.id}`}>{f.title}</Link><span className={ui.sub}>{f.funder ?? ""}</span></td><td>{f.deadline ?? "Unknown"}</td><td>{FUNDING_KINDS[kindOf({ kind: f.kind, type: f.type, title: f.title }).kind].label}</td><td className={ui.num}>{f.amountMax ? compactMoney(f.amountMax, f.currency ?? "USD") : "—"}</td>
+                <td><form action={opportunityToPathwayAction}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="opportunityId" value={f.id} /><input type="hidden" name="back" value={`/projects/${p.id}?tab=pathways`} /><button className={ui.miniBtn} type="submit">Start pathway</button></form></td></tr>
             ))}</tbody></table>
           )}
         </section>

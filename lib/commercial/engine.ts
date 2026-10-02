@@ -24,7 +24,7 @@ export async function ensureServices(db: Db, mandateId: string) {
     await db.insert(services).values({
       mandateId, key: s.key, family: s.family, name: s.name, depth: s.depth, description: s.description, idealClient: s.idealClient, stages: s.stages, inputs: s.inputs, deliverables: s.deliverables,
       workflow: s.workflow, specialistRequired: s.specialistRequired, nextServices: s.next, timelineWeeks: s.timelineWeeks, billingType: s.billingType, bandLow: s.bandLow, bandHigh: s.bandHigh,
-      minPrice: s.bandLow, listPrice: s.bandHigh !== null ? Math.round((s.bandLow + s.bandHigh) / 2 / 500) * 500 : s.bandLow, perMonth: s.perMonth, expectedHours: s.expectedHours,
+      minPrice: s.bandLow, listPrice: s.listPrice ?? (s.bandHigh !== null ? Math.round((s.bandLow + s.bandHigh) / 2 / 500) * 500 : s.bandLow), perMonth: s.perMonth, expectedHours: s.expectedHours,
       targetMarginPct: s.targetMarginPct, role: s.role, phase: s.phase, approvalRequired: s.approvalRequired, legalNotes: s.legalNotes, portalAccess: s.portalAccess, seeded: true,
     });
     added++;

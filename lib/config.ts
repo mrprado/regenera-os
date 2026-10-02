@@ -33,7 +33,7 @@ export function sendPolicy() {
 
 /** Phase 2 outreach settings (docs/plans/phase-2.md defaults). */
 export function outreachConfig() {
-  const baseUrl = env.APP_BASE_URL ?? "https://regenera.bio/os";
+  const baseUrl = env.APP_BASE_URL ?? "https://os.regenera.bio";
   return {
     appBaseUrl: baseUrl,
     bookingUrl: env.BOOKING_URL ?? null,

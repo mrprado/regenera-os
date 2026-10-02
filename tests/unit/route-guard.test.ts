@@ -18,6 +18,7 @@ const files = walk(APP).map(f => ({ path: relative(APP, f).split(sep).join("/"),
 // Phase 0 builds jobs/tick and oauth callback; the rest arrive in later phases with the same rule.
 const ANONYMOUS_API: Record<string, RegExp> = {
   "api/jobs/tick/route.ts": /bearerMatches\(/,
+  "api/mail-intel/import/route.ts": /bearerMatches\(/,
   "api/oauth/google/callback/route.ts": /verifyState\(/,
   "api/webhooks/site/route.ts": /verifySiteSignature\(/,
   "api/webhooks/extension/route.ts": /verifyExtensionToken\(/,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StageOptions } from "@/components/stage-options";
 import { Landmark } from "lucide-react";
 import { Notice, withParams } from "@/components/crm-bits";
 import FilterForm from "@/components/filter-form";
@@ -8,7 +9,7 @@ import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { compactMoney, STAGE_GROUPS, stageLabel } from "@/lib/projects/labels";
 import { listProjects, projectPickers } from "@/lib/projects/queries";
-import { ASSET_CLASSES, PROJECT_STAGES, REGENERA_ROLES } from "@/lib/projects/vocab";
+import { ASSET_CLASSES, REGENERA_ROLES } from "@/lib/projects/vocab";
 import { SECTORS } from "@/lib/vocab";
 import { createProjectAction, createProjectFromDealAction } from "../project-actions";
 import styles from "./projects.module.css";
@@ -43,7 +44,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           {view === "board" && <input type="hidden" name="view" value="board" />}
           <div className={ui.field}><label htmlFor="q">Search</label><input id="q" name="q" defaultValue={sp.q} placeholder="Name or description" /></div>
           <div className={ui.field}><label htmlFor="stage">Stage</label>
-            <select id="stage" name="stage" defaultValue={sp.stage ?? ""}><option value="">Any stage</option>{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+            <select id="stage" name="stage" defaultValue={sp.stage ?? ""}><option value="">Any stage</option><StageOptions /></select></div>
           <div className={ui.field}><label htmlFor="sector">Sector</label>
             <select id="sector" name="sector" defaultValue={sp.sector ?? ""}><option value="">Any sector</option>{Object.entries(SECTORS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           <div className={ui.field}><label htmlFor="country">Country</label><input id="country" name="country" defaultValue={sp.country} placeholder="e.g. Mexico" /></div>
@@ -61,7 +62,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               <label>Asset class<select name="assetClass" defaultValue=""><option value="">Choose</option>{Object.entries(ASSET_CLASSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
               <label>Sector<select name="sector" defaultValue=""><option value="">Choose</option>{Object.entries(SECTORS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
               <label>Country<input name="country" placeholder="e.g. Mexico" /></label>
-              <label>Stage<select name="stage" defaultValue="opportunity">{Object.entries(PROJECT_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <label>Stage<select name="stage" defaultValue="opportunity"><StageOptions /></select></label>
               <label>Regenera role<select name="regeneraRole" defaultValue=""><option value="">Not set</option>{Object.entries(REGENERA_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
               <button className="btn btn--primary" type="submit">Create project</button>
             </form>

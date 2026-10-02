@@ -130,5 +130,14 @@ export const networkProfiles = sqliteTable("network_profiles", {
   bankable: integer("bankable", { mode: "boolean" }).notNull().default(false), // accepted by lenders / tier-1
   references: text("references").notNull().default(""),
   performance: text("performance").notNull().default(""),                  // Regenera's own experience with them
+  // Supplier qualification (built environment §11)
+  approvedStatus: text("approved_status").notNull().default("not_assessed"),   // not_assessed | in_review | approved | conditional | not_approved
+  technicalQualification: text("technical_qualification").notNull().default(""),
+  financialQualification: text("financial_qualification").notNull().default(""),
+  certifications: text("certifications", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+  deliveryTime: text("delivery_time").notNull().default(""),
+  paymentTerms: text("payment_terms").notNull().default(""),
+  pricingNote: text("pricing_note").notNull().default(""),
+  procurementContactId: text("procurement_contact_id"),
   ...timestamps,
 }, t => [index("network_profiles_mandate").on(t.mandateId), index("network_profiles_org").on(t.orgId)]);

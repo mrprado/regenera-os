@@ -12,6 +12,7 @@ export const EVENT_TYPES = [
   "PROJECT_CREATED", "PROJECT_STAGE_CHANGED", "DOCUMENT_UPLOADED", "DOCUMENT_APPROVED", "CAPITAL_MANDATE_CHANGED", "CAPITAL_MATCH_CREATED", "DEAL_STAGE_CHANGED",
   "RISK_CHANGED", "SIGNAL_CREATED", "PERMIT_DUE", "CONTRACT_OBLIGATION_DUE", "BROKER_REFERRAL_SUBMITTED", "BROKER_REFERRAL_APPROVED", "PARTNER_PROPOSAL_RECEIVED",
   "PLAYBOOK_FAILED", "PLAYBOOK_COMPLETED", "INTAKE_RECEIVED", "PORTAL_MESSAGE_RECEIVED",
+  "MATCH_CREATED", "QUALIFICATION_COMPLETED", "PURSUIT_APPROVED", "RFP_RECEIVED", "MANDATE_AT_RISK", "SIGNAL_DETECTED",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
@@ -143,6 +144,10 @@ export const DEAL_FLOW = ["lead", "contacted", "engaged", "call_booked", "propos
 export async function checkDealGate(db: Db, dealId: string, toStage: string) {
   const [d] = await db.select({ mandateId: deals.mandateId, projectId: deals.projectId, path: deals.path, stage: deals.stage }).from(deals).where(eq(deals.id, dealId));
   if (!d) throw new Error("Opportunity not found");
+  // Gates were only seeded by the scheduler's reference data (and only for Regenera's workspace), so a workspace whose
+  // scheduler never ran showed "no gate" for every stage. Seed the defaults on first use; disabled gates stay disabled.
+  const [anyGate] = await db.select({ id: stageGates.id }).from(stageGates).where(and(eq(stageGates.mandateId, d.mandateId), eq(stageGates.entityType, "deal"))).limit(1);
+  if (!anyGate) for (const g of DEFAULT_DEAL_GATES) await db.insert(stageGates).values({ mandateId: d.mandateId, entityType: "deal", toStage: g.toStage, conditions: g.conditions });
   const from = DEAL_FLOW.indexOf(d.stage), to = DEAL_FLOW.indexOf(toStage);
   const stages = from >= 0 && to > from ? DEAL_FLOW.slice(from + 1, to + 1) : [toStage];
   const gs = await db.select().from(stageGates).where(and(eq(stageGates.mandateId, d.mandateId), eq(stageGates.entityType, "deal"), inArray(stageGates.toStage, stages), eq(stageGates.enabled, true)));

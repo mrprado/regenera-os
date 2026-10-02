@@ -1,0 +1,18 @@
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; margin: 6px 0; }
+.row label { display: grid; gap: 3px; font-size: 12px; color: var(--text-2); }
+.row input, .row select, .stack input, .stack select, .stack textarea, .field input, .field select { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; background: var(--paper); font: inherit; font-size: 13px; min-width: 0; }
+.stack textarea { height: auto; padding: 6px 8px; }
+.grow { flex: 1 1 200px; }
+.stack { display: grid; gap: 8px; font-size: 13px; max-width: 760px; }
+.stack label { display: grid; gap: 3px; color: var(--text-2); font-size: 12px; }
+.ladder { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0; padding: 0; font-size: 12px; }
+.ladder li { padding: 3px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--text-3); }
+.ladder li[data-current] { color: var(--heading); border-color: var(--text-2); font-weight: 600; }
+.dims { display: grid; gap: 10px; }
+.dim { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.dim:first-child { border-top: 0; }
+.details summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr) 150px 160px; gap: 6px; align-items: end; }
+.field label { display: grid; gap: 3px; font-size: 12px; color: var(--text-2); }
+.row input:focus-visible, .row select:focus-visible, .stack input:focus-visible, .stack select:focus-visible, .stack textarea:focus-visible, .field input:focus-visible, .field select:focus-visible, .details summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+@media (max-width: 760px) { .field { grid-template-columns: minmax(0, 1fr); } }

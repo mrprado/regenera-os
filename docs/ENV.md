@@ -29,6 +29,8 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | `PRIMARY_DAILY_CAP`, `SENDING_DAILY_CAP` | 2 (optional) | Defaults 25 and 40 |
 | `APP_ENV`, `SEND_ALLOWED_DOMAINS` | 2 | `APP_ENV=production` only on the live OS. Anywhere else, sequence and reply sends go only to the comma-separated test domains in `SEND_ALLOWED_DOMAINS` |
 | `EXTENSION_TOKEN_SECRET` | 3 | Generate |
+| `MAIL_IMPORT_TOKEN` | 13 (optional) | Generate. Bearer for `/api/mail-intel/import` (Gmail history backfill via `scripts/mail-import.mjs`). Unset in production = the import endpoint is closed |
+| `GFW_API_KEY` | 12 (optional) | Free Global Forest Watch key; without it GFW datasets stay NOT CONNECTED |
 
 ## Bindings (declared in `.openai/hosting.json`)
 

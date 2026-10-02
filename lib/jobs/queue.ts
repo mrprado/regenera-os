@@ -82,3 +82,15 @@ export async function retryDead(db: Db, id: string, now: Date): Promise<void> {
   await db.run(sql`UPDATE jobs SET status = 'queued', attempts = 0, run_after = ${iso(now)}, locked_until = NULL, updated_at = ${iso(now)}
     WHERE id = ${id} AND status = 'dead'`);
 }
+
+/** Claims only jobs of the given types (a screen running its own queued work, e.g. a mandate universe build). */
+export async function claimTypes(db: Db, now: Date, types: string[], limit: number, lockMs: number): Promise<Job[]> {
+  if (!types.length) return [];
+  const rows = await db.all<JobRow>(sql`UPDATE jobs
+    SET status = 'running', attempts = attempts + 1, locked_until = ${iso(new Date(now.getTime() + lockMs))}, updated_at = ${iso(now)}
+    WHERE id IN (
+      SELECT id FROM jobs WHERE status = 'queued' AND run_after <= ${iso(now)} AND type IN (${sql.join(types.map(t => sql`${t}`), sql`, `)}) ORDER BY run_after LIMIT ${limit}
+    ) AND status = 'queued'
+    RETURNING id, type, payload, attempts, max_attempts, run_after`);
+  return rows.map(r => ({ id: r.id, type: r.type, payload: JSON.parse(r.payload), attempts: r.attempts, maxAttempts: r.max_attempts, runAfter: r.run_after }));
+}

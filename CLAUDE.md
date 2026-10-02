@@ -7,15 +7,16 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 ## Stack
 - Next.js 16 App Router + React 19, TypeScript strict, built with vinext for
   Cloudflare Workers (same toolchain as regenera-development-office)
-- Hosted on Cloudflare as the Worker regenera-os at regenera.bio/os (docs/DEPLOY.md): routes in front of the
-  public site's Custom Domain, basePath "/os", D1 (binding DB) with Drizzle, R2 (BUCKET, not yet enabled).
+- Hosted on Cloudflare as the Worker regenera-os at https://os.regenera.bio (docs/DEPLOY.md): Worker Custom
+  Domain, no basePath (regenera.bio/os/* 308-redirects there), D1 (binding DB) with Drizzle, R2 (BUCKET, not yet
+  enabled). Workers Paid is required (Free's 10 ms CPU cap gives error 1102).
   Jobs live in the D1 jobs table; a cron trigger in scripts/deploy.mjs's entry runs POST /api/jobs/tick
 - Auth: email + password sign-in (lib/session.ts, app/api/auth/*; password = the tracker's, checked by the
   site's /api/pipeline/auth, never stored) + membership (lib/auth.ts requireOsUser).
   Never trust identity headers. Every (app) route and server action calls the guard; anonymous routes are
   listed in tests/unit/route-guard.test.ts
-- basePath: next/link, redirect() and router.push add /os; plain <a href>, <form action>, fetch() and cookie
-  paths use withBase() from lib/base-path.ts
+- Base path is empty (lib/base-path.ts BASE_PATH = ""); plain <a href>, <form action>, fetch() and cookie paths
+  still use withBase() so a base path can return in one place
 - NO Supabase, ever
 - Anthropic API server-side only. Models: claude-sonnet-5 for research,
   scoring, drafting, reports; claude-haiku-4-5 for reply
@@ -27,9 +28,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - zod for all external and AI payloads
 
 ## Commands
-- npm run dev (vinext, port 5180 via -- --port 5180; open http://localhost:5180/os. Locally
+- npm run dev (vinext, port 5180 via -- --port 5180; open http://localhost:5180. Locally
   OS_PASSWORD in .dev.vars is the password) / build / start / lint / typecheck / test
-- npm run deploy: build, apply D1 migrations, deploy to regenera.bio/os (wrangler login first)
+- npm run deploy: build, apply D1 migrations, deploy to os.regenera.bio (wrangler login first)
 - npm run db:generate (drizzle-kit) after editing db/schema.ts
 - npm run build once, then npm run db:migrate:local and npm run db:seed:local for the
   local preview D1 (.wrangler/state). Production migrations apply on npm run deploy
@@ -73,7 +74,7 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Data layer: lib/sources/* (free sources, each with limits, cache and provider_calls ledger);
   lib/triggers/* (engine + default queries); lib/freshness.ts (current-data policy: this calendar year)
 - Local secrets in .dev.vars (ignored). Local tick:
-  curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/os/api/jobs/tick
+  curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/api/jobs/tick
 - If a dev route 500s with "Network connection lost" right after startup, it is a stale
   module from dependency optimization; touch the file or restart the dev server
 
@@ -91,18 +92,40 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - Vocabulary comes from the live site (lib/vocab.ts): three practices, five
   sectors, seven territorial systems, engagement keys, tracker stages.
   Source of truth is regenera-development-office, never regenera-nextjs.
-- Design system: docs/design-system.md (2026-09-30, supersedes the regenera.bio fern/gold copy and the interim
-  copper palette, at the user's direction). Colours only from styles/tokens.css: forest-black shell (#0D1511), antique-brass
-  wordmark, old-gold selection markers (never button fills) — palette LOCKED, limestone/chalk canvases; copper, lichen, water, plum, steel are
-  semantic data colours only. Geist + Geist Mono. Hairline sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind.
-  Icons: lucide-react. Use components/page.tsx (PageHeader, EmptyState) for page chrome.
+- Design system: docs/design-system.md (2026-09-30 final lock: Graphite Moss shell #252D27, Carbon Moss deep #1B211D,
+  Saffron Gold #D9A61C for the REGENERA wordmark and key selected states only (thin rail, never a button fill), Oxidized
+  Rust #A45F3F / Iron Oxide #7D4633 secondary accent, Warm Ivory #F3F0E9 / Soft White #FBFAF7 surfaces, Warm Stone
+  #D8D5CE borders, Muted Sage #7B887E, Blue Grey #728087; supersedes every earlier palette). Colours only from
+  styles/tokens.css; copper (rust), lichen, water, plum, steel are semantic data colours only. Geist + Geist Mono. Hairline
+  sections, not cards; radius 0-6. CSS Modules per screen. No Tailwind. Icons: lucide-react. Use components/page.tsx
+  (PageHeader, EmptyState) for page chrome.
 - Client operating layer (docs/plans/phase-10-client-os.md): tenants own workspaces (the `mandates` table; UI calls
   them workspaces). Workspace grants stay the isolation boundary; lib/tenancy resolves user type, persona, module
   entitlements and deactivation. requireOsUser enforces module entitlements by route (lib/tenancy/vocab ROUTE_MODULES);
   withOsUser refuses read-only users; platform administration uses withOsUser(..., { internal: true }).
   The prompt's "Mandate" (scope of work) is a different object from the `mandates` table.
+- Funding origination (docs/plans/phase-11-funding-origination.md): db/funding-origination.ts (prospects, readiness,
+  bid reviews, applications + consortium + workplan, awards, funders, dates, registrations, team members + allocations,
+  specialists, practice scenarios, expansion), lib/funding/{vocab,origination,pipeline,origination-queries}.ts. Pages:
+  /funding tabs, /funding/[id] (8 tabs), /funding/applications/[id], /funding/economics, /capacity, /specialists.
+  Eligibility is Confirmed only with a basis; no award probability or 0-100 fit (keyword count = discovery signal);
+  approval and submission are human (isHuman); contingent fees flag LEGAL / PROGRAM REVIEW REQUIRED; team rates,
+  capacity, specialists and economics are internal only.
+- Institutional data providers (docs/data/*.md): lib/data-providers (catalogue, engine, evidence, site, WRI adapters:
+  Resource Watch + Aqueduct keyless, GFW with GFW_API_KEY), db/data-providers.ts. Status is "connected" only after a
+  real success; WRI is Tier 1 provenance, not co-branding. Evidence levels 1/2/3 shown as three readings.
+- Built environment (docs/plans/phase-12-built-environment.md): db/built.ts, lib/built/*, /intelligence/built (14 tabs),
+  Project 360 Built environment tab. Companies are CRM organizations with a profile; RFIs/RFPs reuse procurement
+  packages and bids; claims need provenance; governed vernacular knowledge never reaches search, Ask or MCP.
 - Navigation: lib/nav.ts is the single map (sidebar, Systems flyout, menu search, Cmd+K). A new page must be added
-  there or tests/unit/nav-inventory.test.ts fails. Top-level groups are frozen.
+  there or tests/unit/nav-inventory.test.ts fails. Top-level groups are frozen (Mandates added after Atlas at the
+  user's request, 2026-09-30).
+- Email intelligence (docs/plans/phase-13-mail-intelligence.md): db/mail-intel.ts, lib/mail-intel/*, /api/mail-intel/import +
+  scripts/mail-import.mjs, /intelligence/mail (owner only). Gmail is read-only; mail never reaches Ask, MCP or search.
+- Mandates (docs/plans/phase-14-mandates.md): db/mandates.ts (commercial_mandates, mandate_candidates, pursuits, approvals,
+  mandate_deliveries, mandate_signals, queue_projects), lib/mandates/*, /mandates, /pursuits, /approvals. A commercial
+  mandate is not the `mandates` workspace table. Machine screening stops at pre-qualified; people qualify, approve, decide
+  bids and outcomes (isHuman); client approval fixes attribution; inferences are labelled; success fees need counsel.
 - Write JS regex and embedded scripts in their own files and run node --check.
   Avoid ID-level display overrides in CSS.
 - Tests required for: dedupe, scoring, screening matrix, send idempotency,

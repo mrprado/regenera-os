@@ -4,8 +4,8 @@ The internal operating system of Regenera — *Regenerative Ecosystem Advisory. 
 One graph-centred platform connecting people, capital, land, projects, infrastructure, energy, nature, regulation,
 execution and outcomes, with controlled external portals for sponsors, capital partners, introducers and partners.
 
-Live: https://regenera.bio/os (internal) · https://regenera.bio/os/portal/signin (portals) ·
-https://regenera.bio/os/intake/project (public intake: project, capital, broker, partner)
+Live: https://os.regenera.bio (internal) · https://os.regenera.bio/portal/signin (portals) ·
+https://os.regenera.bio/intake/project (public intake: project, capital, broker, partner)
 
 ## Architecture
 - Next.js 16 App Router + React 19 + TypeScript (strict), built with vinext for Cloudflare Workers.
@@ -26,9 +26,9 @@ cp .env.example .dev.vars   # fill OS_PASSWORD and OS_ALLOWLIST at minimum; ever
 npm run build               # once, to produce the local D1 config
 npm run db:migrate:local
 npm run db:seed:local
-npm run dev -- --port 5180  # open http://localhost:5180/os
+npm run dev -- --port 5180  # open http://localhost:5180
 ```
-Run the job tick locally: `curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/os/api/jobs/tick`.
+Run the job tick locally: `curl -X POST -H "Authorization: Bearer local-dev-tick-token" http://localhost:5180/api/jobs/tick`.
 Demo data: Settings → Demo data → Load (a separate "DEMO" entity; every record is labelled).
 
 ## Commands

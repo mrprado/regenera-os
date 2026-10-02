@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { brokerProfiles, generatedDocuments, organizations, projects } from "@/db/schema";
+import { brokerProfiles, deals, generatedDocuments, objectives, organizations, projects } from "@/db/schema";
 import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { approveLegal, generateDocument, MockESignProvider, newVersion, recordSignedUpload, startSignature } from "@/lib/documents/engine";
@@ -22,7 +22,7 @@ async function scopedDoc(scope: Scope, id: string) {
 
 /** The entity a template binds to must be in the user's scope; returns its mandate. */
 async function entityMandate(scope: Scope, type: string, id: string) {
-  const t = type === "project" ? projects : type === "organization" ? organizations : type === "broker" ? brokerProfiles : null;
+  const t = type === "project" ? projects : type === "organization" ? organizations : type === "broker" ? brokerProfiles : type === "deal" ? deals : type === "objective" ? objectives : null;
   if (!t) throw new Error("Unknown entity");
   const [r] = await appDb().select({ m: t.mandateId }).from(t).where(and(eq(t.id, id), mandateCondition(scope, t.mandateId)));
   if (!r) throw new Error("Not found");

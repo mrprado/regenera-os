@@ -76,11 +76,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const range = sp.range && RANGES[sp.range] ? sp.range : "30";
   const now = new Date();
   const from = RANGES[range].days ? new Date(now.getTime() - RANGES[range].days! * 86_400_000) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const m = await computeMetrics(appDb(), user.scope.mandateIds, { from: from.toISOString(), to: new Date(now.getTime() + 60_000).toISOString() });
-  const weekly = await appDb().select().from(reports).where(and(inArray(reports.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["__none__"]), eq(reports.kind, "weekly"))).orderBy(desc(reports.periodStart)).limit(6);
+  const [m, weekly, bids, contractStats] = await Promise.all([
+    computeMetrics(appDb(), user.scope.mandateIds, { from: from.toISOString(), to: new Date(now.getTime() + 60_000).toISOString() }),
+    appDb().select().from(reports).where(and(inArray(reports.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["__none__"]), eq(reports.kind, "weekly"))).orderBy(desc(reports.periodStart)).limit(6),
+    bidDeals(user.scope),
+    contractTotals(user.scope),
+  ]);
   const o = m.outreach;
-  const bids = await bidDeals(user.scope);
-  const contractStats = await contractTotals(user.scope);
   const WON = ["signed", "active", "expansion", "completed"];
   const byFunder = [...bids.reduce((acc, b) => {
     const k = `${b.funder ?? "Unknown funder"}|${b.route ?? "unread"}`;

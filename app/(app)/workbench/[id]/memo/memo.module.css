@@ -1,0 +1,30 @@
+/* Institutional memo: bone paper, ink type, brass signature, numbered sources. Prints cleanly. */
+.doc { max-width: 880px; margin: 0 auto; padding: 32px 40px 64px; background: var(--chalk); color: var(--text-1); font-size: 14.5px; line-height: 1.6; }
+.tools { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); margin-bottom: 28px; }
+.cover { border-bottom: 1px solid var(--text-1); padding-bottom: 26px; margin-bottom: 26px; }
+.brand { margin: 0 0 40px; font-size: 12px; letter-spacing: .28em; font-weight: 600; color: var(--brass); }
+.meta { margin: 0 0 14px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.cover h1 { font-size: 32px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 12px; }
+.lede { color: var(--text-2); margin: 0 0 12px; }
+.status { font-size: 12px; margin: 0; color: var(--text-2); }
+.status[data-draft="true"] { color: var(--warning); }
+.doc section { margin: 0 0 26px; }
+.doc h2 { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--text-3); border-top: 1px solid var(--line); padding-top: 12px; margin: 0 0 10px; }
+.rec { font-size: 17px; font-weight: 500; border-left: 2px solid var(--accent); padding-left: 14px; }
+.missing { color: var(--text-3); font-style: italic; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; border-bottom: 1px solid var(--line); padding: 6px 8px 6px 0; }
+.table td { border-bottom: 1px solid var(--line); padding: 8px 8px 8px 0; vertical-align: top; }
+.findings { padding-left: 20px; display: grid; gap: 12px; }
+.findings p { margin: 0; }
+.kind { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-right: 6px; }
+.sub { font-size: 12.5px; color: var(--text-2); }
+.cite { font-family: var(--font-mono); font-size: 11px; color: var(--accent-ink); white-space: nowrap; }
+.sources ol { font-size: 12.5px; padding-left: 26px; display: grid; gap: 4px; }
+.sources a { overflow-wrap: anywhere; }
+.foot { margin-top: 36px; font-size: 11px; color: var(--text-3); border-top: 1px solid var(--line); padding-top: 10px; }
+@media print {
+  .tools { display: none; }
+  .doc { padding: 0; max-width: none; background: #fff; }
+  .doc section { break-inside: avoid; }
+}

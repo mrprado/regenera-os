@@ -1,42 +1,42 @@
 /* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30, LOCKED).
-   Forest-black shell, antique-brass Regenera signature, limestone/chalk analytical canvas. Copper, lichen, water, plum
+   Graphite Moss shell, Saffron Gold Regenera signature, Oxidized Rust secondary accent, Warm Ivory canvas (2026-09-30 lock). Copper, lichen, water, plum
    and steel are semantic data colours only. Do not add ad-hoc colours: add a token here. Legacy names (paper, ink,
    fern, wax, pollen, leaf, reed, water, line, volcanic, basalt …) are kept and remapped so every screen follows. */
 :root {
   /* Shell (navigation, header, immersive Atlas) */
-  --forest-carbon: #0d1511;
-  --deep-moss: #16201a;
-  --canopy: #263028;
-  --sage-ash: #7c877e;
-  --atlas-base: #0a110d;
+  --forest-carbon: #252d27;          /* Graphite Moss: shell / sidebar */
+  --deep-moss: #2e3830;
+  --canopy: #3a463e;
+  --sage-ash: #7b887e;               /* Muted Sage */
+  --atlas-base: #141715;             /* Atlas canvas: near black (Carbon Moss #1B211D is no longer used for Atlas) */
   /* Analytical surfaces */
-  --limestone: #f1eee6;
-  --chalk: #faf8f2;
-  --warm-ash: #e4ded1;
-  --ash: #d3ccbe;                  /* hairlines, input borders */
+  --limestone: #f3f0e9;              /* Warm Ivory: main workspace */
+  --chalk: #fbfaf7;                  /* Soft White: cards / panels */
+  --warm-ash: #e8e5de;
+  --ash: #d8d5ce;                    /* Warm Stone: borders / dividers */
   /* Text */
-  --text-1: #191c19;
-  --text-2: #6b6d67;
-  --text-3: #8d8e88;
-  --text-on-dark: #f1eee6;
-  --text-on-dark-2: #a3aba4;
+  --text-1: #191d1a;                 /* Near Black */
+  --text-2: #747a74;                 /* Mineral Grey */
+  --text-3: #8f948e;
+  --text-on-dark: #eeece5;
+  --text-on-dark-2: #a3aba5;
   /* Signature and interaction */
-  --gold: #a37c2d;                 /* logo, selected high-level object, opportunity, important signal */
-  --gold-ink: #7a5a1c;             /* gold that passes contrast as text on chalk */
-  --gold-tint: rgba(163, 124, 45, .12);
-  --brass: #8f6b24;                /* Antique brass: the Regenera wordmark */
+  --gold: #d9a61c;                   /* Saffron Gold: Regenera identity and key selected states only */
+  --gold-ink: #87660c;               /* saffron that passes contrast as text on ivory */
+  --gold-tint: rgba(217, 166, 28, .12);
+  --brass: #d9a61c;                  /* the REGENERA wordmark: Saffron Gold on Graphite Moss */
   --accent: var(--gold);
   --accent-ink: var(--gold-ink);
   --accent-tint: var(--gold-tint);
   /* Semantic data colours — never decoration */
-  --copper: #9b6248;               /* land, physical assets, selected geometry, development */
-  --copper-ink: #7d4b35;
-  --copper-tint: rgba(155, 98, 72, .10);
-  --lichen: #6f8062;               /* nature, agriculture, ecology, restoration */
-  --water: #557f7c;                /* hydrology */
-  --plum: #655468;                 /* capital, funds, investors */
-  --steel: #6d7573;                /* infrastructure */
-  --critical: #a84b40;
+  --copper: #a45f3f;                 /* Oxidized Rust: secondary accent; land, physical assets, development */
+  --copper-ink: #7d4633;             /* Iron Oxide */
+  --copper-tint: rgba(164, 95, 63, .10);
+  --lichen: #7b887e;                 /* Muted Sage: nature, agriculture, ecology, restoration */
+  --water: #4e7f7d;                /* hydrology */
+  --plum: #67566d;                 /* capital, funds, investors */
+  --steel: #728087;                  /* Blue Grey: cool data accent, infrastructure */
+  --critical: #ac4d43;
   --warning: #b17b2e;
   --positive: #5b7552;
   --energy: #b17b2e;
@@ -71,7 +71,7 @@
   --indigo: var(--accent);
   --indigo-ink: var(--accent-ink);
   --indigo-tint: var(--accent-tint);
-  --ice: #efd9a3;
+  --ice: #f1dc9c;
 
   /* Legacy names */
   --paper: var(--chalk);
@@ -83,7 +83,7 @@
   --pollen: var(--gold);
   --leaf: var(--text-3);
   --reed: var(--lichen);
-  --line: rgba(25, 28, 25, .11);
+  --line: rgba(25, 29, 26, .11);
 
   /* Roles */
   --bg: var(--limestone);
@@ -95,7 +95,7 @@
   --action: var(--forest-carbon);  /* primary buttons: shell green, never gold */
   --action-hover: var(--canopy);
   --action-text: var(--chalk);
-  --link: #3b5a45;
+  --link: #2e5a52;
   --focus: var(--gold);
 
   /* Type */
@@ -126,7 +126,24 @@
   --ease: cubic-bezier(.2, .7, .2, 1);
 
   /* Floating dark surfaces (Atlas controls) */
-  --glass-dark: rgba(22, 32, 26, .94);
+  --glass-dark: rgba(32, 36, 33, .94);
+
+  /* Atlas: graphite intelligence terminal. Green stays in the Regenera shell only. */
+  --atlas-black: #141715;          /* Near Black: globe canvas */
+  --atlas-canvas: #181c1a;         /* Carbon Graphite: map frame */
+  --atlas-toolbar: #1b1f1c;
+  --atlas-panel: #202421;          /* Graphite: layers panel */
+  --atlas-card: #272c28;
+  --atlas-card-hover: #303631;
+  --atlas-border: #353b36;
+  --atlas-frame: #303632;
+  --atlas-text: #e8eae6;           /* Warm White */
+  --atlas-text-2: #9ca39d;
+  --atlas-telemetry: #a0a7a1;
+  /* Shell interaction (sidebar) */
+  --shell-hover: #303832;
+  --shell-active: #343d36;
+  --shell-icon: #8f9790;
 }
 
 :root { color-scheme: light; }

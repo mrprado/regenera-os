@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
-// The OS is served at regenera.bio/os: a Cloudflare Worker route in front of the public site (docs/DEPLOY.md).
-const nextConfig: NextConfig = {
-  basePath: "/os",
-};
+// The OS is served at the root of os.regenera.bio (Worker Custom Domain, docs/DEPLOY.md); regenera.bio/os redirects there.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

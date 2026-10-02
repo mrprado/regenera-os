@@ -5,7 +5,8 @@ import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const now = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 
-export type StageFact = { label: string; value: string; source: string };
+/** A fact from a stage. `datasetId` links the data catalogue (provenance); `data` keeps machine-readable values. */
+export type StageFact = { label: string; value: string; source: string; datasetId?: string; kind?: "observed" | "modelled" | "inference"; data?: Record<string, unknown> };
 export type StageState = { key: string; status: "queued" | "running" | "done" | "failed" | "skipped"; startedAt?: string; finishedAt?: string; summary?: string; facts?: StageFact[]; error?: string };
 
 export const siteIntelRuns = sqliteTable("site_intel_runs", {

@@ -1,7 +1,7 @@
 // Side panel. Talks only to Regenera OS, only after a click, and only about the profile in the active tab.
 const $ = id => document.getElementById(id);
 const show = (id, on) => { $(id).hidden = !on; };
-let cfg = { base: "https://regenera.bio/os", token: "" };
+let cfg = { base: "https://os.regenera.bio", token: "" };
 let current = null; // { url, tabId }
 
 function status(msg) { $("status").textContent = msg || ""; }
@@ -67,7 +67,7 @@ async function refresh() {
 }
 
 $("save").onclick = async () => {
-  cfg = { base: $("base").value.trim() || "https://regenera.bio/os", token: $("token").value.trim() };
+  cfg = { base: $("base").value.trim() || "https://os.regenera.bio", token: $("token").value.trim() };
   await chrome.storage.local.set({ cfg });
   refresh();
 };

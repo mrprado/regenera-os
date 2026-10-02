@@ -1,5 +1,6 @@
-// Eastern Time helpers. Schedules are defined in ET (SPEC section 23) and evaluated here, DST-aware.
-export const ET = "America/New_York";
+// Workspace-time helpers (named ET for history; now Pacific, see lib/time/zone.ts). Schedules are defined in this zone and evaluated here, DST-aware.
+import { WORKSPACE_TZ } from "./zone";
+export const ET = WORKSPACE_TZ;
 
 const partsFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: ET,
@@ -21,7 +22,7 @@ export function etParts(date: Date): EtParts {
   };
 }
 
-/** Offset of ET from UTC at the given instant, in ms (e.g. -4h in EDT). */
+/** Offset of the workspace zone from UTC at the given instant, in ms (e.g. -7h in PDT). */
 function etOffsetMs(instantMs: number): number {
   const p = etParts(new Date(instantMs));
   const wallAsUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);

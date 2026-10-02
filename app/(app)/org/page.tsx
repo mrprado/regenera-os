@@ -99,7 +99,7 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
             <label>Website<input name="website" type="url" defaultValue={t.website} disabled={!admin} /></label>
             <label>Base currency<input name="baseCurrency" defaultValue={t.baseCurrency} maxLength={3} disabled={!admin} /></label>
             <label>Units<select name="units" defaultValue={t.units} disabled={!admin}>{Object.entries(UNIT_SYSTEMS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-            <label>Timezone<input name="timezone" defaultValue={t.timezone} placeholder="America/Merida" disabled={!admin} /></label>
+            <label>Timezone<input name="timezone" defaultValue={t.timezone} placeholder="America/Los_Angeles" disabled={!admin} /></label>
             <label>Date format<select name="dateFormat" defaultValue={t.dateFormat} disabled={!admin}>{["YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY"].map(f => <option key={f}>{f}</option>)}</select></label>
             <fieldset className={s.checks}><legend>Languages</legend>{Object.entries(LANGUAGES).map(([k, v]) => <label key={k}><input type="checkbox" name="languages" value={k} defaultChecked={t.languages.includes(k)} disabled={!admin} />{v}</label>)}</fieldset>
             <label className={s.wide}>Reporting preferences<textarea name="reportingPrefs" rows={2} defaultValue={t.reportingPrefs} placeholder="Quarterly portfolio review to IC; monthly project status to the executive team" disabled={!admin} /></label>

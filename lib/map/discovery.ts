@@ -1,4 +1,5 @@
 /** Shared map/directory filtering. It derives views of canonical records, never new entities. */
+import { country as resolveCountry } from "@/lib/scan/countries";
 export const RECORD_LAYERS = ["projects", "organizations", "deals", "triggers", "procurement"] as const;
 export type RecordLayer = (typeof RECORD_LAYERS)[number];
 export type MapPoint = {
@@ -6,7 +7,18 @@ export type MapPoint = {
   geometry: { type: "Point"; coordinates: [number, number] };
   properties: Record<string, string | number | null>;
 };
-export type MapRecord = { key: string; layer: RecordLayer; feature: MapPoint; label: string; location: string; topics: string[] };
+export type MapRecord = { key: string; layer: RecordLayer; feature: MapPoint; label: string; location: string; topics: string[]; country: string | null };
+
+/** One country name per record for filtering: the stored code or name (ISO3, ISO2 or English), else the last part of the
+ *  location text ("Monterrey, Mexico"). Records with neither have no country and are only reachable unfiltered. */
+export function recordCountry(p: Record<string, string | number | null>): string | null {
+  const direct = resolveCountry(typeof p.country === "string" ? p.country : null);
+  if (direct) return direct.name;
+  if (typeof p.country === "string" && p.country.trim()) return p.country.trim();
+  const loc = typeof p.location === "string" ? p.location.split(/[,·]/).map(x => x.trim()).filter(Boolean) : [];
+  for (let i = loc.length - 1; i >= 0; i--) { const c = resolveCountry(loc[i]); if (c) return c.name; }
+  return null;
+}
 export type DiscoveryFilters = { query: string; country: string; sector: string; topic: string };
 
 export function validCoordinates(lng: unknown, lat: unknown): boolean {
@@ -34,7 +46,7 @@ export function mapRecords(data: Record<RecordLayer, { features: MapPoint[] }>):
       key: `${layer}:${p.kind ?? ""}:${p.source ?? ""}:${p.id}`, layer, feature,
       label: String(p.name ?? p.summary ?? "Untitled record"),
       location: [p.location, p.country].filter(Boolean).join(" · "),
-      topics,
+      topics, country: recordCountry(p),
     };
   })).sort((a, b) => a.label.localeCompare(b.label));
 }
@@ -45,7 +57,7 @@ export function filterRecords(records: MapRecord[], filters: DiscoveryFilters, v
     const p = r.feature.properties;
     const haystack = [r.label, r.location, p.orgName, p.description, p.sector, p.assetClass, ...r.topics].filter(Boolean).join(" ").replace(/_/g, " ").toLocaleLowerCase();
     return visible[r.layer] !== false
-      && (!filters.country || p.country === filters.country)
+      && (!filters.country || r.country === filters.country)
       && (!filters.sector || p.sector === filters.sector)
       && (!filters.topic || r.topics.includes(filters.topic))
       && words.every(word => haystack.includes(word));
@@ -53,5 +65,5 @@ export function filterRecords(records: MapRecord[], filters: DiscoveryFilters, v
 }
 
 export function discoveryOptions(records: MapRecord[], field: "country" | "sector" | "topic"): string[] {
-  return [...new Set(records.flatMap(r => field === "topic" ? r.topics : [String(r.feature.properties[field] ?? "")]).filter(Boolean))].sort();
+  return [...new Set(records.flatMap(r => field === "topic" ? r.topics : field === "country" ? [r.country ?? ""] : [String(r.feature.properties[field] ?? "")]).filter(Boolean))].sort();
 }

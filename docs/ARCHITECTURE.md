@@ -3,7 +3,7 @@
 Detailed history: docs/regenera-os-architecture.md (phase 6), docs/master-spec.md, BUILD_CHECKLIST.md (master build).
 
 ## Runtime
-One Cloudflare Worker (`regenera-os`) serves regenera.bio/os/* (routes placed in front of the public site). vinext
+One Cloudflare Worker (`regenera-os`) serves https://os.regenera.bio (Custom Domain; regenera.bio/os/* redirects there). vinext
 builds the Next.js App Router app; static assets through the ASSETS binding; D1 (`regenera-os-d1`) is the only database;
 a cron trigger every 5 minutes runs the job tick. R2 (files) is prepared but not enabled.
 

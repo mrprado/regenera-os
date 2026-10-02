@@ -4,7 +4,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
 import * as z from "zod/v4";
 import type { Db } from "@/db";
-import { activities, capitalRequirements, constraints, contacts, deals, decisions, economicCases, esIssues, fundingOpportunities, insurancePolicies, lists, organizations, projectReadiness, projects, proposals, replies, segments, sequences, studies, triggers } from "@/db/schema";
+import { activities, capitalRequirements, constraints, contacts, deals, decisions, economicCases, esIssues, fundingOpportunities, insurancePolicies, lists, organizations, projectReadiness, projects, projectScreeningFlags, proposals, replies, segments, sequences, siteIntelRuns, studies, triggers } from "@/db/schema";
 import { projectPlan, studyGaps } from "@/lib/delivery/engine";
 import { mandateCondition, type UserScope } from "@/lib/db/scoped";
 import { computeMetrics } from "@/lib/reports/metrics";
@@ -238,6 +238,24 @@ export const TOOLS: ToolDef[] = [
         route: fundingOpportunities.route, decision: fundingOpportunities.decision, countries: fundingOpportunities.countries })
         .from(fundingOpportunities).where(and(...conds)).orderBy(desc(sql`coalesce(${fundingOpportunities.fit}, 0)`), asc(fundingOpportunities.deadline)).limit(a.limit);
       return { shown: rows.length, opportunities: rows };
+    },
+  }),
+  tool({
+    name: "project_screening", kind: "read",
+    description: "Environmental and spatial screening of one project from institutional data (WRI Aqueduct, Global Forest Watch, NASA, World Bank, OpenStreetMap): sourced facts from the latest site-intelligence run by category (energy, grid, water, ecology, land, infrastructure, climate, regulatory, finance), screening flags with required diligence, and the three evidence readings. Every fact has a source and a kind (observed / modelled / inference). Use for 'screen this site' questions; never present Level 1 screening as project proof.",
+    input: z.object({ projectId: z.string().uuid() }),
+    run: async (ctx, a) => {
+      const [p] = await ctx.db.select({ id: projects.id, name: projects.name }).from(projects).where(and(eq(projects.id, a.projectId), mandateCondition(ctx.scope, projects.mandateId)));
+      if (!p) return { error: "Project not found" };
+      const [run] = await ctx.db.select().from(siteIntelRuns).where(and(eq(siteIntelRuns.projectId, p.id), inArray(siteIntelRuns.status, ["complete", "partial"]))).orderBy(desc(siteIntelRuns.createdAt)).limit(1);
+      const flags = await ctx.db.select({ flag: projectScreeningFlags.flag, observed: projectScreeningFlags.observed, implication: projectScreeningFlags.implication, diligence: projectScreeningFlags.diligence, datasetId: projectScreeningFlags.datasetId, status: projectScreeningFlags.status }).from(projectScreeningFlags).where(eq(projectScreeningFlags.projectId, p.id));
+      // Community-stage facts are excluded: governed community records never reach Ask the OS or MCP.
+      const facts = run ? run.stages.filter(s => s.key !== "community").map(s => ({ category: s.key, status: s.status, facts: (s.facts ?? []).map(f => ({ label: f.label, value: f.value, source: f.source, datasetId: f.datasetId ?? null, kind: f.kind ?? "observed" })) })) : [];
+      return {
+        project: p.name, runAt: run?.finishedAt ?? null, categories: facts, flags,
+        note: "Level 1 global screening: observed data and model-derived signals with their sources. Regenera inferences are labelled 'inference'. Local jurisdictional (Level 2) and project-specific (Level 3) evidence is still required. No fact here is a legal conclusion.",
+        ...(run ? {} : { missing: "No site-intelligence run yet: run it from Atlas." }),
+      };
     },
   }),
   // ---------- writes: proposals only ----------

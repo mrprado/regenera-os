@@ -23,7 +23,7 @@ function addLayerFor(map: maplibregl.Map, id: string, color: string) {
   map.addSource(src, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: `${src}-fill`, type: "fill", source: src, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": color, "fill-opacity": 0.18 } });
   map.addLayer({ id: `${src}-line`, type: "line", source: src, filter: ["in", ["geometry-type"], ["literal", ["Polygon", "LineString"]]], paint: { "line-color": color, "line-width": 1.6 } });
-  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#0d1511", "circle-stroke-width": 1 } });
+  map.addLayer({ id: `${src}-pt`, type: "circle", source: src, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4.5, "circle-color": color, "circle-stroke-color": "#141715", "circle-stroke-width": 1 } });
 }
 function removeLayerFor(map: maplibregl.Map, id: string) {
   const src = `lib-${id}`;
@@ -205,6 +205,10 @@ export function SiteContext({ projectId }: { projectId: string }) {
       ))}
       <form action={runPlaybookOnProjectAction}><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="key" value="site-intelligence" /><button type="submit" className={styles.open}>Run site intelligence</button></form>
       <Link className={styles.open} href={`/projects/${projectId}?tab=systems`}>Systems</Link>
+      <p className={styles.kicker} style={{ marginTop: 10 }}>Built environment</p>
+      <p className={styles.note}>Design, construction systems, materials, building energy, water and resilience matched to this site&apos;s climate, hazards and development type.</p>
+      <Link className={styles.open} href={`/projects/${projectId}?tab=built`}>Run built environment intelligence</Link>
+      <Link className={styles.open} href={`/projects/${projectId}?tab=screening`}>Environmental &amp; spatial screening</Link>
     </div>
   );
 }

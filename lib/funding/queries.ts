@@ -1,5 +1,9 @@
 // Read models for the Funding screens. Every query is mandate-scoped.
-import { and, asc, desc, eq, gte, like, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
+
+/** A call is current only when it is not closed AND its deadline is unknown or today or later. Status can lag the
+ *  deadline (sources mark calls closed late), so the date decides. A missing deadline is "unknown", never "rolling". */
+export const currentCall = (today: string) => and(ne(fundingOpportunities.status, "closed"), or(isNull(fundingOpportunities.deadline), gte(fundingOpportunities.deadline, today)));
 import { bidLibrary, caseRecords, contacts, deals, fundingMatches, fundingOpportunities, organizations } from "@/db/schema";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 
@@ -7,9 +11,9 @@ export type FundingFilters = { q?: string; route?: string; type?: string; source
 
 export async function listFunding(scope: Scope, f: FundingFilters, now = new Date()) {
   const today = now.toISOString().slice(0, 10);
-  const windowDays = f.window === "30" ? 30 : f.window === "90" ? 90 : f.window === "365" ? 365 : null;
+  const windowDays = f.window === "14" ? 14 : f.window === "30" ? 30 : f.window === "90" ? 90 : f.window === "365" ? 365 : null;
   const conds: (SQL | undefined)[] = [
-    mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"),
+    mandateCondition(scope, fundingOpportunities.mandateId), currentCall(today),
     f.decision === "dismissed" ? eq(fundingOpportunities.decision, "dismissed") : ne(fundingOpportunities.decision, "dismissed"),
     f.q ? or(like(sql`lower(${fundingOpportunities.title})`, `%${f.q.toLowerCase()}%`), like(sql`lower(coalesce(${fundingOpportunities.funder}, ''))`, `%${f.q.toLowerCase()}%`), like(sql`lower(${fundingOpportunities.description})`, `%${f.q.toLowerCase()}%`)) : undefined,
     f.route ? eq(fundingOpportunities.route, f.route as never) : undefined,
@@ -24,7 +28,7 @@ export async function listFunding(scope: Scope, f: FundingFilters, now = new Dat
     .orderBy(desc(sql`coalesce(${fundingOpportunities.fit}, 0)`), asc(fundingOpportunities.deadline)).limit(200);
   const [{ total }] = await appDb().select({ total: sql<number>`count(*)` }).from(fundingOpportunities).where(and(...conds));
   const [{ closingSoon }] = await appDb().select({ closingSoon: sql<number>`count(*)` }).from(fundingOpportunities)
-    .where(and(mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed"),
+    .where(and(mandateCondition(scope, fundingOpportunities.mandateId), currentCall(today), ne(fundingOpportunities.decision, "dismissed"),
       gte(fundingOpportunities.deadline, today), sql`${fundingOpportunities.deadline} <= ${new Date(now.getTime() + 14 * 86_400_000).toISOString().slice(0, 10)}`));
   return { rows, total, closingSoon };
 }
@@ -67,12 +71,13 @@ export async function libraryBlocks(scope: Scope) {
 }
 
 /** Opportunities matching a playbook's keywords (shown on the playbook page). */
-export async function fundingForKeywords(scope: Scope, terms: string[], limit = 8) {
+export async function fundingForKeywords(scope: Scope, terms: string[], limit = 8, now = new Date()) {
   const t = terms.filter(Boolean).slice(0, 6);
+  const today = now.toISOString().slice(0, 10);
   if (!t.length) return [];
   return appDb().select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline, fit: fundingOpportunities.fit, type: fundingOpportunities.type })
     .from(fundingOpportunities)
-    .where(and(mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed"),
+    .where(and(mandateCondition(scope, fundingOpportunities.mandateId), currentCall(today), ne(fundingOpportunities.decision, "dismissed"),
       or(...t.map(x => like(sql`lower(${fundingOpportunities.title} || ' ' || ${fundingOpportunities.description})`, `%${x.toLowerCase()}%`)))))
     .orderBy(desc(sql`coalesce(${fundingOpportunities.fit}, 0)`), asc(fundingOpportunities.deadline)).limit(limit);
 }
@@ -83,7 +88,7 @@ export async function fundingCounts(scope: Scope, now = new Date()) {
     open: sql<number>`count(*)`,
     strong: sql<number>`sum(case when coalesce(${fundingOpportunities.fit}, 0) >= 70 then 1 else 0 end)`,
     closing: sql<number>`sum(case when ${fundingOpportunities.deadline} between ${today} and ${new Date(now.getTime() + 14 * 86_400_000).toISOString().slice(0, 10)} then 1 else 0 end)`,
-  }).from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), ne(fundingOpportunities.status, "closed"), ne(fundingOpportunities.decision, "dismissed")));
+  }).from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), currentCall(today), ne(fundingOpportunities.decision, "dismissed")));
   return { open: r.open ?? 0, strong: r.strong ?? 0, closing: r.closing ?? 0 };
 }
 

@@ -30,7 +30,7 @@ export function baseStyle(): StyleSpecification {
     layers: [
       { id: "space", type: "background", paint: { "background-color": "#030608" } },
       // Tactical vector basemap (hidden unless chosen)
-      { id: "tac-land", type: "background", layout: { visibility: "none" }, paint: { "background-color": "#0b1410" } },
+      { id: "tac-land", type: "background", layout: { visibility: "none" }, paint: { "background-color": "#141715" } },
       { id: "tac-landcover", type: "fill", source: "ofm", "source-layer": "landcover", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "class"], "wood", "#102419", "forest", "#102419", "grass", "#0f1d15", "ice", "#1b2a33", "sand", "#1c1a12", "#0e1913"], "fill-opacity": 0.9 } },
       { id: "tac-landuse", type: "fill", source: "ofm", "source-layer": "landuse", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "class"], "residential", "#141c18", "industrial", "#1d1a14", "commercial", "#1a1a18", "farmland", "#121a10", "#111914"], "fill-opacity": 0.8 } },
       { id: "tac-water", type: "fill", source: "ofm", "source-layer": "water", layout: { visibility: "none" }, paint: { "fill-color": "#06131d" } },
@@ -51,7 +51,7 @@ export function baseStyle(): StyleSpecification {
         paint: { "line-color": ["match", ["get", "class"], ["motorway", "trunk"], "#f4c77d", "primary", "#f8dea5", ["path", "track"], "#d8cfbd", "#ffffff"], "line-dasharray": ["match", ["get", "class"], ["path", "track"], ["literal", [2, 1]], ["literal", [1, 0]]],
           "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 5, ["match", ["get", "class"], ["motorway", "trunk"], 0.8, 0.2], 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 17, ["service"], 4.5, ["path", "track"], 1.5, 11]] } },
       { id: "lt-rail", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 8, filter: ["==", ["get", "class"], "rail"], layout: { visibility: "none" }, paint: { "line-color": "#b9b2a6", "line-width": 1.2, "line-dasharray": [3, 2] } },
-      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#f2f0e9", "hillshade-accent-color": "#0d1511" } },
+      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#f2f0e9", "hillshade-accent-color": "#141715" } },
       anchor(A_RASTER),
       anchor(A_VECTOR),
       // Hybrid reference layers over imagery (OpenStreetMap via OpenFreeMap): roads, buildings, street names, places,

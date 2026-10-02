@@ -1,8 +1,9 @@
-// Deploys the built OS to Cloudflare as the Worker "regenera-os", served at regenera.bio/os (docs/DEPLOY.md).
-// Run `npm run build` first. Wrangler must be logged in (`npx wrangler login`). Secrets are set separately
+// Deploys the built OS to Cloudflare as the Worker "regenera-os", served at os.regenera.bio (docs/DEPLOY.md).
+// Always builds first, so an old dist/ can never be uploaded. Wrangler must be logged in (`npx wrangler login`). Secrets are set separately
 // with `npx wrangler secret put NAME --name regenera-os`; this script never reads or writes them.
 //   node scripts/deploy.mjs            apply D1 migrations, then deploy
 //   node scripts/deploy.mjs --dry-run  write the config and show what would be uploaded
+//   node scripts/deploy.mjs --skip-build  reuse the existing dist/ (only when it was just built from this commit)
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -11,23 +12,33 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const server = path.join(root, "dist", "server");
 const built = path.join(server, "wrangler.json");
-if (!existsSync(built)) { console.error("dist/server/wrangler.json is missing. Run `npm run build` first."); process.exit(1); }
+if (!process.argv.includes("--skip-build")) {
+  const b = spawnSync("npm", ["run", "build"], { cwd: root, stdio: "inherit", shell: true });
+  if (b.status !== 0) { console.error("Build failed; nothing was deployed."); process.exit(b.status ?? 1); }
+}
+if (!existsSync(built)) { console.error("dist/server/wrangler.json is missing after the build."); process.exit(1); }
 const target = JSON.parse(readFileSync(path.join(root, "deploy", "cloudflare.json"), "utf8"));
 const dryRun = process.argv.includes("--dry-run");
 
-// Wraps the vinext handler: a cron trigger runs the job tick, and MCP clients that look up OAuth metadata
-// by path insertion (/.well-known/<kind>/os/...) reach the OS's own /os/.well-known routes.
+// Wraps the vinext handler: a cron trigger runs the job tick, and the old address regenera.bio/os/... answers with a
+// permanent redirect (308 keeps the method and body, so webhooks and form posts still arrive) to os.regenera.bio/...
 writeFileSync(path.join(server, "entry.js"), `import app from "./index.js";
-const WELL_KNOWN = /^\\/\\.well-known\\/(oauth-authorization-server|oauth-protected-resource)\\/os(\\/.*)?$/;
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const m = url.pathname.match(WELL_KNOWN);
-    if (m) { url.pathname = "/os/.well-known/" + m[1] + (m[2] ?? ""); request = new Request(url, request); }
+    const url = new URL(request.url), home = new URL(env.APP_BASE_URL);
+    if (url.hostname !== home.hostname && (url.pathname === "/os" || url.pathname.startsWith("/os/"))) {
+      return Response.redirect(home.origin + (url.pathname.slice(3) || "/") + url.search, 308);
+    }
     return app.fetch(request, env, ctx);
   },
   async scheduled(event, env, ctx) {
-    if (!env.JOBS_TICK_TOKEN) return;
+    // Heartbeat on every firing, so Command and Settings can tell "cron never fires" from "fires but cannot run jobs".
+    const beat = (status) => env.DB.batch([
+      env.DB.prepare("INSERT INTO system_state (key, value, updated_at) VALUES ('cron_last_fired_at', ?1, ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at").bind(new Date().toISOString()),
+      env.DB.prepare("INSERT INTO system_state (key, value, updated_at) VALUES ('cron_status', ?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at").bind(status, new Date().toISOString()),
+    ]).catch(() => {});
+    if (!env.JOBS_TICK_TOKEN) { ctx.waitUntil(beat("skipped_no_token")); return; }
+    ctx.waitUntil(beat("fired"));
     const tick = new Request(env.APP_BASE_URL + "/api/jobs/tick", { method: "POST", headers: { authorization: "Bearer " + env.JOBS_TICK_TOKEN } });
     ctx.waitUntil(app.fetch(tick, env, ctx).then(r => r.text()));
   },
@@ -44,7 +55,11 @@ Object.assign(config, {
   base_dir: ".",
   workers_dev: false,
   preview_urls: false,
-  routes: target.routes.map(pattern => ({ pattern, zone_name: target.zone })),
+  // Strings are zone routes (the legacy regenera.bio/os redirect); objects pass through (the os.regenera.bio Custom Domain).
+  routes: target.routes.map(r => (typeof r === "string" ? { pattern: r, zone_name: target.zone } : r)),
+  // Workers Paid: 30 s CPU per request (the plan default, stated so a runaway request cannot run longer). Workers Free
+  // allows 10 ms, which server rendering exceeds: that is Cloudflare error 1102.
+  limits: { cpu_ms: 30000 },
   triggers: { crons: [target.cron] },
   vars: { ...config.vars, ...target.vars },
   d1_databases: [{ binding: "DB", database_name: target.d1.name, database_id: target.d1.id, migrations_dir: "../../drizzle" }],

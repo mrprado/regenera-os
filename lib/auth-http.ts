@@ -14,7 +14,7 @@ export function redirectTo(request: Request, path: string, cookie?: string) {
 
 export function sessionCookie(request: Request, name: string, value: string, maxAgeSeconds: number) {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `${name}=${value}; Path=${withBase("/").replace(/\/$/, "")}; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
+  return `${name}=${value}; Path=${withBase("/").replace(/\/$/, "") || "/"}; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
 }
 
 export const isLocalRequest = (request: Request) => ["localhost", "127.0.0.1", "[::1]"].includes(new URL(request.url).hostname);

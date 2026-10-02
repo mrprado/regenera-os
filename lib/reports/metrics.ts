@@ -33,6 +33,14 @@ export function median(values: number[]): number | null {
 
 export async function computeMetrics(db: Db, mandateIds: string[], p: Period) {
   if (!mandateIds.length) mandateIds = ["__none__"];
+  // Independent reads start together; each is awaited where it is used (fewer sequential D1 round trips).
+  const trigP = db.select({ id: triggers.id, type: triggers.type, createdAt: triggers.createdAt }).from(triggers)
+    .where(and(inArray(triggers.mandateId, mandateIds), gte(triggers.createdAt, new Date(Date.parse(p.from) - 90 * 86_400_000).toISOString())));
+  const allDealsP = db.select({ id: deals.id, stage: deals.stage, practice: deals.practice, feeType: deals.feeType, engagement: deals.engagement, value: deals.valueEstimate, probability: deals.probability,
+    source: deals.source, partnerId: deals.partnerId, stageChangedAt: deals.stageChangedAt }).from(deals)
+    .where(and(inArray(deals.mandateId, mandateIds), notInArray(deals.stage, ["churned"])));
+  const partnerRowsP = db.select({ id: partners.id, tier: partners.tier }).from(partners).where(inArray(partners.mandateId, mandateIds));
+  const checksP = db.select().from(deliverabilityChecks).orderBy(desc(deliverabilityChecks.checkedAt)).limit(20);
   // ---------- outreach ----------
   const sent = await db.select({
     id: messages.id, contactId: messages.contactId, tier: messages.tier, angle: messages.angleTag, sentAt: messages.sentAt,
@@ -80,8 +88,7 @@ export async function computeMetrics(db: Db, mandateIds: string[], p: Period) {
   const met = new Set(meetings.map(m => m.contactId).filter((x): x is string => !!x && contactIds.includes(x)));
 
   // ---------- trigger to first touch ----------
-  const trig = await db.select({ id: triggers.id, type: triggers.type, createdAt: triggers.createdAt }).from(triggers)
-    .where(and(inArray(triggers.mandateId, mandateIds), gte(triggers.createdAt, new Date(Date.parse(p.from) - 90 * 86_400_000).toISOString())));
+  const trig = await trigP;
   const firstTouch = new Map<string, number[]>();
   if (trig.length) {
     const touched = await inChunks(trig.map(t => t.id), ids => db.select({ triggerId: contacts.sourceTriggerId, sentAt: messages.sentAt }).from(messages)
@@ -97,9 +104,7 @@ export async function computeMetrics(db: Db, mandateIds: string[], p: Period) {
   }
 
   // ---------- pipeline ----------
-  const allDeals = await db.select({ id: deals.id, stage: deals.stage, practice: deals.practice, feeType: deals.feeType, engagement: deals.engagement, value: deals.valueEstimate, probability: deals.probability,
-    source: deals.source, partnerId: deals.partnerId, stageChangedAt: deals.stageChangedAt }).from(deals)
-    .where(and(inArray(deals.mandateId, mandateIds), notInArray(deals.stage, ["churned"])));
+  const allDeals = await allDealsP;
   const open = allDeals.filter(d => !["lost", "completed"].includes(d.stage));
   const weight = (d: (typeof allDeals)[number]) => (d.value ?? 0) * ((d.probability ?? STAGE_PROBABILITY[d.stage] ?? 0) / 100);
   const pipeline = (key: (d: (typeof allDeals)[number]) => string) => {
@@ -122,7 +127,7 @@ export async function computeMetrics(db: Db, mandateIds: string[], p: Period) {
 
   // ---------- Partner Network ----------
   const refDeals = allDeals.filter(d => d.source === "referral");
-  const partnerRows = await db.select({ id: partners.id, tier: partners.tier }).from(partners).where(inArray(partners.mandateId, mandateIds));
+  const partnerRows = await partnerRowsP;
   const tierOf = new Map(partnerRows.map(r => [r.id, r.tier]));
   const byTier = new Map<string, { referrals: number; won: number; lost: number }>();
   for (const d of refDeals) {
@@ -135,7 +140,7 @@ export async function computeMetrics(db: Db, mandateIds: string[], p: Period) {
   }
 
   // ---------- deliverability ----------
-  const checks = await db.select().from(deliverabilityChecks).orderBy(desc(deliverabilityChecks.checkedAt)).limit(20);
+  const checks = await checksP;
   const latest = new Map<string, (typeof checks)[number]>();
   for (const c of checks) if (!latest.has(c.domain)) latest.set(c.domain, c);
 

@@ -25,12 +25,13 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
   const tab = sp.tab === "apollo" ? "apollo" : "saved";
   const [segs, orgLists, data] = await Promise.all([
     listSegments(), listLists(user.scope, "companies"),
-    listOrganizations(user.scope, { q: sp.q, sector: sp.sector, country: sp.country, segment: sp.segment, source: sp.source, trigger: sp.trigger, list: sp.list, sort: sp.sort, page: Number(sp.page) || 1 }),
+    listOrganizations(user.scope, { q: sp.q, sector: sp.sector, country: sp.country, segment: sp.segment, source: sp.source, trigger: sp.trigger, list: sp.list, sort: sp.sort, page: Number(sp.page) || 1, qualification: sp.qualification, missing: sp.missing, tests: sp.tests }),
   ]);
   return (
     <>
       <PageHeader title="Companies" count={data.total} actions={<Link className="btn" href="/companies/new">Add company</Link>} />
       <Notice text={sp.notice} />
+      {(sp.qualification || sp.missing) && <p className={ui.notice}>Filtered: {sp.qualification ? `qualification ${sp.qualification.replace(/_/g, " ")}` : ""}{sp.qualification && sp.missing ? " · " : ""}{sp.missing ? `missing ${sp.missing}` : ""}. <Link href="/companies">Clear</Link></p>}
       <nav className={ui.tabs} aria-label="Company views">
         <Link className={`${ui.tab} ${tab === "saved" ? ui.tabActive : ""}`} href="/companies">Saved<span className={ui.tabCount}>{data.total}</span></Link>
         <Link className={`${ui.tab} ${tab === "apollo" ? ui.tabActive : ""}`} href="/companies?tab=apollo">Find in Apollo</Link>

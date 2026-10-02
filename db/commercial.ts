@@ -94,6 +94,11 @@ export const engagements = sqliteTable("engagements", {
   sla: text("sla").notNull().default(""),
   successCriteria: text("success_criteria").notNull().default(""),
   includedModules: json<string[]>("included_modules"),
+  // Funding origination (phase 11)
+  fundingLine: text("funding_line"),                                    // FUNDING_LINES
+  originOpportunityId: text("origin_opportunity_id"),                   // the funding call this relationship came from
+  feeBasis: text("fee_basis"),                                          // FEE_BASES; contingent needs legal / program review
+  budgetLines: json<{ role: string; person?: string; hours: number; rate: number }[]>("budget_lines"),
   ...timestamps,
 }, t => [index("engagements_mandate_status").on(t.mandateId, t.status), index("engagements_org").on(t.orgId), index("engagements_project").on(t.projectId)]);
 

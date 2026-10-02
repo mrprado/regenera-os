@@ -5,6 +5,7 @@ import { getOsApiUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { offerCatalog } from "@/lib/map/catalog";
 import { freshnessOf, PROVENANCE } from "@/lib/map/provenance";
+import { DATASETS, providerOf } from "@/lib/data-providers/catalog";
 
 // Layers whose data passes through the Worker (fetchJson → provider_calls), so their freshness is measured, not assumed.
 const SERVED_KINDS = new Set(["feed", "satellites"]);
@@ -47,6 +48,7 @@ export async function GET() {
     return {
       ...l,
       provenance: p ?? null,
+      dataset: (() => { const d = DATASETS.find(x => x.atlasLayer === l.id); if (!d) return null; const pv = providerOf(d.provider); return { id: d.id, provider: pv?.name ?? d.provider, platform: pv?.platforms.find(x => x.key === d.platform)?.name ?? null, name: d.name, version: d.version ?? null, role: d.analyticalRole, limitation: d.limitations[0] ?? null, evidenceLevel: d.evidenceLevel, localValidation: d.localValidationRequired }; })(),
       terms: r ? { license: r.license, licenseUrl: r.licenseUrl, commercialUse: r.commercialUse, redistribution: r.redistribution, attribution: r.attribution } : null,
       freshness: { ...fresh, lastOk: SERVED_KINDS.has(l.kind) ? last(l.registry, true) : null },
     };

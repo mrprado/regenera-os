@@ -1,5 +1,86 @@
-.head { margin: 0 0 26px; }
-.date { margin: 0 0 10px; font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--text-3); }
+.head { margin: 0 0 18px; }
+.date { margin: 0 0 8px; font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--text-3); }
 .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .hello { margin: 0; font-size: var(--fs-display); font-weight: 500; letter-spacing: -.03em; }
+.helloName { color: var(--text-3); font-weight: 400; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .statement { margin: -8px 0 22px; font-size: var(--fs-section); font-weight: 500; letter-spacing: -.012em; color: var(--text-2); max-width: 820px; }
+
+/* Summary: four restrained metrics, each with its definition one click away. */
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 0 22px; }
+.metric { display: grid; align-content: start; gap: 3px; padding: 12px 16px 12px; border-left: 1px solid var(--line); min-width: 0; }
+.metric:first-child { border-left: 0; padding-left: 0; }
+.metricValue { font-size: clamp(19px, 1.7vw, 25px); font-weight: 600; letter-spacing: -.02em; color: var(--heading); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.metricLabel { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+.metricSub { font-size: 12px; color: var(--text-muted); }
+.def summary { font-size: 11.5px; color: var(--text-3); cursor: pointer; width: max-content; }
+.def p { margin: 4px 0 0; font-size: 12px; color: var(--text-2); max-width: 36ch; }
+
+/* Priorities left, map + readiness right. */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 36px; align-items: start; margin-bottom: 8px; }
+.priorities { min-width: 0; border-top: 1px solid var(--line); padding-top: 16px; }
+.side { display: grid; gap: 18px; border-top: 1px solid var(--line); padding-top: 16px; min-width: 0; }
+.bucket { margin: 0 0 18px; }
+.bucketTitle { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--heading); display: flex; gap: 8px; align-items: baseline; }
+.bucketTitle span { font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.bucketTitle[data-bucket="overdue"] { color: var(--critical); }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; padding: 10px 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.card:first-child { border-top: 0; }
+.cardMain { display: grid; gap: 2px; min-width: 0; }
+.cardMain b { font-size: 14px; font-weight: 600; }
+.cardMain b a { color: var(--heading); }
+.type { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+.reason { font-size: 13px; color: var(--text); }
+.meta { font-size: 12px; color: var(--text-muted); }
+.next { font-size: 12.5px; color: var(--text-2); }
+.overdue { font-size: 12px; font-weight: 600; color: var(--critical); }
+.sev { display: inline-block; padding: 0 5px; border-radius: 3px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--line); }
+.sevCritical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 50%, transparent); }
+.sevHigh { color: var(--critical); }
+.sevMedium { color: var(--warning); }
+.sevLow { color: var(--text-3); }
+.group { grid-column: 1 / -1; }
+.group summary { font-size: 12.5px; color: var(--text-2); cursor: pointer; }
+.group ul { list-style: none; margin: 6px 0 0; padding: 0 0 0 12px; border-left: 2px solid var(--line); display: grid; gap: 10px; }
+.group li { display: grid; gap: 3px; }
+
+.mapSkeleton { height: 260px; background: var(--atlas-black); opacity: .6; }
+.ready { font-size: 13px; }
+.readyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.readyList li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; }
+.readyList li > span:last-child { grid-column: 1 / -1; }
+.readyStatus { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+.readyList li[data-status="ok"] .readyStatus { color: var(--positive); }
+.readyList li[data-status="failed"] .readyStatus, .readyList li[data-status="stale"] .readyStatus { color: var(--critical); }
+.readyList li[data-status="not_connected"] .readyStatus, .readyList li[data-status="never"] .readyStatus, .readyList li[data-status="attention"] .readyStatus { color: var(--warning); }
+
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; }
+
+/* Pipeline: one compact bar chart; the table carries the same numbers for screen readers. */
+.bars { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.bars a { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 10px; align-items: center; color: inherit; font-size: 12.5px; }
+.barLabel { color: var(--text-2); }
+.barTrack { height: 10px; background: color-mix(in srgb, var(--line) 60%, transparent); }
+.bar { display: block; height: 100%; background: var(--steel); min-width: 2px; }
+.barValue { font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.srTable { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.card a:focus-visible, .metric a:focus-visible, .bars a:focus-visible, .def summary:focus-visible, .group summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric:nth-child(3) { border-left: 0; padding-left: 0; }
+  .metric:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 760px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+  .card { grid-template-columns: minmax(0, 1fr); }
+  .bars a { grid-template-columns: 90px minmax(0, 1fr) auto; }
+}
+@media (max-width: 480px) {
+  .summary { grid-template-columns: minmax(0, 1fr); }
+  .metric { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); }
+  .metric:first-child { border-top: 0; }
+}
