@@ -92,7 +92,6 @@
 .heroRule { display: block; width: 44px; height: 2px; margin: 14px 0 12px; background: var(--copper); }
 .heroLead { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-2); }
 .sectors { margin: 0 0 8px; font-size: 13px; color: var(--text-3); }
-.purpose { margin: 0 0 14px; font-size: 14px; color: var(--text-2); }
 .mapBand { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; margin: 0 0 22px; }
 .mapBar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
 .sectionTitle { margin: 0; font-size: 14px; font-weight: 600; }
@@ -103,7 +102,6 @@
 .mapLinks { margin-left: auto; font-size: 13px; }
 .mapOff { margin: 0 0 18px; font-size: 13px; }
 .mapEmpty { margin: 0; padding: 18px 0; font-size: 14px; color: var(--text-2); }
-.mapNote { margin: 8px 0 0; font-size: 12px; color: var(--text-3); }
 .unmapped { margin-top: 8px; font-size: 13px; }
 .unmapped summary { cursor: pointer; color: var(--text-2); }
 .unmapped ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }

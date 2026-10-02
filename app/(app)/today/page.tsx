@@ -61,7 +61,6 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
         <span className={t.heroRule} aria-hidden="true" />
         <p className={t.heroLead}>Connect intelligence, assess opportunities, structure engagements, and coordinate delivery.</p>
         <p className={t.sectors}>Energy · Land · Infrastructure · Waste &amp; Resources</p>
-        <p className={t.purpose}>Track what each project contributes—and the evidence behind it.</p>
         <div className={t.row}>
           <p className={t.date}>{date} · {scope}{name ? ` · ${name}` : ""}</p>
           <nav className={t.actions} aria-label="Command actions">
@@ -332,7 +331,6 @@ async function CommandMap({ ws, flagged, mode, since, focus }: { ws: string[]; f
         <details className={t.unmapped}><summary>{unmapped.length} item{unmapped.length === 1 ? "" : "s"} without a site location (listed, not pinned)</summary>
           <ul>{unmapped.slice(0, 12).map(u => <li key={u.key}><Link href={u.href}>{u.name}</Link> <span className={ui.sub}>{u.what}</span></li>)}</ul></details>
       )}
-      <p className={t.mapNote}>Project sites are exact or recorded points; organizations are approximate (headquarters); capital is shown at its office, never as proof of where it invests. Test records are excluded.</p>
     </>
   );
 }
