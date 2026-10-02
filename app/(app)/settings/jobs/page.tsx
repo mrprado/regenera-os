@@ -4,6 +4,8 @@ import { isOwner } from "@/lib/db/scoped";
 import { jobsOverview } from "@/lib/settings";
 import { appDb } from "@/lib/db/scoped";
 import { getState } from "@/lib/state";
+import { queueHealth, scheduleHealth } from "@/lib/jobs/health";
+import { fmtLocal } from "@/lib/time/zone";
 import { retryJob, runJobsNow } from "../actions";
 import styles from "../settings.module.css";
 
@@ -25,13 +27,15 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const parse = (v: string | null) => { try { return v ? JSON.parse(v) as Record<string, unknown> : null; } catch { return null; } };
   const backup = parse(await getState(appDb(), "last_backup"));
   const check = parse(await getState(appDb(), "last_backup_check"));
+  const [q, sched] = await Promise.all([queueHealth(appDb()), scheduleHealth(appDb())]);
+  const STATE_LABEL = { ok: "Completed", never: "Never completed", failing: "Failing", overdue: "Queued, not completed", paused: "Paused" } as const;
 
   return (
     <>
       <h2>Jobs</h2>
       {params.ran && <p className={`${styles.notice} ${styles.noticeOk}`}>Ran one tick.</p>}
       <p className={`${styles.notice} ${backup ? styles.noticeOk : ""}`}>
-        Backups: {backup ? `last nightly export ${String(backup.day)} (${String(backup.tables)} tables, ${String(backup.rows)} rows, kept 30 days in R2)` : "no backup yet (runs nightly at 02:30 ET)"}.
+        Backups: {backup ? `last nightly export ${String(backup.day)} (${String(backup.tables)} tables, ${String(backup.rows)} rows, kept 30 days in R2)` : "no backup yet (runs nightly at 02:30 Pacific)"}.
         {" "}Read-back check: {check ? `${check.ok ? "passed" : "FAILED"} on ${String(check.at).slice(0, 10)}${check.ok ? "" : `: ${(check.problems as string[]).slice(0, 2).join("; ")}`}` : "not run yet (monthly)"}.
         {" "}Full restore test: <code>node scripts/restore-backup.mjs &lt;folder&gt;</code>.
       </p>
@@ -50,18 +54,24 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           <p className="eyebrow">Queue</p>
           <dl className={styles.meta}>
             {(["queued", "running", "done", "dead"] as const).map(s => <Fragment key={s}><dt>{s}</dt><dd>{counts[s] ?? 0}</dd></Fragment>)}
+            <dt>Due and waiting</dt><dd>{q.dueWaiting}{q.oldestDueAt ? `, oldest due ${fmtLocal(q.oldestDueAt)}` : ""}</dd>
+            <dt>Retrying</dt><dd>{q.retrying}</dd>
+            <dt>Expired leases</dt><dd>{q.expiredLeases}{q.expiredLeases ? " (reclaimed on the next tick)" : ""}</dd>
           </dl>
         </article>
       </div>
 
       <h3>Schedules</h3>
+      <p className={styles.notice}>Queued is not completed: a schedule is working only when its jobs reach Completed. Times are Pacific; storage is UTC.</p>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
-          <thead><tr><th>Job</th><th>Cadence (ET)</th><th>Next run</th><th>Last run</th></tr></thead>
+          <thead><tr><th>Job</th><th>Cadence (Pacific)</th><th>State</th><th>Next queued</th><th>Last queued</th><th>Last completed</th><th>Last failure</th></tr></thead>
           <tbody>
-            {schedules.length === 0 && <tr><td colSpan={4}>Created on the first tick.</td></tr>}
-            {schedules.map(s => (
-              <tr key={s.id}><td className={styles.mono}>{s.jobType}</td><td className={styles.mono}>{s.cadence}</td><td>{s.nextRunAt}</td><td>{s.lastRunAt ?? "never"}</td></tr>
+            {schedules.length === 0 && <tr><td colSpan={7}>Created on the first tick.</td></tr>}
+            {[...sched].sort((a, b) => a.jobType.localeCompare(b.jobType)).map(s => (
+              <tr key={s.jobType}><td className={styles.mono}>{s.jobType}</td><td className={styles.mono}>{s.cadence}</td>
+                <td><span className={`${styles.pill} ${s.state === "ok" ? styles.pillOk : s.state === "failing" || s.state === "overdue" ? styles.pillWarn : styles.pillMuted}`}>{STATE_LABEL[s.state]}</span>{s.waiting ? <> · {s.waiting} waiting</> : null}</td>
+                <td>{fmtLocal(s.nextRunAt)}</td><td>{fmtLocal(s.lastQueuedAt)}</td><td>{fmtLocal(s.lastCompletedAt)}</td><td>{s.lastFailedAt ? <>{fmtLocal(s.lastFailedAt)}{s.lastError ? <span className={styles.mono}> · {s.lastError.slice(0, 120)}</span> : null}</> : "none"}</td></tr>
             ))}
           </tbody>
         </table>
