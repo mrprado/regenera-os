@@ -5,7 +5,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { approvals, mandateCandidates, mandateSignals, pursuits } from "@/db/schema";
-import { advanceCandidate, buildUniverse, buildUniverseSlice, clientRespond, getWork, createMandate, createPursuit, decideApproval, decideBid, deliveryFloor, mandateEconomics, movePursuit, recordCheck, requestApproval, saveBidCriteria, signalsFromQueueChanges } from "@/lib/mandates/engine";
+import { advanceCandidate, buildUniverse, buildUniverseSlice, clientRespond, getWork, createMandate, createPursuit, decideApproval, decideBid, deliveryFloor, mandateEconomics, movePursuit, recordCheck, requestApproval, saveBidCriteria, signalsFromQueueChanges, updateMandate } from "@/lib/mandates/engine";
 import { candidateDetail, mandateById, mandateCommand } from "@/lib/mandates/queries";
 import { upsertQueue, type QueueRow } from "@/lib/mandates/queues";
 import { enqueue } from "@/lib/jobs/queue";
@@ -108,8 +108,12 @@ describe("mandate engine", () => {
     const m = (await mandateById(t.db, scope, mId))!;
     const d = await deliveryFloor(t.db, m, "2026-09"); // the universe was screened at 2026-09-30
     expect(d.lines[0].delivered).toBe(2);
+    // A retainer amount alone is a proposal: it is shown, but not counted as revenue until separately approved.
     const e = await mandateEconomics(t.db, m);
-    expect(e.monthlyRevenue).toBe(15000);
+    expect(e.retainer!.fee).toBe(15000);
+    expect(e.monthlyRevenue).toBe(0);
+    await updateMandate(t.db, mId, { retainerStatus: "approved", retainerApprovedBy: "lead@regenera.bio", retainerApprovedAt: new Date().toISOString() }, "lead@regenera.bio");
+    expect((await mandateEconomics(t.db, (await mandateById(t.db, scope, mId))!)).monthlyRevenue).toBe(15000);
     expect(e.seats.length).toBeGreaterThan(0);
     expect(e.successNote).toMatch(/No success component/);
   });

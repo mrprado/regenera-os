@@ -9,7 +9,7 @@ import { approvals, jobs, mandateSignals } from "@/db/schema";
 import { enqueue } from "@/lib/jobs/queue";
 import { runJobsOfTypes } from "@/lib/jobs/tick";
 import { withOsUser } from "@/lib/auth";
-import { appDb, isInternal, mandateCondition } from "@/lib/db/scoped";
+import { appDb, isInternal, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { advanceCandidate, clientRespond, getWork, setWork, type MandateWork, closePursuit, createMandate, createPursuit, decideApproval, decideBid, movePursuit, recordCheck, requestApproval, reviewDelivery, saveBidCriteria, setCandidateFeedback, setProbability, updateMandate, updatePursuit, type MandateInput } from "@/lib/mandates/engine";
 import { candidateDetail, mandateById, pursuitDetail } from "@/lib/mandates/queries";
 import { APPROVAL_KINDS, BID_CRITERIA, BUILDER, CANDIDATE_STAGES, CLIENT_RESPONSES, DELIVERY_METRICS, MANDATE_TYPES, SUCCESS_STRUCTURES, type ApprovalKind, type CandidateStage, type ClientResponse, type DeliveryMetric, type FloorLine, type MandateType, type SuccessStructure } from "@/lib/mandates/vocab";
@@ -41,6 +41,9 @@ function mandateFields(f: FormData, type: MandateType) {
     confidentiality: str(f, "confidentiality", 40) || "confidential", outreachPermission: str(f, "outreachPermission", 40) || "approval_each", successDefinition: str(f, "successDefinition"),
     deliveryFloor: floor, reportingCadence: str(f, "reportingCadence", 20) || "weekly", engagementModel: str(f, "engagementModel", 30) || null, breadth: str(f, "breadth", 30) || "regional",
     termMonths: num(f, "termMonths"), retainer: num(f, "retainer") ?? 0, pilotFee: num(f, "pilotFee") ?? 0, implementationFee: num(f, "implementationFee") ?? 0,
+    pilotDays: (() => { const v = num(f, "pilotDays"); return v != null && v > 0 ? Math.round(v) : null; })(), pilotStart: str(f, "pilotStart", 10) || null, pilotEnd: str(f, "pilotEnd", 10) || null,
+    retainerStatus: z.enum(["none", "proposed", "approved", "active", "declined"]).catch("none").parse(f.get("retainerStatus")),
+    targetMarginPct: (() => { const v = num(f, "targetMarginPct"); return v != null && v >= 0 && v < 100 ? v : 55; })(),
     dataCost: num(f, "dataCost") ?? 0, partnerCost: num(f, "partnerCost") ?? 0, travelCost: num(f, "travelCost") ?? 0,
     successEconomics: { structure, rate: num(f, "successRate"), amount: num(f, "successAmount"), cap: num(f, "successCap"), floor: num(f, "successFloor"), attributionWindowMonths: num(f, "attributionWindow"), appliesTo: str(f, "successAppliesTo", 500), exclusions: str(f, "successExclusions", 500), paymentEvent: str(f, "paymentEvent", 300), counselReviewed: f.get("counselReviewed") === "on" },
     attributionRules: str(f, "attributionRules"), startDate: str(f, "startDate", 10) || null, reviewDate: str(f, "reviewDate", 10) || null, endDate: str(f, "endDate", 10) || null,
@@ -68,7 +71,13 @@ export async function updateMandateAction(formData: FormData) {
     const m = await mandateById(appDb(), user.scope, id);
     if (!m) throw new Error("Not found");
     const fields = mandateFields(formData, m.type as MandateType);
-    await updateMandate(appDb(), id, { ...fields, name: str(formData, "name", 200) || m.name, publishApproved: m.publishApproved && fields.publicLabel === m.publicLabel }, user.email);
+    // A recurring retainer counts only once separately approved: moving it to approved or active needs a workspace owner
+    // and records who and when. A retainer amount alone is a proposal.
+    const approving = ["approved", "active"].includes(fields.retainerStatus) && !["approved", "active"].includes(m.retainerStatus);
+    if (approving && !isOwner(user.scope, m.mandateId)) throw new Error("Only a workspace owner can record a retainer as approved or active.");
+    if (fields.retainerStatus !== "none" && fields.retainer <= 0) fields.retainerStatus = "none";
+    const approval = approving ? { retainerApprovedBy: user.email, retainerApprovedAt: new Date().toISOString() } : {};
+    await updateMandate(appDb(), id, { ...fields, ...approval, name: str(formData, "name", 200) || m.name, publishApproved: m.publishApproved && fields.publicLabel === m.publicLabel }, user.email);
   });
   redirect(note(`/mandates/${id}?tab=profile`, "Mandate saved."));
 }

@@ -53,7 +53,7 @@ export default async function EngagementPage({ params, searchParams }: { params:
       <p className={ui.sub}><span className={ui.chip}>{ENGAGEMENT_STATUSES[e.status]}</span> {org ? <Link href={`/companies/${org.id}`}>{org.name}</Link> : "No client linked"}{project ? <> · <Link href={`/projects/${project.id}`}>{project.name}</Link></> : null} · {BILLING_TYPES[e.billingType]} · conflict check: {CONFLICT_STATES[e.conflictStatus]}{e.approvalRequired ? ` · approval ${e.approvedBy ? `by ${e.approvedBy}` : "REQUIRED"}` : ""}</p>
 
       <div className={styles.strip}>
-        {[["Contract value", money(econ.contractValue, e.currency)], ["Invoiced", money(econ.invoiced, e.currency)], ["Collected", money(econ.collected, e.currency)], ["Outstanding", money(econ.outstanding, e.currency)], ["To invoice", money(econ.toInvoice, e.currency)], ["Hours (vs plan)", `${econ.hours}${econ.hoursVsPlanPct !== null ? ` (${econ.hoursVsPlanPct}%)` : ""}`], ["Gross margin", econ.marginPct === null ? "—" : `${econ.marginPct}%${econ.internalCostKnown ? "" : " (no time cost)"}`]].map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
+        {[["Contract value", money(econ.contractValue, e.currency)], ["Invoiced", money(econ.invoiced, e.currency)], ["Collected", money(econ.collected, e.currency)], ["Outstanding", money(econ.outstanding, e.currency)], ["To invoice", money(econ.toInvoice, e.currency)], ["Hours (vs plan)", `${econ.hours}${econ.hoursVsPlanPct !== null ? ` (${econ.hoursVsPlanPct}%)` : ""}`], ["Gross margin", econ.marginPct === null ? (econ.internalCostKnown ? "—" : "Unknown: set the internal cost / hour") : `${econ.marginPct}%${econ.internalCostKnown ? "" : " (no time planned or logged)"}`]].map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
       </div>
 
       <Lifecycle e={e} scope={user.scope} />
@@ -70,6 +70,7 @@ export default async function EngagementPage({ params, searchParams }: { params:
               <label>Client responsibilities<textarea name="clientResponsibilities" defaultValue={e.clientResponsibilities} rows={2} /></label>
               <div className={r.formRow}>
                 <label>Fixed fee<input name="fee" defaultValue={e.fee} inputMode="decimal" /></label>
+                <label>Reason for a fee below the minimum (owner)<input name="priceOverrideReason" maxLength={1000} defaultValue={e.priceOverrideReason ?? ""} placeholder="Only needed when the fee is under the services' minimum" /></label>
                 <label>Monthly fee<input name="monthlyFee" defaultValue={e.monthlyFee} inputMode="decimal" /></label>
                 <label>Months<input name="months" defaultValue={e.months} inputMode="numeric" /></label>
                 <label>Currency<input name="currency" defaultValue={e.currency} /></label>
@@ -88,7 +89,8 @@ export default async function EngagementPage({ params, searchParams }: { params:
               </div>
               <button className="btn btn--primary" type="submit">Save</button>
             </form>
-            {quote.length > 0 && <p className={ui.sub}>Pricing check (one-off services, standard complexity{e.hourlyCost ? `, ${e.currency} ${e.hourlyCost}/h` : ", no time cost"}): suggested {money(quoteTotal, e.currency)}, minimum {money(minTotal, e.currency)}. {e.fee < minTotal ? <b style={{ color: "#b0432f" }}>Fee is below the minimum: LOW MARGIN.</b> : null} Override is allowed; the pricing policy lives in Services &amp; pricing.</p>}
+            {quote.length > 0 && <p className={ui.sub}>Pricing check (one-off services, standard complexity{e.hourlyCost ? `, ${e.currency} ${e.hourlyCost}/h` : ", no time cost"}): suggested {money(quoteTotal, e.currency)}, minimum {money(minTotal, e.currency)}. {e.fee > 0 && e.fee < minTotal ? <b style={{ color: "#b0432f" }}>Fee is below the minimum: LOW MARGIN.</b> : null} A lower price needs an owner&apos;s written reason and blocks contracting until recorded; the pricing policy lives in Services &amp; pricing.</p>}
+            {e.priceOverrideReason && <p className={ui.sub}>Price below the floor approved by {e.priceOverrideBy} on {(e.priceOverrideAt ?? "").slice(0, 10)}: {e.priceOverrideReason}</p>}
           </section>
 
           <section className={r.panel}>

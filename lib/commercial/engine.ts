@@ -111,9 +111,26 @@ export async function setEngagementStatus(db: Db, id: string, status: Status, ac
     if (e.conflictStatus === "review" && e.conflictNote.trim().length < 5) throw new Error("Conflict check needs review: record the decision in the conflict note");
   }
   if (status === "active" && e.approvalRequired && !e.approvedBy) throw new Error("This engagement type requires internal approval before it starts");
+  if (["contracting", "active"].includes(status) && e.workstreams.length) {
+    const svc = await db.select().from(services).where(and(eq(services.mandateId, e.mandateId), inArray(services.key, e.workstreams)));
+    const floor = engagementFloor(e, svc);
+    if (belowFloorWithoutOverride(e.fee, floor, e)) throw new Error(`The fee is below the services' minimum (${floor.minimum}). An owner must record the reason for the lower price before contracting.`);
+  }
   await db.update(engagements).set({ status, lostReason: status === "lost" ? opts.lostReason ?? "" : e.lostReason, startDate: status === "active" && !e.startDate ? new Date().toISOString().slice(0, 10) : e.startDate, updatedAt: new Date().toISOString() }).where(eq(engagements.id, id));
   await audit(db, { actor, action: "engagement_status", entity: "engagements", entityId: id, before: { status: e.status }, after: { status } });
 }
+
+/** The price floor of an engagement from its linked one-off services (phase 16 §4): the sum of each service's minimum at
+ *  the engagement's own internal cost rate. Monthly services are priced per month and not part of the one-off floor. */
+export function engagementFloor(e: Pick<Engagement, "hourlyCost">, svc: Pick<Service, "listPrice" | "minPrice" | "bandLow" | "bandHigh" | "expectedHours" | "expectedExternalCost" | "targetMarginPct" | "perMonth">[]) {
+  const oneOff = svc.filter(s => !s.perMonth);
+  const quotes = oneOff.map(s => priceService(s, { complexity: "standard", urgency: false, travelCost: 0, specialistCost: 0, hourlyCost: e.hourlyCost }));
+  return { minimum: quotes.reduce((a, q) => a + q.minimum, 0), suggested: quotes.reduce((a, q) => a + q.suggested, 0), services: oneOff.length, rateMissing: !e.hourlyCost && oneOff.some(s => s.expectedHours > 0) };
+}
+
+/** A one-off fee under the floor needs a recorded override (reason, owner, time) before it can be contracted. */
+export const belowFloorWithoutOverride = (fee: number, floor: { minimum: number }, e: Pick<Engagement, "priceOverrideReason">) =>
+  fee > 0 && floor.minimum > 0 && fee < floor.minimum && !(e.priceOverrideReason ?? "").trim();
 
 export function changeOrder(e: Pick<Engagement, "changeOrders">, input: { reason: string; description: string; fee: number; weeks: number }): ChangeOrder[] {
   return [...e.changeOrders, { id: uid(), ...input, status: "proposed", at: new Date().toISOString() }];
@@ -175,7 +192,11 @@ export function engagementEconomics(e: Engagement, invs: (typeof invoices.$infer
   const cost = externalCost + (internalCost ?? 0);
   return {
     contractValue: r2(contractValue), invoiced: r2(invoiced), collected: r2(collected), outstanding: r2(invoiced - collected), toInvoice: r2(contractValue - live.reduce((a, i) => a + i.amount, 0)),
-    hours, internalCost: internalCost === null ? null : r2(internalCost), externalCost: r2(externalCost), grossMargin: r2(revenue - cost), marginPct: revenue > 0 ? r2(((revenue - cost) / revenue) * 100) : null,
+    // Without an internal cost rate, time that is planned or logged has an unknown cost: the margin is unknown, never the
+    // inflated figure that treats the time as free.
+    hours, internalCost: internalCost === null ? null : r2(internalCost), externalCost: r2(externalCost),
+    grossMargin: internalCost === null && (hours > 0 || e.expectedHours > 0) ? null : r2(revenue - cost),
+    marginPct: internalCost === null && (hours > 0 || e.expectedHours > 0) ? null : revenue > 0 ? r2(((revenue - cost) / revenue) * 100) : null,
     hoursVsPlanPct: e.expectedHours > 0 ? r2((hours / e.expectedHours) * 100) : null, internalCostKnown: internalCost !== null,
     probabilityPct: e.probabilityPct ?? STAGE_PROBABILITY[e.status], weighted: r2(contractValue * ((e.probabilityPct ?? STAGE_PROBABILITY[e.status]) / 100)),
   };
@@ -196,12 +217,12 @@ export async function commercialOverview(db: Db, mandateIds: string[], today = n
   const open = rows.filter(r => ["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting", "renewal"].includes(r.e.status));
   const active = rows.filter(r => ["active", "waiting_on_client", "on_hold"].includes(r.e.status));
   const liveInv = invs.filter(i => i.status !== "void").map(i => ({ ...i, derived: derivedInvoiceStatus(i, today) }));
-  const byService = new Map<string, { contract: number; margin: number; revenue: number; count: number }>();
+  const byService = new Map<string, { contract: number; margin: number; revenue: number; count: number; known: boolean }>();
   const byClient = new Map<string, { contract: number; collected: number; count: number }>();
   for (const r of rows.filter(x => !["prospect", "lost"].includes(x.e.status))) {
     const k = r.e.workstreams[0] ?? "unassigned";
-    const s = byService.get(k) ?? { contract: 0, margin: 0, revenue: 0, count: 0 };
-    s.contract += r.econ.contractValue; s.margin += r.econ.grossMargin; s.revenue += r.econ.contractValue; s.count++; byService.set(k, s);
+    const s = byService.get(k) ?? { contract: 0, margin: 0, revenue: 0, count: 0, known: true };
+    s.contract += r.econ.contractValue; s.margin += r.econ.grossMargin ?? 0; s.known &&= r.econ.grossMargin !== null; s.revenue += r.econ.contractValue; s.count++; byService.set(k, s);
     const c = byClient.get(r.client) ?? { contract: 0, collected: 0, count: 0 }; c.contract += r.econ.contractValue; c.collected += r.econ.collected; c.count++; byClient.set(r.client, c);
   }
   const mrr = active.filter(r => r.e.monthlyFee > 0).reduce((a, r) => a + r.e.monthlyFee, 0);
@@ -211,7 +232,8 @@ export async function commercialOverview(db: Db, mandateIds: string[], today = n
     activeValue: r2(active.reduce((a, r) => a + r.econ.contractValue, 0)), mrr: r2(mrr), arr: r2(mrr * 12),
     receivables: r2(liveInv.reduce((a, i) => a + (i.derived === "paid" || i.derived === "draft" || i.derived === "scheduled" ? 0 : i.amount - i.paidAmount), 0)),
     overdue: liveInv.filter(i => i.derived === "overdue"), dueSoon: liveInv.filter(i => i.derived === "due" || i.derived === "partially_paid"),
-    byService: [...byService.entries()].map(([k, v]) => ({ service: k, ...v, marginPct: v.revenue ? r2((v.margin / v.revenue) * 100) : null })).sort((a, b) => b.contract - a.contract),
+    // A service whose engagements include an unknown margin (no internal cost rate) shows no margin, not a partial sum.
+    byService: [...byService.entries()].map(([k, v]) => ({ service: k, ...v, marginPct: v.revenue && v.known ? r2((v.margin / v.revenue) * 100) : null })).sort((a, b) => b.contract - a.contract),
     byClient: [...byClient.entries()].map(([k, v]) => ({ client: k, ...v })).sort((a, b) => b.contract - a.contract),
     winRate: (() => { const decided = rows.filter(r => r.e.status === "lost" || !["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting"].includes(r.e.status)); const won = decided.filter(r => r.e.status !== "lost"); return decided.length ? r2((won.length / decided.length) * 100) : null; })(),
   };

@@ -2,7 +2,7 @@
 
 // Commercial operations: services and pricing, engagements, invoices, expenses, time, partners, accounts, entities.
 // Nothing is emailed or charged from here: "sent" records that the invoice left through the billing system.
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { accountConnections, commercialPartners, corporateEntities, engagements, expenses, invoices, services, timeEntries } from "@/db/schema";
@@ -10,7 +10,7 @@ import type { Deliverable, PaymentLine } from "@/db/commercial";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
-import { changeOrder, createEngagement, engagementConflicts, invoiceFromSchedule, recordPayment, setEngagementStatus } from "@/lib/commercial/engine";
+import { changeOrder, createEngagement, engagementConflicts, engagementFloor, invoiceFromSchedule, recordPayment, setEngagementStatus } from "@/lib/commercial/engine";
 import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, CHANGE_REASONS, DELIVERABLE_STATUSES, ENGAGEMENT_STATUSES, ENTITY_KINDS, EXPENSE_CATEGORIES, EXPENSE_CLASSES, PARTNER_KINDS } from "@/lib/commercial/vocab";
 
 const zId = z.string().uuid();
@@ -41,9 +41,23 @@ export async function createEngagementAction(formData: FormData) {
 
 export async function updateEngagementAction(formData: FormData) {
   const id = zId.parse(formData.get("id"));
+  let msg = "Engagement updated.";
   await withOsUser(async user => {
-    await scopedEngagement(user.scope, id);
-    await appDb().update(engagements).set({
+    const e = await scopedEngagement(user.scope, id);
+    // A fee below the price floor is saved only with an owner's written reason; the reason, who and when are kept and audited.
+    const fee = num(formData, "fee") ?? 0, hourlyCost = num(formData, "hourlyCost");
+    const svc = e.workstreams.length ? await appDb().select().from(services).where(and(eq(services.mandateId, e.mandateId), inArray(services.key, e.workstreams))) : [];
+    const floor = engagementFloor({ hourlyCost }, svc);
+    const reason = str(formData, "priceOverrideReason", 1000);
+    const below = fee > 0 && floor.minimum > 0 && fee < floor.minimum;
+    let override: Partial<typeof engagements.$inferInsert> = below ? {} : { priceOverrideReason: null, priceOverrideBy: null, priceOverrideAt: null };
+    if (below && fee !== e.fee) {
+      if (!isOwner(user.scope, e.mandateId)) throw new Error(`The fee ${fee} is below the minimum ${floor.minimum}; only an owner can approve a lower price.`);
+      if (reason.length < 10) { msg = `Not saved: the fee ${fee} is below the minimum ${floor.minimum}. Write the reason for the lower price (scope, strategic value, agreed terms) to save it.`; return; }
+      override = { priceOverrideReason: reason, priceOverrideBy: user.email, priceOverrideAt: new Date().toISOString() };
+      await audit(appDb(), { actor: user.email, action: "engagement_price_override", entity: "engagements", entityId: id, before: { fee: e.fee }, after: { fee, minimum: floor.minimum, reason } });
+    }
+    await appDb().update(engagements).set({ ...override,
       name: z.string().trim().min(2).max(200).parse(formData.get("name")), scope: str(formData, "scope", 5000), assumptions: str(formData, "assumptions", 3000), exclusions: str(formData, "exclusions", 3000),
       clientResponsibilities: str(formData, "clientResponsibilities", 3000), fee: num(formData, "fee") ?? 0, monthlyFee: num(formData, "monthlyFee") ?? 0, months: Math.round(num(formData, "months") ?? 0),
       currency: z.string().regex(/^[A-Z]{3}$/).catch("USD").parse(str(formData, "currency").toUpperCase()), paymentTerms: str(formData, "paymentTerms", 120) || "Net 30",
@@ -52,7 +66,7 @@ export async function updateEngagementAction(formData: FormData) {
     }).where(eq(engagements.id, id));
     await audit(appDb(), { actor: user.email, action: "engagement_update", entity: "engagements", entityId: id });
   });
-  redirect(note(eUrl(id), "Engagement updated."));
+  redirect(note(eUrl(id), msg));
 }
 
 export async function scheduleAction(formData: FormData) {

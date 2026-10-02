@@ -9,7 +9,7 @@ import { accountConnections, commercialPartners, corporateEntities, organization
 import { requireOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { commercialOverview, ensureServices, priceService } from "@/lib/commercial/engine";
-import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, DEPTHS, ENGAGEMENT_STATUSES, ENTITY_KINDS, INVOICE_STATUSES, LIFECYCLE_PHASES, PARTNER_KINDS, SERVICE_FAMILIES, VENDOR_CAPABILITIES , REVENUE_CATEGORIES } from "@/lib/commercial/vocab";
+import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, DEPTHS, ENGAGEMENT_STATUSES, ENTITY_KINDS, INVOICE_STATUSES, LIFECYCLE_PHASES, PARTNER_KINDS, SERVICE_FAMILIES, VENDOR_CAPABILITIES , REVENUE_CATEGORIES, COST_BASIS } from "@/lib/commercial/vocab";
 import { addAccountAction, addEntityAction, addPartnerAction, createEngagementAction, updateServiceAction } from "../commercial-actions";
 import styles from "./commercial.module.css";
 
@@ -85,8 +85,8 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       {tab === "services" && <section className={r.panel}>
         <p className={r.panelTitle}>Service catalogue and pricing</p>
         <p className={ui.sub}>Price bands are Regenera&apos;s internal defaults, not market facts. Suggested price = list × complexity (× urgency), raised to meet the target margin on known costs; set an internal hourly cost on an engagement to include time. Changes are audited.</p>
-        <div className={ui.tableWrap}><table className={ui.table}><thead><tr><th>Service</th><th>Phase</th><th>Billing</th><th>Band</th><th>List</th><th>Minimum</th><th>Hours</th><th>External cost</th><th>Target margin</th><th>Suggested (std, $120/h)</th><th>Role · specialists</th><th /></tr></thead><tbody>
-          {svc.map(s => { const p = priceService(s, { complexity: "standard", urgency: false, travelCost: 0, specialistCost: 0, hourlyCost: 120 }); return (
+        <div className={ui.tableWrap}><table className={ui.table}><thead><tr><th>Service</th><th>Phase</th><th>Billing</th><th>Band</th><th>List</th><th>Minimum</th><th>Hours</th><th>External cost</th><th>Target margin</th><th>Suggested (std, ${COST_BASIS.CATALOGUE.rate}/h)</th><th>Role · specialists</th><th /></tr></thead><tbody>
+          {svc.map(s => { const p = priceService(s, { complexity: "standard", urgency: false, travelCost: 0, specialistCost: 0, hourlyCost: COST_BASIS.CATALOGUE.rate }); return (
             <tr key={s.id} className={s.active ? undefined : styles.inactive}>
               <td className={ui.primary}>{s.name}{s.depth !== "standard" ? <span className={ui.chip}> {DEPTHS[s.depth]}</span> : null}<span className={ui.sub}>{SERVICE_FAMILIES[s.family]}{s.approvalRequired ? " · approval required" : ""}</span></td>
               <td className={ui.sub}>{LIFECYCLE_PHASES[s.phase]}</td><td className={ui.sub}>{BILLING_TYPES[s.billingType]}</td>

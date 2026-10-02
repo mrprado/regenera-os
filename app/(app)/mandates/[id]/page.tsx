@@ -7,7 +7,8 @@ import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { appDb, isInternal } from "@/lib/db/scoped";
 import { withBase } from "@/lib/base-path";
-import { deliveryFloor, getWork, mandateEconomics, mandateHealth } from "@/lib/mandates/engine";
+import { COST_BASIS } from "@/lib/commercial/vocab";
+import { deliveryFloor, getWork, isPrelaunch, mandateEconomics, mandateHealth } from "@/lib/mandates/engine";
 import { WorkProgress } from "./work-progress";
 import { day, label, money, pct } from "@/lib/mandates/format";
 import { candidatePage, candidatesFor, funnelFor, mandateById, pursuitsFor, signalsFor } from "@/lib/mandates/queries";
@@ -204,17 +205,19 @@ async function Signals({ m, scope, status }: { m: M; scope: Scope; status: strin
 
 async function Delivery({ m, period }: { m: M; period: string }) {
   const d = await deliveryFloor(appDb(), m, period);
+  const prelaunch = isPrelaunch(m, period);
   return (
     <>
       <form action={withBase(`/mandates/${m.id}`)} className={f.inline} style={{ marginBottom: 10 }}><input type="hidden" name="tab" value="delivery" /><input name="period" type="month" defaultValue={period} aria-label="Period" /><button className="btn" type="submit">Show</button></form>
+      {prelaunch && <p className={s.caution}>Pre-launch: this mandate is {MANDATE_STATUSES[m.status as keyof typeof MANDATE_STATUSES] ?? m.status}{(m.pilotStart ?? m.startDate) ? `, starting ${m.pilotStart ?? m.startDate}` : ", with no start date"}. Delivery is not scored until it is active; targets below are what the agreement would require.</p>}
       {d.lines.length === 0 ? <EmptyState icon={Target} title="No delivery floor" body="Set monthly targets in Profile. Delivered counts come from the records; raw activity is never the only measure." /> : (
         <div className={ui.tableWrap}><table className={ui.table}>
           <thead><tr><th>Metric</th><th>Level</th><th className={ui.num}>Target</th><th className={ui.num}>Delivered</th><th>Status</th></tr></thead>
-          <tbody>{d.lines.map(l => <tr key={l.metric}><td>{l.label}</td><td>{l.level}</td><td className={ui.num}>{l.target}</td><td className={ui.num}>{l.delivered}</td><td><span className={s.reading} data-r={l.met ? "yes" : "weak"}>{l.met ? "Met" : `Short ${l.target - l.delivered}`}</span></td></tr>)}</tbody>
+          <tbody>{d.lines.map(l => <tr key={l.metric}><td>{l.label}</td><td>{l.level}</td><td className={ui.num}>{l.target}</td><td className={ui.num}>{l.delivered}</td><td>{prelaunch ? <span className={s.reading} data-r="unknown">Not started</span> : <span className={s.reading} data-r={l.met ? "yes" : "weak"}>{l.met ? "Met" : `Short ${l.target - l.delivered}`}</span>}</td></tr>)}</tbody>
         </table></div>
       )}
       <h3 className={f.kicker} style={{ marginTop: 16 }}>Mandate lead review for {period}</h3>
-      {d.review && <p className={ui.sub}>Reviewed by {d.review.reviewedBy} on {day(d.review.reviewedAt)}: {d.review.status}.</p>}
+      {d.review && <p className={ui.sub}>Reviewed by {d.review.reviewedBy} on {day(d.review.reviewedAt)}: {d.review.status === "prelaunch" || (prelaunch && d.review.status === "short") ? "pre-launch operating review (not a missed delivery; the mandate had not started)" : d.review.status}.</p>}
       <form action={reviewDeliveryAction} className={f.form} style={{ maxWidth: 720 }}>
         <input type="hidden" name="id" value={m.id} /><input type="hidden" name="period" value={period} />
         <label>Quality of what was delivered<textarea name="quality" defaultValue={d.review?.quality ?? ""} /></label>
@@ -230,14 +233,36 @@ async function Economics({ m }: { m: M }) {
   const e = await mandateEconomics(appDb(), m);
   return (
     <>
-      <div className={f.econ}>
-        <div><b>{money(e.monthlyRevenue)}</b><span>Retainer / month</span></div>
-        <div><b>{money(e.monthlyCost)}</b><span>Delivery cost / month</span></div>
-        <div><b>{money(e.contribution)}</b><span>Contribution / month</span></div>
-        <div><b>{money(e.totalRevenue)}</b><span>Expected revenue ({e.months} mo)</span></div>
-        <div><b>{money(e.grossProfit)}</b><span>Expected gross profit</span></div>
-        <div><b>{pct(e.margin)}</b><span>Expected margin</span></div>
-      </div>
+      <p className={ui.sub}>Estimates in {e.currency}, not incurred costs. Cost basis: {e.costBasis}. Target margin {e.targetMarginPct}%. The pilot and any retainer are separate agreements; a retainer counts as recurring revenue only once it is separately approved or active.</p>
+      {e.pilot && (
+        <>
+          <h3 className={f.kicker}>Pilot ({e.pilot.days} days{e.pilot.daysAssumed ? ", assumed: record the agreed length in Profile" : ""})</h3>
+          <div className={f.econ}>
+            <div><b>{money(e.pilot.fee)}</b><span>Fixed fee (one time)</span></div>
+            <div><b>{e.pilot.hours}</b><span>Planned hours</span></div>
+            <div><b>{money(e.pilot.cost)}</b><span>Estimated delivery cost</span></div>
+            <div><b>{money(e.pilot.contribution)}</b><span>Contribution</span></div>
+            <div><b>{pct(e.pilot.margin)}</b><span>Margin</span></div>
+            <div><b>{money(e.pilot.maxCost)}</b><span>Max cost at {e.targetMarginPct}%</span></div>
+          </div>
+          {e.pilot.belowTarget && <p className={s.caution} role="alert">Below the {e.targetMarginPct}% target: estimated cost {money(e.pilot.cost)} exceeds the {money(e.pilot.maxCost)} the fee supports. Revise the scope or price, with a recorded reason, before treating this pilot as viable. At the catalogue assumption ({money(COST_BASIS.CATALOGUE.rate)}/h) the cost would be {money(e.pilot.costAtCatalogue)}.</p>}
+        </>
+      )}
+      {e.retainer && (
+        <>
+          <h3 className={f.kicker}>Monthly retainer ({e.retainer.status === "none" ? "status not recorded" : e.retainer.status}{e.retainer.counted ? "" : ": not counted as revenue"})</h3>
+          <div className={f.econ}>
+            <div><b>{money(e.retainer.fee)}</b><span>Per month</span></div>
+            <div><b>{money(e.retainer.cost)}</b><span>Estimated cost / month</span></div>
+            <div><b>{money(e.retainer.contribution)}</b><span>Contribution / month</span></div>
+            <div><b>{pct(e.retainer.margin)}</b><span>Margin</span></div>
+            <div><b>{money(e.retainer.maxCost)}</b><span>Max cost at {e.targetMarginPct}%</span></div>
+            <div><b>{e.retainer.termMonths ?? "Not agreed"}</b><span>Term (months)</span></div>
+          </div>
+          {e.retainer.belowTarget && <p className={s.caution} role="alert">Below the {e.targetMarginPct}% target: estimated monthly cost {money(e.retainer.cost)} exceeds the {money(e.retainer.maxCost)} the retainer supports. Scope the recurring work to the capacity the fee pays for.</p>}
+        </>
+      )}
+      {!e.pilot && !e.retainer && <p className={ui.sub}>No fee recorded yet. Record the pilot and any retainer in Profile.</p>}
       {e.assumedRates && <p className={s.caution}>Some seats use the internal planning rate (no team member with a cost rate assigned). Add people and rates under Operations → Capacity.</p>}
       <div className={ui.tableWrap}><table className={ui.table}>
         <thead><tr><th>Seat</th><th className={ui.num}>Hours / month</th><th>Who</th><th className={ui.num}>Rate</th><th className={ui.num}>Cost</th></tr></thead>
@@ -301,7 +326,12 @@ function Profile({ m }: { m: M }) {
         <label>Breadth<select name="breadth" defaultValue={m.breadth}>{Object.entries(BREADTH).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label>
         <label>Term (months)<input name="termMonths" defaultValue={m.termMonths ?? ""} /></label>
         <label>Pilot / fixed fee<input name="pilotFee" defaultValue={m.pilotFee || ""} /></label>
+        <label>Pilot length (days)<input name="pilotDays" inputMode="numeric" defaultValue={m.pilotDays ?? ""} placeholder="45" /></label>
+        <label>Pilot start<input name="pilotStart" type="date" defaultValue={m.pilotStart ?? ""} /></label>
+        <label>Pilot end<input name="pilotEnd" type="date" defaultValue={m.pilotEnd ?? ""} /></label>
         <label>Retainer / month<input name="retainer" defaultValue={m.retainer || ""} /></label>
+        <label>Retainer status<select name="retainerStatus" defaultValue={m.retainerStatus}><option value="none">None</option><option value="proposed">Proposed (not counted)</option><option value="approved">Separately approved</option><option value="active">Active (contracted)</option><option value="declined">Declined</option></select></label>
+        <label>Target margin (%)<input name="targetMarginPct" inputMode="decimal" defaultValue={m.targetMarginPct} /></label>
         <label>Implementation<input name="implementationFee" defaultValue={m.implementationFee || ""} /></label>
         <label>Data cost / month<input name="dataCost" defaultValue={m.dataCost || ""} /></label>
         <label>Partner cost / month<input name="partnerCost" defaultValue={m.partnerCost || ""} /></label>

@@ -344,6 +344,13 @@
       "when": 1790887563957,
       "tag": "0048_clear_joystick",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1790965328781,
+      "tag": "0049_furry_mantis",
+      "breakpoints": true
     }
   ]
 }

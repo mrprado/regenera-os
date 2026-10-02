@@ -5,7 +5,7 @@ import type { engagements } from "@/db/schema";
 import { REVENUE_CATEGORIES, type RevenueCategory } from "./vocab";
 
 type Engagement = typeof engagements.$inferSelect;
-type Econ = { contractValue: number; invoiced: number; weighted: number; grossMargin: number; internalCostKnown: boolean };
+type Econ = { contractValue: number; invoiced: number; weighted: number; grossMargin: number | null; internalCostKnown: boolean };
 export type Row = { e: Engagement; econ: Econ };
 
 const LIVE = new Set(["active", "waiting_on_client", "on_hold", "renewal"]);
@@ -54,7 +54,7 @@ export function commercialMetrics(rows: Row[], today = new Date().toISOString().
     if (WON.has(e.status)) {
       const k = `${category}|${e.currency}`;
       const x = mix.get(k) ?? { category, currency: e.currency, contract: 0, margin: 0, marginKnown: true, count: 0 };
-      x.contract += econ.contractValue; x.margin += econ.grossMargin; x.marginKnown &&= econ.internalCostKnown; x.count++;
+      x.contract += econ.contractValue; x.margin += econ.grossMargin ?? 0; x.marginKnown &&= econ.internalCostKnown && econ.grossMargin !== null; x.count++;
       mix.set(k, x);
     }
   }

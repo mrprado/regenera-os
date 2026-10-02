@@ -17,6 +17,7 @@ import {
   APPROVAL_KINDS, ATTRIBUTION, BID_CRITERIA, BREADTH, CLIENT_RESPONSES, DEFAULT_SEAT_RATE, DELIVERY_METRICS, ENGAGEMENT_MODELS, flowFor, MANDATE_TYPES, PURSUIT_TYPE_FOR, qualificationFor, STAFFING, STAGE_ORDER,
   type ApprovalKind, type CandidateStage, type ClientResponse, type DeliveryMetric, type Evidence, type MandateType, type PursuitType, type Seat,
 } from "./vocab";
+import { COST_BASIS } from "@/lib/commercial/vocab";
 
 export const isHuman = (actor: string) => /@/.test(actor) && !/^(ai|claude|system|mcp|job)[:@]/i.test(actor);
 const requireHuman = (actor: string, what: string) => { if (!isHuman(actor)) throw new Error(`${what} is decided by a person.`); };
@@ -418,33 +419,70 @@ export async function deliveryFloor(db: Db, m: Cm, period: string) {
   return { period, lines, delivered: got, review: row ?? null };
 }
 
+/** Delivery is scored only once the work has started: a draft or proposed mandate, or a period before the start date, is
+ *  pre-launch. A pre-launch review is kept (costs, qualification, missing terms) but never counted as missed delivery. */
+export function isPrelaunch(m: Pick<Cm, "status" | "startDate" | "pilotStart">, period: string): boolean {
+  if (!["active", "pilot"].includes(m.status)) return true;
+  const start = m.pilotStart ?? m.startDate;
+  return !!start && start.slice(0, 7) > period;
+}
+
 export async function reviewDelivery(db: Db, m: Cm, period: string, input: { quality: string; shortfall: string; remediation: string }, actor: string) {
   requireHuman(actor, "A delivery review");
   const f = await deliveryFloor(db, m, period);
   const metrics = Object.fromEntries(f.lines.map(l => [l.metric, { target: l.target, delivered: l.delivered }]));
-  const status = f.lines.every(l => l.met) ? "met" : "short";
+  const status = isPrelaunch(m, period) ? "prelaunch" : f.lines.every(l => l.met) ? "met" : "short";
   await db.insert(mandateDeliveries).values({ mandateId: m.mandateId, commercialMandateId: m.id, period, metrics, ...input, status, reviewedBy: actor, reviewedAt: new Date().toISOString() })
     .onConflictDoUpdate({ target: [mandateDeliveries.commercialMandateId, mandateDeliveries.period], set: { metrics, ...input, status, reviewedBy: actor, reviewedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } });
 }
 
-/** §28, §30, §66 Staffing plan and mandate economics. Rates come from team members when assigned; else the planning default. */
-export async function mandateEconomics(db: Db, m: Cm) {
-  const members = await db.select().from(teamMembers).where(and(eq(teamMembers.mandateId, m.mandateId), eq(teamMembers.active, true)));
+/** Pure economics of one mandate (phase 16 §4). The pilot is a fixed fee over its agreed days; the monthly retainer is a
+ *  separate agreement counted only once approved or active; neither is assumed from the other. All figures are estimates
+ *  from the staffing template and named cost bases (never incurred costs), in the mandate's currency. */
+export function mandateEconomicsFrom(m: Pick<Cm, "type" | "retainer" | "retainerStatus" | "pilotFee" | "pilotDays" | "implementationFee" | "termMonths" | "engagementModel" | "dataCost" | "partnerCost" | "travelCost" | "targetMarginPct" | "currency" | "successEconomics" | "breadth">,
+  members: { role: string; name: string; costRate: number | null }[]) {
   const plan = Object.entries(STAFFING[m.type as MandateType] ?? { mandate_lead: 10, origination_analyst: 30 }) as [Seat, number][];
   const rateFor = (seat: Seat) => { const mem = members.find(x => x.role === seat || (seat === "mandate_lead" && /lead|principal|partner/i.test(x.role))); return mem?.costRate ? { rate: mem.costRate, who: mem.name, assumed: false } : { rate: DEFAULT_SEAT_RATE, who: null, assumed: true }; };
   const seats = plan.map(([seat, hours]) => { const r = rateFor(seat); return { seat, hours, ...r, cost: hours * r.rate }; });
   const personnel = seats.reduce((s, x) => s + x.cost, 0);
-  const monthlyRevenue = m.retainer;
-  const months = m.termMonths ?? (m.engagementModel ? ENGAGEMENT_MODELS[m.engagementModel as keyof typeof ENGAGEMENT_MODELS]?.months : null) ?? 3;
+  const monthlyHours = seats.reduce((s, x) => s + x.hours, 0);
   const monthlyCost = personnel + m.dataCost + m.partnerCost + m.travelCost;
-  const totalRevenue = monthlyRevenue * months + m.pilotFee + m.implementationFee;
-  const totalCost = monthlyCost * months;
+  const target = m.targetMarginPct ?? 55;
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const atCatalogue = (hours: number) => hours * COST_BASIS.CATALOGUE.rate;
+
+  // Pilot: fixed fee over its days. Days are the agreed figure; without one, 45 is an assumption and says so.
+  const pilot = m.pilotFee > 0 ? (() => {
+    const days = m.pilotDays ?? 45, months = days / 30, hours = r2(monthlyHours * months), cost = r2(monthlyCost * months);
+    const contribution = r2(m.pilotFee - cost), margin = contribution / m.pilotFee, maxCost = r2(m.pilotFee * (1 - target / 100));
+    return { fee: m.pilotFee, days, daysAssumed: m.pilotDays == null, hours, cost, contribution, margin, maxCost, belowTarget: cost > maxCost,
+      costAtCatalogue: r2(atCatalogue(hours) + (m.dataCost + m.partnerCost + m.travelCost) * months) };
+  })() : null;
+  // Retainer: per month, counted only when separately approved or active. A blank term is "not agreed", never 12 months.
+  const counted = m.retainer > 0 && ["approved", "active"].includes(m.retainerStatus);
+  const retainer = m.retainer > 0 ? {
+    fee: m.retainer, status: m.retainerStatus, counted, termMonths: m.termMonths ?? null, cost: r2(monthlyCost), contribution: r2(m.retainer - monthlyCost),
+    margin: (m.retainer - monthlyCost) / m.retainer, maxCost: r2(m.retainer * (1 - target / 100)), belowTarget: monthlyCost > m.retainer * (1 - target / 100),
+    costAtCatalogue: r2(atCatalogue(monthlyHours) + m.dataCost + m.partnerCost + m.travelCost),
+  } : null;
+  const monthlyRevenue = counted ? m.retainer : 0;
+  const months = counted ? m.termMonths ?? 0 : 0;
+  const totalRevenue = (pilot?.fee ?? 0) + m.implementationFee + monthlyRevenue * months;
+  const totalCost = (pilot?.cost ?? 0) + (counted ? monthlyCost * months : 0);
   const s = m.successEconomics;
   const successNote = !s.structure || s.structure === "none" ? "No success component." : `${s.structure.replace(/_/g, " ")}${s.rate != null ? ` ${s.rate}%` : ""}${s.amount != null ? ` ${s.amount.toLocaleString("en-US")}` : ""}${s.cap != null ? `, cap ${s.cap.toLocaleString("en-US")}` : ""}: potential only, not counted in margin; counsel review ${s.counselReviewed ? "recorded" : "required"}.`;
   const breadth = BREADTH[m.breadth as keyof typeof BREADTH] ?? BREADTH.regional;
   const model = m.engagementModel ? ENGAGEMENT_MODELS[m.engagementModel as keyof typeof ENGAGEMENT_MODELS] : null;
   const recommended = model ? { low: Math.round(model.low * breadth.f / 500) * 500, high: Math.round(model.high * breadth.f / 500) * 500, why: `${model.label} template × ${breadth.label} (${breadth.f}×). A template, not a quote: adjust for qualification depth, outreach, specialists, data and exclusivity.` } : null;
-  return { seats, personnel, monthlyCost, monthlyRevenue, months, totalRevenue, totalCost, grossProfit: totalRevenue - totalCost, margin: totalRevenue ? (totalRevenue - totalCost) / totalRevenue : null, contribution: monthlyRevenue - monthlyCost, successNote, recommended, assumedRates: seats.some(x => x.assumed) };
+  return { seats, personnel, monthlyHours, monthlyCost, monthlyRevenue, months, totalRevenue, totalCost, grossProfit: totalRevenue - totalCost, margin: totalRevenue ? (totalRevenue - totalCost) / totalRevenue : null,
+    contribution: monthlyRevenue - monthlyCost, successNote, recommended, assumedRates: seats.some(x => x.assumed), pilot, retainer, targetMarginPct: target, currency: m.currency,
+    costBasis: seats.some(x => x.assumed) ? COST_BASIS.PLANNING_DEFAULT.label : "Assigned team member rates" };
+}
+
+/** §28, §30, §66 Staffing plan and mandate economics. Rates come from team members when assigned; else the planning default. */
+export async function mandateEconomics(db: Db, m: Cm) {
+  const members = await db.select().from(teamMembers).where(and(eq(teamMembers.mandateId, m.mandateId), eq(teamMembers.active, true)));
+  return mandateEconomicsFrom(m, members);
 }
 
 export async function deskSummary(db: Db, mandateIds: string[]) {
@@ -455,7 +493,9 @@ export async function deskSummary(db: Db, mandateIds: string[]) {
   for (const m of ms) {
     const d = out.get(m.desk) ?? { desk: m.desk, mandates: 0, active: 0, mrr: 0, pipeline: 0, weighted: 0, pursuits: 0, won: 0, cost: 0 };
     d.mandates++;
-    if (["active", "pilot"].includes(m.status)) { d.active++; d.mrr += m.retainer; d.cost += (await mandateEconomics(db, m)).monthlyCost; }
+    // Recurring revenue only from a retainer that was separately approved or is active, on a running mandate; a pilot fee is
+    // never recurring and a proposed retainer is never counted.
+    if (["active", "pilot"].includes(m.status)) { d.active++; if (m.retainer > 0 && ["approved", "active"].includes(m.retainerStatus)) { d.mrr += m.retainer; d.cost += (await mandateEconomics(db, m)).monthlyCost; } }
     for (const p of purs.filter(x => x.commercialMandateId === m.id)) {
       d.pursuits++; if (p.outcome === "won") d.won++;
       if (p.outcome === "open" && p.value) { d.pipeline += p.value; d.weighted += p.value * probabilityOf(p.type as PursuitType, p.stage, p.probabilityOverride).effective / 100; }

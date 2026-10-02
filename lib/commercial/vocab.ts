@@ -61,3 +61,11 @@ export const PRODUCT_ITEM_KINDS = { request: "Client / internal request", idea: 
 export const PRODUCT_CLASSES = { core: "Core (universal)", vertical: "Vertical (reusable for a sector)", configuration: "Configuration (client setting)", custom: "Custom (client-specific code)", advisory: "Advisory (human judgement)" } as const;
 export const BUILD_CATEGORIES = { bug: "Bug", depth: "Depth", client_requirement: "Validated client requirement", not_ready: "Not yet justified" } as const;
 export const PRODUCT_STATUSES = { proposed: "Proposed", under_review: "Under review", accepted: "Accepted", scheduled: "Scheduled", done: "Done", declined: "Declined" } as const;
+
+/** Named cost bases (phase 16 §4). Each is an internal planning assumption, not a measured cost: screens say which one they
+ *  use. The catalogue suggests prices at CATALOGUE; mandate staffing falls back to PLANNING_DEFAULT only for seats with no
+ *  assigned team member rate. Real assigned rates always win. */
+export const COST_BASIS = {
+  CATALOGUE: { rate: 120, label: "Catalogue pricing assumption ($120 per loaded hour)" },
+  PLANNING_DEFAULT: { rate: 75, label: "Mandate planning default ($75 per loaded hour) for unassigned seats" },
+} as const;

@@ -240,7 +240,7 @@ export const STAFFING: Partial<Record<MandateType, Partial<Record<Seat, number>>
   project_capital: { mandate_lead: 15, capital_origination: 40, financial_analyst: 25, diligence_manager: 10, legal_compliance: 6 },
   funding: { mandate_lead: 8, funding_specialist: 40, bid_manager: 20 },
 };
-export const DEFAULT_SEAT_RATE = 75; // USD per loaded hour when no team member is assigned (internal planning default)
+export const DEFAULT_SEAT_RATE = 75; // = COST_BASIS.PLANNING_DEFAULT (lib/commercial/vocab.ts): USD per loaded hour for seats with no assigned team rate
 
 /** §19 Evidence markers: an interpretation is never displayed like a source fact. */
 export const EVIDENCE_KINDS = { verified: "Verified fact", source: "Source record", internal: "Internal intelligence", inference: "Model inference", analyst: "Analyst assessment", client: "Client-provided", unknown: "Unknown" } as const;

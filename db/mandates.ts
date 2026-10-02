@@ -61,6 +61,13 @@ export const commercialMandates = sqliteTable("commercial_mandates", {
   publishApproved: integer("publish_approved", { mode: "boolean" }).notNull().default(false),
   sources: arr<{ label: string; url: string; at: string }>("sources"),
   createdBy: text("created_by").notNull(),
+  // Phase 16 §4: the pilot and any recurring engagement are separate agreed terms. A pilot is a fixed fee over pilotDays
+  // (never recurring revenue); the monthly retainer counts only once retainerStatus is approved or active (separately
+  // approved), and never overlaps the pilot's period automatically.
+  pilotDays: integer("pilot_days"), pilotStart: text("pilot_start"), pilotEnd: text("pilot_end"),
+  retainerStatus: text("retainer_status").notNull().default("none"),   // none | proposed | approved | active | declined
+  retainerApprovedBy: text("retainer_approved_by"), retainerApprovedAt: text("retainer_approved_at"),
+  targetMarginPct: real("target_margin_pct").notNull().default(55),
   ...timestamps,
 }, t => [index("commercial_mandates_ws").on(t.mandateId, t.status), index("commercial_mandates_type").on(t.type)]);
 
@@ -154,7 +161,7 @@ export const mandateDeliveries = sqliteTable("mandate_deliveries", {
   period: text("period").notNull(),                               // YYYY-MM
   metrics: obj<Record<string, { target: number; delivered: number }>>("metrics"),
   quality: text("quality").notNull().default(""), shortfall: text("shortfall").notNull().default(""), remediation: text("remediation").notNull().default(""),
-  status: text("status").notNull().default("open"),              // open | met | short | reviewed
+  status: text("status").notNull().default("open"),              // open | met | short | reviewed | prelaunch (reviewed before activation; not scored)
   reviewedBy: text("reviewed_by"), reviewedAt: text("reviewed_at"),
   ...timestamps,
 }, t => [uniqueIndex("mandate_deliveries_period").on(t.commercialMandateId, t.period)]);

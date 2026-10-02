@@ -73,6 +73,8 @@ export const engagements = sqliteTable("engagements", {
   expectedHours: real("expected_hours").notNull().default(0),
   expectedExternalCost: real("expected_external_cost").notNull().default(0),
   hourlyCost: real("hourly_cost"),                                        // internal cost rate for margin (user-set)
+  // A fee below the services' price floor needs an owner's written reason before it is saved or activated (phase 16 §4).
+  priceOverrideReason: text("price_override_reason"), priceOverrideBy: text("price_override_by"), priceOverrideAt: text("price_override_at"),
   startDate: text("start_date"), endDate: text("end_date"),
   owner: text("owner"),
   conflictStatus: text("conflict_status", { enum: keys(CONFLICT_STATES) }).notNull().default("unchecked"),
