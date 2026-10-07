@@ -78,6 +78,12 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
 - If a dev route 500s with "Network connection lost" right after startup, it is a stale
   module from dependency optimization; touch the file or restart the dev server
 
+- Phase 19 ontology + data fabric (docs/plans/phase-19-ontology-data-fabric.md): lib/ontology (entities, typed relations with
+  allowed ends, state machines + gates 0–8, taxonomies, L0–L4, identity aliases, values by source), lib/fabric (source records,
+  question layers, country packs, SoilGrids / Climate TRACE / reverse admin chain), lib/sanctions (OFAC/UK/EU/UN, weekly job;
+  a possible match blocks introductions until an owner decides), db/ontology.ts. Only freemium / commercially usable free
+  sources are enabled.
+
 ## Rules
 - Never send email or LinkedIn actions without an approved messages row.
   Sends are idempotent on messages.id.

@@ -38,6 +38,7 @@ import { freshnessSince } from "@/lib/freshness";
 import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
+import { LIST_KEYS, refreshList, type ListKey } from "@/lib/sanctions/engine";
 import { runScanJob } from "@/lib/scan/engine";
 import { expireQualifications, runMatches } from "@/lib/capital/engine";
 import { expirePermissions } from "@/lib/community/engine";
@@ -334,6 +335,14 @@ export const handlers: Record<string, JobHandler> = {
     await sendViaResend(cfg.resend, renderWeekly({ periodStart: r.periodStart, periodEnd: r.periodEnd, body: r.body as WeeklyBody, metrics: r.metrics as unknown as Metrics }, cfg.appBaseUrl));
     await db.update(reports).set({ emailedAt: now.toISOString() }).where(eq(reports.id, r.id));
   },
+  // Phase 19: public sanctions lists, one list per job (the UK and EU files are tens of MB, streamed).
+  "sanctions.refresh": async ({ db, now }) => {
+    for (const list of LIST_KEYS) await enqueue(db, "sanctions.list", { list }, { dedupeKey: `sanctions:${list}:${now.toISOString().slice(0, 10)}`, now });
+  },
+  "sanctions.list": async ({ db, job, now }) => {
+    const list = LIST_KEYS.includes(job.payload.list as ListKey) ? (job.payload.list as ListKey) : "ofac";
+    await refreshList(db, list, now);
+  },
   "digest.daily": async ({ db, now }) => {
     const cfg = outreachConfig();
     const digest = await buildDigest(db, now);
@@ -371,4 +380,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",
+  "sanctions.refresh": "weekly:sun:03:20",
 };

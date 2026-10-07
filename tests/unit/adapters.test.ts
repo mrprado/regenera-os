@@ -53,7 +53,7 @@ describe("registry", () => {
     for (const i of INTEGRATIONS) expect(i.license.length, i.key).toBeGreaterThan(2);
     const state = (k: string) => INTEGRATIONS.find(i => i.key === k)?.featureState;
     expect(state("wdpa")).toBe("license_required");
-    expect(state("soilgrids")).toBe("disabled");
+    expect(state("soilgrids")).toBe("enabled"); // REST service back (beta, 5 req/min), re-enabled in phase 19
     expect(state("google_solar")).toBe("disabled");
     expect(state("nominatim")).toBe("development_only");
     expect(state("pvgis")).toBe("enabled");

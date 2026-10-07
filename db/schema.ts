@@ -157,3 +157,4 @@ export * from "./scans";
 export * from "./commercial-flow";
 export * from "./site-briefs";
 export * from "./project-context";
+export * from "./ontology";

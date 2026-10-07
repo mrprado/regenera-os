@@ -12,6 +12,8 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.ts"],
+    // *.node.test.ts files use node:test (from the 2026-10 design port), not vitest.
+    exclude: ["**/node_modules/**", "tests/**/*.node.test.ts"],
     environment: "node",
     testTimeout: 30000,
     hookTimeout: 60000,

@@ -47,6 +47,7 @@ import CommunityTab from "../community-tab";
 import PowerTab from "../power-tab";
 import BenchmarksTab from "../benchmarks-tab";
 import { runPlaybookOnProjectAction } from "../../playbook-actions";
+import { DiligenceTab, EquipmentTab, LandTab, MatchesTab, QuestionsTab, StakeholdersTab } from "../fabric-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -55,16 +56,16 @@ type TabKey = (typeof TABS)[number][0];
 /** Project 360 context groups (navigation prompt §9): what part of the project am I working on? */
 const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
   { label: "Overview", tabs: ["overview", "operating", "activity"] },
-  { label: "Site & land", tabs: ["place", "screening", "natural", "systems", "constraints"] },
-  { label: "Development", tabs: ["readiness", "plan", "engineering", "built", "power", "materials", "procurement"] },
-  { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community"] },
-  { label: "Capital", tabs: ["capital", "pathways", "funding", "stack"] },
+  { label: "Site & land", tabs: ["place", "questions", "land", "screening", "natural", "systems", "constraints"] },
+  { label: "Development", tabs: ["readiness", "diligence", "plan", "engineering", "built", "power", "equipment", "materials", "procurement"] },
+  { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community", "stakeholders"] },
+  { label: "Capital", tabs: ["capital", "pathways", "funding", "stack", "matches"] },
   { label: "Economics", tabs: ["financials", "economics", "benchmarks"] },
   { label: "Partners & agreements", tabs: ["partners", "contracts"] },
 ];
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["operating", "Operating context"], ["place", "Place"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["operating", "Operating context"], ["place", "Place"], ["questions", "Site questions"], ["land", "Land control"], ["diligence", "Diligence & data room"], ["equipment", "Equipment & queue"], ["stakeholders", "Stakeholders"], ["matches", "Matches"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -448,6 +449,12 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       )}
 
       {tab === "built" && <BuiltTab projectId={p.id} />}
+      {tab === "questions" && <QuestionsTab project={p} />}
+      {tab === "land" && <LandTab project={p} scope={user.scope} />}
+      {tab === "diligence" && <DiligenceTab project={p} scope={user.scope} />}
+      {tab === "equipment" && <EquipmentTab project={p} scope={user.scope} />}
+      {tab === "stakeholders" && <StakeholdersTab project={p} scope={user.scope} />}
+      {tab === "matches" && <MatchesTab project={p} scope={user.scope} kind={sp.kind} />}
       {tab === "screening" && <ScreeningTab project={{ id: p.id, mandateId: p.mandateId, name: p.name, country: p.country }} />}
       {tab === "funding" && (
         <section className={r.panel}>

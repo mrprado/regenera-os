@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   capitalMandates, capitalMatches, capitalOpportunities, capitalProfiles, capitalRequirements, capitalTranches, contacts, debtSecurities,
-  introductions, investorQualifications, privateCapitalProfiles, projects,
+  introductions, investorQualifications, organizations, privateCapitalProfiles, projects,
 } from "@/db/schema";
+import { screenBeforeAction } from "@/lib/sanctions/engine";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { runMatches, setCommitment, setGate } from "@/lib/capital/engine";
@@ -268,9 +269,20 @@ export async function setCommitmentAction(formData: FormData) {
 export async function addIntroductionAction(formData: FormData) {
   const fromContactId = zId.parse(formData.get("fromContactId"));
   const back = z.string().startsWith("/").catch("/capital?tab=introductions").parse(formData.get("back"));
+  let blocked: string | null = null, warning = "";
   await withOsUser(async user => {
     const [c] = await appDb().select({ mandateId: contacts.mandateId }).from(contacts).where(and(eq(contacts.id, fromContactId), mandateCondition(user.scope, contacts.mandateId)));
     if (!c) throw new Error("Introducer not found");
+    // Sanctions screening runs before an introduction (phase 19): a possible or confirmed match blocks it until reviewed.
+    const toOrg = zId.safeParse(formData.get("toOrgId")).data, toPerson = zId.safeParse(formData.get("toContactId")).data;
+    const parties: { entityType: "organization" | "person"; entityId: string; name: string }[] = [];
+    if (toOrg) { const [o] = await appDb().select({ name: organizations.name }).from(organizations).where(and(eq(organizations.id, toOrg), mandateCondition(user.scope, organizations.mandateId))); if (o) parties.push({ entityType: "organization", entityId: toOrg, name: o.name }); }
+    if (toPerson) { const [p] = await appDb().select({ name: contacts.fullName }).from(contacts).where(and(eq(contacts.id, toPerson), mandateCondition(user.scope, contacts.mandateId))); if (p) parties.push({ entityType: "person", entityId: toPerson, name: p.name }); }
+    for (const party of parties) {
+      const g = await screenBeforeAction(appDb(), { mandateId: c.mandateId, ...party, actor: user.email });
+      if (!g.proceed) { blocked = `${party.name}: sanctions screening shows a ${g.state === "confirmed" ? "confirmed" : "possible"} match. Review it in Network → Sanctions screening before introducing.`; return; }
+      if (g.warning) warning = ` Sanctions screening not run: ${g.warning}`;
+    }
     const compensation = formData.get("compensation") === "on";
     await appDb().insert(introductions).values({
       mandateId: c.mandateId, fromContactId, toContactId: zId.safeParse(formData.get("toContactId")).data ?? null, toOrgId: zId.safeParse(formData.get("toOrgId")).data ?? null,
@@ -278,7 +290,8 @@ export async function addIntroductionAction(formData: FormData) {
       status: pick(INTRO_STATUSES, formData, "status") ?? "requested", compensation, reviewStatus: compensation ? "review_required" : "not_required", notes: str(formData, "notes", 2000),
     });
   });
-  redirect(note(back, formData.get("compensation") === "on" ? "Introduction recorded. COMPENSATION / REGULATORY REVIEW REQUIRED before anything is paid or promised." : "Introduction recorded."));
+  if (blocked) redirect(note(back, blocked));
+  redirect(note(back, (formData.get("compensation") === "on" ? "Introduction recorded. COMPENSATION / REGULATORY REVIEW REQUIRED before anything is paid or promised." : "Introduction recorded.") + warning));
 }
 
 export async function introductionReviewedAction(formData: FormData) {
