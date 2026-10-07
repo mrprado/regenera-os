@@ -116,7 +116,7 @@ function MapClient() {
   const [firmsKey, setFirmsKey] = useState(false);
   const [streetCfg, setStreetCfg] = useState<StreetViewConfig>({ provider: "none", key: "" });
   const [streetAt, setStreetAt] = useState<{ lat: number; lng: number } | null>(null);
-  const [base, setBase] = useState<string>(init.base ?? "light");
+  const [base, setBase] = useState<string>(init.base ?? "esri");
   const [overlays, setOverlays] = useState<Set<string>>(() => new Set(init.layers?.filter(l => !RECORD_KEYS.includes(l as LayerKey)) ?? []));
   const [visible, setVisible] = useState<Record<LayerKey, boolean>>(() => {
     const fromHash = init.layers?.filter(l => RECORD_KEYS.includes(l as LayerKey));
@@ -218,7 +218,7 @@ function MapClient() {
     get<FeatureCollection>("/api/map/hazards").then(setHazards).catch(() => { if (!controller.signal.aborted) setStatus(s => ({ ...s, hazards: { error: "GDACS alerts unavailable" } })); });
     get<{ layers: OfferedLayer[]; firmsKey: boolean; streetView?: StreetViewConfig }>("/api/map/catalog").then(c => {
       setCatalog(c.layers); setFirmsKey(c.firmsKey); if (c.streetView) setStreetCfg(c.streetView);
-      if (!init.base) setBase(c.layers.some(l => l.id === "light") ? "light" : c.layers.find(l => l.group === "basemap")?.id ?? "tactical");
+      if (!init.base) setBase(c.layers.some(l => l.id === "esri") ? "esri" : c.layers.some(l => l.id === "light") ? "light" : c.layers.find(l => l.group === "basemap")?.id ?? "tactical");
     }).catch(e => { if (!controller.signal.aborted) setMapError(`Layer catalogue unavailable (${e.message}).`); });
     return () => controller.abort();
   }, [init.base]);

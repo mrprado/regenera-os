@@ -208,3 +208,8 @@
 
 .header .workspaceTrail,.header .accountName,.header .signOut{color:var(--text-2)}.header .workspaceTrail a:last-of-type,.header .workspaceTrail span,.mobileMenu>summary{color:var(--text-1)}
 .header .avatar{background:var(--secondary-surface);border-color:var(--ash);color:var(--accent-ink)}.headerSlot .switcher select{background:var(--chalk);border-color:var(--ash);color:var(--text-1)}
+
+/* 2026-10-07: a thin green accent under the header as the page break; centred content with even breathing room. */
+.header { border-bottom: 2px solid #246448 !important; }
+.main { max-width: 1440px; margin: 0 auto; padding: 36px clamp(20px, 4vw, 56px) 80px; }
+.main:has(> [data-fullbleed]) { max-width: none; padding: 0; }
