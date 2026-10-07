@@ -166,5 +166,8 @@ export async function reviewResultAction(formData: FormData) {
       if (!q || q.status === "discovered" || q.status === "criteria_matched") await setQualificationStatus(db, r.mandateId, r.entityId, "human_reviewed", user.email, str(formData, "reason", 500) || "Accepted in scan review");
     }
   });
-  redirect(note(`/scans/${runId}?tab=results`, decision === "accepted" ? "Marked human reviewed." : "Rejected; kept with the reason."));
+  const requestedBack = str(formData, "back", 2000);
+  const returnPath = `/scans/${runId}`;
+  const back = requestedBack === returnPath || requestedBack.startsWith(`${returnPath}?`) ? requestedBack : `${returnPath}?tab=results`;
+  redirect(note(back, decision === "accepted" ? "Marked human reviewed." : "Rejected; kept with the reason."));
 }

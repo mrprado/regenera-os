@@ -1,4 +1,5 @@
 import Link from "next/link";
+import OperatingTab from "../operating-tab";
 import { StageOptions } from "@/components/stage-options";
 import { notFound } from "next/navigation";
 import { Notice } from "@/components/crm-bits";
@@ -53,17 +54,17 @@ const PLAYBOOK_CHOICES = [["project-intake", "Project intake"], ["project-qualif
 type TabKey = (typeof TABS)[number][0];
 /** Project 360 context groups (navigation prompt §9): what part of the project am I working on? */
 const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
-  { label: "Overview", tabs: ["overview", "activity"] },
-  { label: "Site & land", tabs: ["place", "screening", "constraints", "systems", "natural"] },
+  { label: "Overview", tabs: ["overview", "operating", "activity"] },
+  { label: "Site & land", tabs: ["place", "screening", "natural", "systems", "constraints"] },
   { label: "Development", tabs: ["readiness", "plan", "engineering", "built", "power", "materials", "procurement"] },
   { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community"] },
-  { label: "Capital", tabs: ["capital", "stack", "pathways", "funding"] },
+  { label: "Capital", tabs: ["capital", "pathways", "funding", "stack"] },
   { label: "Economics", tabs: ["financials", "economics", "benchmarks"] },
   { label: "Partners & agreements", tabs: ["partners", "contracts"] },
 ];
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["place", "Place"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["overview", "Overview"], ["operating", "Operating context"], ["place", "Place"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -86,11 +87,11 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     <>
       {/* Project identity (docs/design-system.md): the project as an object, then its key facts as a typographic strip. */}
       <header className={ph.head}>
-        <p className={ph.kicker}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not set"].filter(Boolean).join("  ·  ")}</p>
         <div className={ph.titleRow}>
           <h1 className={ph.title}>{p.name}</h1>
           <div className={ph.actions}><a className="btn btn--primary" href={withBase(`/api/projects/brief?id=${p.id}`)} download>Project brief (PDF)</a>{(p.lat !== null || p.geometry) && <><Link className="btn" href={`/map?project=${p.id}`}>View in Atlas</Link><Link className="btn" href={`/map/briefs?project=${p.id}`}>Site brief</Link></>}<Link className="btn" href="/projects">All projects</Link></div>
         </div>
+        <p className={ph.kicker}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, [p.municipality, p.subdivision, p.country].filter(Boolean).join(", ") || "Location not set"].filter(Boolean).join("  ·  ")}</p>
         <dl className={ph.strip}>
           <div><dt>Stage</dt><dd><span className={ph.dot} data-tone={blockedDims.length ? "critical" : p.stage === "operations" || p.status === "operating" ? "lichen" : "copper"} aria-hidden />{stageLabel(p.stage)}</dd></div>
           <div><dt>Capacity</dt><dd>{p.capacity ? `${p.capacity.toLocaleString("en-US")} ${p.capacityUnit ?? ""}` : <span className={ph.unknown}>Not recorded</span>}</dd></div>
@@ -115,6 +116,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           {g.tabs.map(k => <Link key={k} className={tab === k ? ph.subActive : undefined} aria-current={tab === k ? "page" : undefined} href={`/projects/${p.id}${k === "overview" ? "" : `?tab=${k}`}`}>{TABS.find(([kk]) => kk === k)?.[1]}{k === "constraints" && openCons.length ? ` (${openCons.length})` : ""}</Link>)}
         </nav>) : null; })()}
 
+      {tab === "operating" && <OperatingTab scope={user.scope} projectId={p.id} view={sp.view} />}
       {tab === "overview" && (
         <div className={r.grid}>
           <div>

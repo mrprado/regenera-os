@@ -6,7 +6,11 @@ import { z } from "zod";
 import { brokerProfiles, deals, generatedDocuments, objectives, organizations, projects } from "@/db/schema";
 import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
-import { approveLegal, generateDocument, MockESignProvider, newVersion, recordSignedUpload, startSignature } from "@/lib/documents/engine";
+import { approveLegal, generateDocument, MockESignProvider, newVersion, recordSignedUpload, renderDocument, startSignature } from "@/lib/documents/engine";
+import { audit } from "@/lib/audit";
+import { getAccessToken } from "@/lib/google/accounts";
+import { googleConfig } from "@/lib/google/config";
+import { DRIVE_FOLDER, uploadToDrive } from "@/lib/google/drive";
 import { TEMPLATES } from "@/lib/documents/library";
 
 const zId = z.string().uuid();
@@ -83,4 +87,26 @@ export async function signedUploadAction(formData: FormData) {
   const id = zId.parse(formData.get("id"));
   await withOsUser(async user => { await scopedDoc(user.scope, id); await recordSignedUpload(appDb(), id, str(formData, "url", 1000), user.email); });
   redirect(note(`/documents/generator/${id}`, "Signed PDF recorded; the document is now read-only (edits create a new version)."));
+}
+
+/** Saves a generated document (PDF or DOCX) to the "Regenera OS" folder of the connected Google Workspace Drive. Audited like
+ *  a download; legal drafts keep their counsel-review watermark. Nothing is shared or sent. */
+export async function saveToDriveAction(formData: FormData) {
+  const id = zId.parse(formData.get("id"));
+  const format = formData.get("format") === "docx" ? "docx" : "pdf";
+  let msg = "";
+  try {
+    await withOsUser(async user => {
+      const d = await scopedDoc(user.scope, id);
+      const cfg = googleConfig();
+      if (!cfg) throw new Error("Google is not configured for this workspace (Settings → Connections).");
+      const { accessToken } = await getAccessToken(appDb(), cfg, "primary");
+      const bytes = await renderDocument(d, format);
+      const name = `${d.title.replace(/[^\w\s-]/g, "").replace(/[\s-]+/g, "-").slice(0, 80)}-v${d.version}.${format}`;
+      const f = await uploadToDrive(accessToken, { name, mimeType: format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document", bytes: bytes as Uint8Array });
+      await audit(appDb(), { actor: user.email, action: "generated_document_drive_save", entity: "generated_documents", entityId: d.id, after: { format, driveFileId: f.id } });
+      msg = `Saved to Google Drive → ${DRIVE_FOLDER}/${name}${f.webViewLink ? ` (${f.webViewLink})` : ""}`;
+    });
+  } catch (e) { msg = `Not saved to Drive: ${(e as Error).message}`; }
+  redirect(note(`/documents/generator/${id}`, msg));
 }

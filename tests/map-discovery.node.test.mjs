@@ -45,3 +45,7 @@ test("external website links reject script, relative and credential-bearing URLs
   for (const value of ["javascript:alert(1)", "data:text/html,test", "/private", "https://user:secret@example.com", null]) assert.equal(safeWebsite(value), null);
   assert.equal(safeWebsite("https://example.com/about"), "https://example.com/about");
 });
+
+test("project stage and asset class intersect without including unclassified records",()=>{const sample=mapRecords({...data,projects:{features:[point({id:"stage",name:"BESS development",stage:"development",assetClass:"storage",country:"MEX",sector:"energy"})]}});assert.deepEqual(filterRecords(sample,{...empty,stage:"development",assetClass:"storage"},{}).map(r=>r.feature.properties.id),["stage"]);assert.equal(filterRecords(sample,{...empty,stage:"construction",assetClass:"storage"},{}).length,0);assert.deepEqual(discoveryOptions(sample,"stage"),["development"]);assert.deepEqual(discoveryOptions(sample,"assetClass"),["storage"]);});
+
+test("multiple asset choices use union within asset types and intersect with other filters",()=>{const sample=mapRecords({...data,projects:{features:[point({id:"solar",name:"Solar",assetClass:"solar",stage:"development"}),point({id:"water",name:"Water",assetClass:"water",stage:"operating"})]}});assert.equal(filterRecords(sample,{...empty,assetClasses:["solar","water"],stage:"development"},{}).length,1);assert.equal(filterRecords(sample,{...empty,assetClasses:["solar","water"]},{}).length,2);});

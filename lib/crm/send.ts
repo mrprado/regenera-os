@@ -72,6 +72,7 @@ export type SendOptions = {
 };
 
 export async function sendClaimedMessage(db: Db, messageId: string, getToken: () => Promise<{ accessToken: string; email: string }>, policy: SendPolicy, fetchImpl?: typeof fetch, opts: SendOptions = {}) {
+  if((await import('cloudflare:workers')).env.ISOLATED_DEMO==='true')throw new Error('Outbound sending is disabled in the isolated demo');
   const [msg] = await db.select().from(messages).where(eq(messages.id, messageId));
   if (!msg || msg.status !== "sending") return { sent: false as const, reason: "not_claimed" };
   // Compliance gate (phase 6 M2): investment communications never leave without an approved opportunity,

@@ -18,7 +18,7 @@ export function baseStyle(): StyleSpecification {
     projection: { type: "globe" },
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
     sky: {
-      "sky-color": "#050b12", "horizon-color": "#5f8fb8", "fog-color": "#05080b",
+      "sky-color": "#18221E", "horizon-color": "#70857C", "fog-color": "#18221E",
       "sky-horizon-blend": 0.55, "horizon-fog-blend": 0.5, "fog-ground-blend": 0.2,
       "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 8, 0],
     },
@@ -28,7 +28,7 @@ export function baseStyle(): StyleSpecification {
       ofm: { type: "vector", url: "https://tiles.openfreemap.org/planet", attribution: "© OpenStreetMap contributors, OpenFreeMap" },
     },
     layers: [
-      { id: "space", type: "background", paint: { "background-color": "#030608" } },
+      { id: "space", type: "background", paint: { "background-color": "#18221E" } },
       // Tactical vector basemap (hidden unless chosen)
       { id: "tac-land", type: "background", layout: { visibility: "none" }, paint: { "background-color": "#141715" } },
       { id: "tac-landcover", type: "fill", source: "ofm", "source-layer": "landcover", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "class"], "wood", "#102419", "forest", "#102419", "grass", "#0f1d15", "ice", "#1b2a33", "sand", "#1c1a12", "#0e1913"], "fill-opacity": 0.9 } },
@@ -51,7 +51,7 @@ export function baseStyle(): StyleSpecification {
         paint: { "line-color": ["match", ["get", "class"], ["motorway", "trunk"], "#f4c77d", "primary", "#f8dea5", ["path", "track"], "#d8cfbd", "#ffffff"], "line-dasharray": ["match", ["get", "class"], ["path", "track"], ["literal", [2, 1]], ["literal", [1, 0]]],
           "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 5, ["match", ["get", "class"], ["motorway", "trunk"], 0.8, 0.2], 18, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 17, ["service"], 4.5, ["path", "track"], 1.5, 11]] } },
       { id: "lt-rail", type: "line", source: "ofm", "source-layer": "transportation", minzoom: 8, filter: ["==", ["get", "class"], "rail"], layout: { visibility: "none" }, paint: { "line-color": "#b9b2a6", "line-width": 1.2, "line-dasharray": [3, 2] } },
-      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#05080b", "hillshade-highlight-color": "#f2f0e9", "hillshade-accent-color": "#141715" } },
+      { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "#18221E", "hillshade-highlight-color": "#f2f0e9", "hillshade-accent-color": "#141715" } },
       anchor(A_RASTER),
       anchor(A_VECTOR),
       // Hybrid reference layers over imagery (OpenStreetMap via OpenFreeMap): roads, buildings, street names, places,
@@ -228,11 +228,11 @@ export function addOverlay(map: maplibregl.Map, l: OfferedLayer, date: string) {
     map.addLayer({ id: `${p}-lines`, type: "line", source: p, "source-layer": "power_line", minzoom: 2, paint: {
       "line-color": ["interpolate", ["linear"], ["to-number", ["coalesce", ["get", "voltage"], 0], 0], 0, "#a0a0a0", 100000, "#f2d25c", 220000, "#f2b35a", 380000, "#ff6a4d", 700000, "#ff4fd8"],
       "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 8, 1.2, 14, 2.6], "line-opacity": 0.9 } }, A_VECTOR);
-    map.addLayer({ id: `${p}-subs`, type: "circle", source: p, "source-layer": "power_substation_point", minzoom: 7, paint: { "circle-radius": 3, "circle-color": "#f2b35a", "circle-stroke-color": "#05080b", "circle-stroke-width": 1 } }, A_VECTOR);
+    map.addLayer({ id: `${p}-subs`, type: "circle", source: p, "source-layer": "power_substation_point", minzoom: 7, paint: { "circle-radius": 3, "circle-color": "#f2b35a", "circle-stroke-color": "#18221E", "circle-stroke-width": 1 } }, A_VECTOR);
     map.addLayer({ id: `${p}-plants`, type: "circle", source: p, "source-layer": "power_plant_point", minzoom: 4, paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 2.5, 10, 6],
       "circle-color": ["match", ["get", "source"], "solar", "#f2d25c", "wind", "#9fd3e6", "hydro", "#4a90ff", "nuclear", "#c79bff", "coal", "#6b6b6b", "gas", "#ff8a4c", "oil", "#a47551", "biomass", "#7ac47f", "geothermal", "#ff6f91", "#f2f0e9"],
-      "circle-stroke-color": "#05080b", "circle-stroke-width": 1 } }, A_VECTOR);
+      "circle-stroke-color": "#18221E", "circle-stroke-width": 1 } }, A_VECTOR);
     return;
   }
   map.addSource(p, { type: "geojson", data: EMPTY });

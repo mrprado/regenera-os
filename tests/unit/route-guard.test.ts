@@ -17,6 +17,7 @@ const files = walk(APP).map(f => ({ path: relative(APP, f).split(sep).join("/"),
 // Anonymous API routes and the verifier each must call (SPEC section 23).
 // Phase 0 builds jobs/tick and oauth callback; the rest arrive in later phases with the same rule.
 const ANONYMOUS_API: Record<string, RegExp> = {
+  "api/demo/start/route.ts": /env\.ISOLATED_DEMO!==.*true.*\|\|env\.APP_ENV!==.*demo/,
   "api/jobs/tick/route.ts": /bearerMatches\(/,
   "api/mail-intel/import/route.ts": /bearerMatches\(/,
   "api/oauth/google/callback/route.ts": /verifyState\(/,
@@ -41,6 +42,7 @@ const ANONYMOUS_API: Record<string, RegExp> = {
 };
 // Pages reachable without an OS membership. Each is listed with why.
 const ANONYMOUS_PAGES: Record<string, string> = {
+  "demo/page.tsx": "private isolated Site entry; unavailable unless both demo environment flags are set",
   "page.tsx": "redirects to /today, renders nothing",
   "(auth)/not-allowed/page.tsx": "the 403 page itself",
   "(auth)/signin/page.tsx": "the sign-in form",

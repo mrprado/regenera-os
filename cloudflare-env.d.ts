@@ -16,6 +16,7 @@ declare namespace Cloudflare {
     AI_MONTHLY_BUDGET_USD?: string;
     ESRI_API_KEY?: string;
     APP_ENV?: string;
+    ISOLATED_DEMO?: string;
     SEND_ALLOWED_DOMAINS?: string;
     RESEND_API_KEY?: string;
     RESEND_FROM?: string;

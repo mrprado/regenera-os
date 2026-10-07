@@ -9,15 +9,16 @@ import styles from "./shell.module.css";
 export default function MandateSwitcher({ options, current }: { options: { id: string; name: string; group?: string }[]; current: string }) {
   const form = useRef<HTMLFormElement>(null);
   const pathname = usePathname();
-  const groups = [...new Set(options.map(o => o.group ?? ""))];
+  const ordered=[...options].sort((a,b)=>(a.group??"").localeCompare(b.group??"")||a.name.localeCompare(b.name));
+  const groups = [...new Set(ordered.map(o => o.group ?? ""))];
   return (
     <form ref={form} action={setMandateFocusAction} className={styles.switcher}>
       <input type="hidden" name="back" value={pathname} />
       <select name="mandate" aria-label="Workspace" defaultValue={current} onChange={() => form.current?.requestSubmit()}>
         <option value="all">All workspaces</option>
         {groups.length > 1
-          ? groups.map(g => <optgroup key={g} label={g}>{options.filter(o => (o.group ?? "") === g).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</optgroup>)
-          : options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          ? groups.map(g => <optgroup key={g} label={g}>{ordered.filter(o => (o.group ?? "") === g).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</optgroup>)
+          : ordered.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>
     </form>
   );

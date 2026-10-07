@@ -10,6 +10,7 @@ import { enrollContacts } from "@/lib/outreach/sequences";
 import { validateMessage } from "@/lib/style/validate";
 import { DEAL_STAGES } from "@/lib/vocab";
 import { applyLearningChange } from "@/lib/learning/apply";
+import {confirmContextProposal} from '@/lib/project-context/engine';
 
 export type ConfirmResult = { ok: true; result: Record<string, unknown> } | { ok: false; error: string };
 
@@ -22,6 +23,7 @@ export async function confirmProposal(db: Db, scope: UserScope, actor: string, i
     return { ok: false, error: "This proposal expired. Ask again." };
   }
   if (p.kind !== "action" && !scope.ownerOf.includes(p.mandateId)) return { ok: false, error: "Only an owner can apply learning-loop changes" };
+  if(p.change.action.startsWith('context_'))return confirmContextProposal(db,scope,actor,p,now);
   // Claim first so a double click or two clients can never apply it twice.
   const claimed = await db.update(proposals).set({ status: "applied", decidedBy: actor, decidedAt: now.toISOString(), updatedAt: now.toISOString() })
     .where(and(eq(proposals.id, id), eq(proposals.status, "pending"))).returning({ id: proposals.id });

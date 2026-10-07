@@ -22,6 +22,8 @@ import { logEffortAction } from "../flow-actions";
 import { campaignEconomics } from "@/lib/flow/commercial";
 import { PresetForm } from "./preset-form";
 import s from "./scans.module.css";
+import { filterRuns, pageOf } from "@/lib/scan/review-filters";
+import { ReviewControls, ReviewPagination } from "./review-controls";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Scans" };
@@ -36,7 +38,9 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
   const tab = sp.tab === "runs" || sp.tab === "presets" || sp.tab === "economics" ? sp.tab : "launch";
   const economics = tab === "economics" ? await campaignEconomics(db, user.scope.mandateIds) : [];
   const presets = ws ? await listPresets(db, ws) : [];
-  const runs = await db.select().from(scanRuns).where(and(inArray(scanRuns.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["-"]))).orderBy(desc(scanRuns.createdAt)).limit(50);
+  const runs = await db.select().from(scanRuns).where(and(inArray(scanRuns.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["-"]))).orderBy(desc(scanRuns.createdAt));
+  const filteredRuns = filterRuns(runs, sp);
+  const runPage = pageOf(filteredRuns, sp.page);
   const apollo = apolloConfig();
   const ai = aiConfig();
   const preset = presets.find(p => p.key === sp.preset) ?? presets[0];
@@ -124,10 +128,11 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      {tab === "runs" && (runs.length === 0 ? <EmptyState icon={Radar} title="No scans yet" body="Run a preset from the first tab. Each run keeps its sources, counts, costs and every result with the reason it matched or was excluded." /> : (
+      {tab === "runs" && <ReviewControls path="/scans" sp={{ ...sp, tab: "runs" }} kind="runs" total={runs.length} filtered={filteredRuns.length} providers={[...new Set(runs.flatMap(x => x.providers.map(p => p.provider)))].sort()} />}
+      {tab === "runs" && (filteredRuns.length === 0 ? <EmptyState icon={Radar} title={runs.length ? "No scans match these filters" : "No scans yet"} body={runs.length ? "Clear filters to see all scans." : "Run a preset from the first tab. Each run keeps its sources, counts, costs and every result with the reason it matched or was excluded."} /> : (
         <div className={ui.tableWrap}><table className={ui.table}>
           <thead><tr><th>Scan</th><th>Outcome</th><th>New</th><th>Already held</th><th>Re-screened</th><th>Matches</th><th>Excluded</th><th>To review</th><th>People</th><th>Credits</th><th>Started</th></tr></thead>
-          <tbody>{runs.map(x => (
+          <tbody>{runPage.rows.map(x => (
             <tr key={x.id}>
               <td className={ui.primary}><Link href={`/scans/${x.id}`}>{x.presetName || audience(x.audience)?.label}</Link><span className={ui.sub}>{SCAN_SECTIONS[x.section as ScanSection] ?? x.section} · by {x.requestedBy}</span></td>
               <td><span className={ui.chip}>{scanOutcome(x)}</span></td>
@@ -138,6 +143,7 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
             </tr>))}</tbody>
         </table></div>
       ))}
+      {tab === "runs" && <ReviewPagination path="/scans" sp={{ ...sp, tab: "runs" }} {...runPage} />}
 
       {tab === "economics" && (
         <section className={r.panel} aria-labelledby="econ-h">

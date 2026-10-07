@@ -14,7 +14,7 @@ import { runPlaybookOnProjectAction } from "../playbook-actions";
 import styles from "./map.module.css";
 
 export type LibraryLayer = { id: string; name: string; category: string; provider: string; sourceDate: string | null; retrievedAt: string; license: string; resolution: string; coverage: string; confidence: string; featureCount: number; isDemo: boolean };
-const CAT_COLOR: Record<string, string> = { grid: "#f2b35a", transmission: "#f2b35a", substations: "#e59f5a", water: "#5fa8d3", watersheds: "#4a90b8", water_stress: "#3f7fb0", protected_areas: "#6fbf73", biodiversity: "#7ac47f", land_use: "#c9b27a", parcels: "#d8c79a", roads: "#bbbbbb", ports: "#9aa8b5", communities: "#d9c7f0", regulatory: "#e07a7a", project_area: "#b59a5b", solar: "#f2d25c", wind: "#9fd3e6", agriculture: "#a5c77f", climate: "#e59a3a", topography: "#a38f7a", other: "#f2f0e9" };
+const CAT_COLOR: Record<string, string> = { grid: "#B98236", transmission: "#B98236", substations: "#A56E42", water: "#397C9B", watersheds: "#417792", water_stress: "#366883", protected_areas: "#4F8058", biodiversity: "#698F63", land_use: "#A18B61", parcels: "#B49C72", roads: "#747A73", ports: "#687D88", communities: "#887298", regulatory: "#AC6259", project_area: "#b59a5b", solar: "#B9943F", wind: "#6395A5", agriculture: "#7F9160", climate: "#e59a3a", topography: "#a38f7a", other: "#f2f0e9" };
 const CATEGORIES = Object.keys(CAT_COLOR);
 
 function addLayerFor(map: maplibregl.Map, id: string, color: string) {
@@ -51,9 +51,9 @@ export function useAtlas(mapRef: React.MutableRefObject<maplibregl.Map | null>, 
     map.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: { "fill-color": "#b59a5b", "fill-opacity": 0.16 } }, "projects");
     map.addLayer({ id: "areas-line", type: "line", source: "areas", paint: { "line-color": "#b59a5b", "line-width": 2 } }, "projects");
     map.addSource("draw", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addLayer({ id: "draw-fill", type: "fill", source: "draw", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#f2d25c", "fill-opacity": 0.2 } });
-    map.addLayer({ id: "draw-line", type: "line", source: "draw", paint: { "line-color": "#f2d25c", "line-width": 2, "line-dasharray": [2, 1] } });
-    map.addLayer({ id: "draw-pt", type: "circle", source: "draw", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": "#f2d25c" } });
+    map.addLayer({ id: "draw-fill", type: "fill", source: "draw", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#B9943F", "fill-opacity": 0.2 } });
+    map.addLayer({ id: "draw-line", type: "line", source: "draw", paint: { "line-color": "#B9943F", "line-width": 2, "line-dasharray": [2, 1] } });
+    map.addLayer({ id: "draw-pt", type: "circle", source: "draw", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": "#B9943F" } });
     fetch(withBase("/api/map/areas")).then(r => (r.ok ? r.json() as Promise<FeatureCollection> : null)).then((fc: FeatureCollection | null) => { if (fc) (map.getSource("areas") as GeoJSONSource).setData(fc); }).catch(() => undefined);
     map.on("click", "areas-fill", e => {
       if (drawRef.current !== "none") return;

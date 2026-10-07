@@ -140,3 +140,9 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   and readiness "configured, not verified" until a real call succeeds; pilot vs separately approved retainer, target-
   margin checks, prelaunch delivery, price-floor overrides with an owner's reason (migration 0049); founder Command
   (hero, map modes new/today/all, three decisions, shortcuts, full desk below). Workspace time zone: lib/time/zone.ts.
+
+## Authorized UI revamp — 2026-10-05
+
+The user explicitly authorized the full visual and workflow redesign while preserving content. For presentation, `DESIGN.md` and `docs/plans/phase-18-design-revamp.md` supersede the older frozen typography, shape and navigation ordering above. Keep the existing stack, records, permission boundaries, approval gates, and distinct route destinations.
+
+Use the current shared token/component system, task-ordered disclosure menus, eight primary areas, and the retained Mandates/Systems/Clients specialist workspaces. Do not restore the obsolete flat menu or tiny labels merely because earlier design notes called them locked. Business state/eligibility enumerations remain authoritative; do not remove options to make the interface look simpler. Source and browser validation limitations are recorded in the delivered design review.

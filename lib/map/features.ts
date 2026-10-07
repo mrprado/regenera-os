@@ -62,10 +62,10 @@ export async function mapFeatures(scope: Scope, now = new Date(), db: Db = appDb
   }));
 
   // Projects: their own coordinates (the physical site), not the sponsor's office.
-  const projectRows = await db.select({ id: projects.id, name: projects.name, stage: projects.stage, assetClass: projects.assetClass, country: projects.country, capacity: projects.capacity, capacityUnit: projects.capacityUnit, lat: projects.lat, lng: projects.lng,
+  const projectRows = await db.select({ id: projects.id, name: projects.name, stage: projects.stage, assetClass: projects.assetClass, country: projects.country, capacity: projects.capacity, capacityUnit: projects.capacityUnit, lat: projects.lat, lng: projects.lng, technology: projects.technology, regeneraRole: projects.regeneraRole,
     description: projects.description, sector: projects.sector, municipality: projects.municipality, subdivision: projects.subdivision, systems: projects.systems, updatedAt: projects.updatedAt })
     .from(projects).where(and(mandateCondition(scope, projects.mandateId), isNull(projects.archivedAt)));
-  const projectPoints = projectRows.filter(p => validCoordinates(p.lng, p.lat)).map(p => point(p.lng!, p.lat!, { id: p.id, name: p.name, stage: p.stage, assetClass: p.assetClass, country: p.country, capacity: p.capacity, capacityUnit: p.capacityUnit,
+  const projectPoints = projectRows.filter(p => validCoordinates(p.lng, p.lat)).map(p => point(p.lng!, p.lat!, { id: p.id, name: p.name, stage: p.stage, assetClass: p.assetClass, technology: p.technology, regeneraRole: p.regeneraRole, region: p.subdivision, country: p.country, capacity: p.capacity, capacityUnit: p.capacityUnit,
     description: p.description, sector: p.sector, location: [p.municipality, p.subdivision].filter(Boolean).join(", "), topics: p.systems.join("|"), updatedAt: p.updatedAt, locationBasis: "Recorded project coordinates; see Place for evidence" }));
 
   return {

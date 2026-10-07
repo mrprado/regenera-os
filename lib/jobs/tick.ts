@@ -33,6 +33,7 @@ export async function tick(db: Db, opts: {
   schedules?: Record<string, string>;
   skipReferenceData?: boolean;
 } = {}): Promise<TickResult> {
+  if((await import('cloudflare:workers')).env.ISOLATED_DEMO==='true')throw new Error('External jobs are disabled in the isolated demo');
   const now = opts.now ?? (() => new Date());
   const handlers = opts.handlers ?? defaultHandlers;
   const budgetMs = opts.budgetMs ?? 25_000;

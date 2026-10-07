@@ -1,154 +1,161 @@
+/* Regenera warm editorial palette: ivory header, sand canvas, white cards, forest actions. */
+:root{
+ --forest-carbon:#1d2d26;
+ --deep-moss:#273a31;
+ --canopy:#3c5145;
+ --sage-ash:#7B806E;
+ --atlas-base:#141715;
+ --limestone:#FAF9F5;
+ --chalk:#FAF9F5;
+ --warm-ash:#F1EFE8;
+ --ash:#E2DED4;
+ --text-1:#302F28;
+ --text-2:#686357;
+ --text-3:#777164;
+ --text-on-dark:#f8faf7;
+ --text-on-dark-2:#bbc9bd;
+ --gold:#D5AB4A;
+ --gold-ink:#826321;
+ --gold-tint:rgba(213,171,74,.12);
+ --brass:#D5AB4A;
+ --accent:#246448;
+ --accent-ink:#20583f;
+ --accent-tint:#EAF0E5;
+ --copper:#a25c42;
+ --copper-ink:#804730;
+ --copper-tint:rgba(164, 95, 63, .10);
+ --lichen:#6c826b;
+ --water:#337d79;
+ --plum:#67566d;
+ --steel:#587c88;
+ --critical:#a43e37;
+ --warning:#936319;
+ --positive:#407250;
+ --energy:#b17b2e;
+ --sem-energy:var(--energy);
+ --sem-water:var(--water);
+ --sem-nature:var(--lichen);
+ --sem-agriculture:var(--lichen);
+ --sem-land:var(--copper);
+ --sem-capital:var(--plum);
+ --sem-built:#9a958a;
+ --sem-infrastructure:var(--steel);
+ --risk:var(--critical);
+ --success:var(--positive);
+ --volcanic:var(--forest-carbon);
+ --basalt:var(--deep-moss);
+ --shale:var(--canopy);
+ --smoke:var(--sage-ash);
+ --sandstone:var(--warm-ash);
+ --solar:var(--energy);
+ --glacial:var(--water);
+ --aubergine:var(--plum);
+ --carbon:var(--forest-carbon);
+ --graphite:var(--forest-carbon);
+ --graphite-2:var(--deep-moss);
+ --graphite-3:var(--canopy);
+ --canvas:var(--chalk);
+ --canvas-2:var(--limestone);
+ --canvas-3:var(--warm-ash);
+ --hairline:var(--ash);
+ --indigo:var(--accent);
+ --indigo-ink:var(--accent-ink);
+ --indigo-tint:var(--accent-tint);
+ --ice:#f1dc9c;
+ --paper:var(--chalk);
+ --paper-2:var(--limestone);
+ --white:#FAF9F5;
+ --ink:var(--text-1);
+ --fern:var(--forest-carbon);
+ --wax:var(--text-on-dark);
+ --pollen:var(--gold);
+ --leaf:var(--text-3);
+ --reed:var(--lichen);
+ --line:#E2DED4;
+ --bg:#FAF9F5;
+ --surface:#FAF9F5;
+ --text:var(--text-1);
+ --text-muted:var(--text-2);
+ --heading:var(--text-1);
+ --eyebrow:var(--text-3);
+ --action:#246448;
+ --action-hover:#1C5039;
+ --action-text:#FFFFFF;
+ --link:#246448;
+ --focus:#246448;
+ --font:"Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+ --font-mono:"Geist Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+ --fs-display:clamp(30px,3vw,44px);
+ --fs-title:30px;
+ --fs-section:21px;
+ --fs-sub:16px;
+ --fs-body:16px;
+ --fs-meta:13px;
+ --s1:4px;
+ --s2:8px;
+ --s3:12px;
+ --s4:16px;
+ --s5:24px;
+ --s6:32px;
+ --s7:48px;
+ --s8:64px;
+ --radius-pill:999px;
+ --radius-card:10px;
+ --radius-control:7px;
+ --radius-dialog:12px;
+ --shadow-overlay:0 12px 32px rgba(48,47,40,.12);
+ --t-fast:0ms;
+ --t-standard:0ms;
+ --t-panel:0ms;
+ --t-context:0ms;
+ --ease:cubic-bezier(.2, .7, .2, 1);
+ --glass-dark:rgba(250,249,245,.97);
+ --atlas-black:#141715;
+ --atlas-canvas:#181c1a;
+ --atlas-toolbar:#FAF9F5;
+ --atlas-panel:#FAF9F5;
+ --atlas-card:#FAF9F5;
+ --atlas-card-hover:#F1EFE8;
+ --atlas-border:#E2DED4;
+ --atlas-frame:#E2DED4;
+ --atlas-text:#302F28;
+ --atlas-text-2:#686357;
+ --atlas-telemetry:#686357;
+ --shell-hover:#F5F0E7;
+ --shell-active:#EAF0E5;
+ --shell-icon:#686357;
+ color-scheme:light;
+ --shadow-surface:none;
+ --workspace-canvas:#FAF9F5;
+ --surface-white:#FAF9F5;
+ --surface-selected:#EAF0E5;
+ --control-hover:#F1EFE8;
+ --focus-ring:#246448;
+ --header-surface:#FAF9F5;
+ --secondary-surface:#FAF9F5;
+}
 /* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30, LOCKED).
    Graphite Moss shell, Saffron Gold Regenera signature, Oxidized Rust secondary accent, Warm Ivory canvas (2026-09-30 lock). Copper, lichen, water, plum
    and steel are semantic data colours only. Do not add ad-hoc colours: add a token here. Legacy names (paper, ink,
    fern, wax, pollen, leaf, reed, water, line, volcanic, basalt …) are kept and remapped so every screen follows. */
-:root {
-  /* Shell (navigation, header, immersive Atlas) */
-  --forest-carbon: #252d27;          /* Graphite Moss: shell / sidebar */
-  --deep-moss: #2e3830;
-  --canopy: #3a463e;
-  --sage-ash: #7b887e;               /* Muted Sage */
-  --atlas-base: #141715;             /* Atlas canvas: near black (Carbon Moss #1B211D is no longer used for Atlas) */
-  /* Analytical surfaces */
-  --limestone: #f3f0e9;              /* Warm Ivory: main workspace */
-  --chalk: #fbfaf7;                  /* Soft White: cards / panels */
-  --warm-ash: #e8e5de;
-  --ash: #d8d5ce;                    /* Warm Stone: borders / dividers */
-  /* Text */
-  --text-1: #191d1a;                 /* Near Black */
-  --text-2: #747a74;                 /* Mineral Grey */
-  --text-3: #8f948e;
-  --text-on-dark: #eeece5;
-  --text-on-dark-2: #a3aba5;
-  /* Signature and interaction */
-  --gold: #d9a61c;                   /* Saffron Gold: Regenera identity and key selected states only */
-  --gold-ink: #87660c;               /* saffron that passes contrast as text on ivory */
-  --gold-tint: rgba(217, 166, 28, .12);
-  --brass: #d9a61c;                  /* the REGENERA wordmark: Saffron Gold on Graphite Moss */
-  --accent: var(--gold);
-  --accent-ink: var(--gold-ink);
-  --accent-tint: var(--gold-tint);
-  /* Semantic data colours — never decoration */
-  --copper: #a45f3f;                 /* Oxidized Rust: secondary accent; land, physical assets, development */
-  --copper-ink: #7d4633;             /* Iron Oxide */
-  --copper-tint: rgba(164, 95, 63, .10);
-  --lichen: #7b887e;                 /* Muted Sage: nature, agriculture, ecology, restoration */
-  --water: #4e7f7d;                /* hydrology */
-  --plum: #67566d;                 /* capital, funds, investors */
-  --steel: #728087;                  /* Blue Grey: cool data accent, infrastructure */
-  --critical: #ac4d43;
-  --warning: #b17b2e;
-  --positive: #5b7552;
-  --energy: #b17b2e;
-  --sem-energy: var(--energy);
-  --sem-water: var(--water);
-  --sem-nature: var(--lichen);
-  --sem-agriculture: var(--lichen);
-  --sem-land: var(--copper);
-  --sem-capital: var(--plum);
-  --sem-built: #9a958a;
-  --sem-infrastructure: var(--steel);
-  --risk: var(--critical);
-  --success: var(--positive);
 
-  /* Transitional aliases (earlier palettes) */
-  --volcanic: var(--forest-carbon);
-  --basalt: var(--deep-moss);
-  --shale: var(--canopy);
-  --smoke: var(--sage-ash);
-  --sandstone: var(--warm-ash);
-  --solar: var(--energy);
-  --glacial: var(--water);
-  --aubergine: var(--plum);
-  --carbon: var(--forest-carbon);
-  --graphite: var(--forest-carbon);
-  --graphite-2: var(--deep-moss);
-  --graphite-3: var(--canopy);
-  --canvas: var(--chalk);
-  --canvas-2: var(--limestone);
-  --canvas-3: var(--warm-ash);
-  --hairline: var(--ash);
-  --indigo: var(--accent);
-  --indigo-ink: var(--accent-ink);
-  --indigo-tint: var(--accent-tint);
-  --ice: #f1dc9c;
 
-  /* Legacy names */
-  --paper: var(--chalk);
-  --paper-2: var(--limestone);
-  --white: #ffffff;
-  --ink: var(--text-1);
-  --fern: var(--forest-carbon);
-  --wax: var(--text-on-dark);
-  --pollen: var(--gold);
-  --leaf: var(--text-3);
-  --reed: var(--lichen);
-  --line: rgba(25, 29, 26, .11);
 
-  /* Roles */
-  --bg: var(--limestone);
-  --surface: var(--warm-ash);
-  --text: var(--text-1);
-  --text-muted: var(--text-2);
-  --heading: var(--text-1);
-  --eyebrow: var(--text-3);
-  --action: var(--forest-carbon);  /* primary buttons: shell green, never gold */
-  --action-hover: var(--canopy);
-  --action-text: var(--chalk);
-  --link: #2e5a52;
-  --focus: var(--gold);
-
-  /* Type */
-  --font: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Geist Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --fs-display: clamp(30px, 2.5vw, 40px);
-  --fs-title: 26px;
-  --fs-section: 19px;
-  --fs-sub: 15px;
-  --fs-body: 13.5px;
-  --fs-meta: 11.5px;
-
-  /* Spacing (8 px grid) */
-  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
-
-  /* Shape */
-  --radius-pill: 999px;
-  --radius-card: 3px;
-  --radius-control: 5px;
-  --radius-dialog: 7px;
-  --shadow-overlay: 0 16px 40px rgba(8, 13, 10, .24);
-
-  /* Motion: fade, slide, spatial focus; no bounce */
-  --t-fast: 120ms;
-  --t-standard: 180ms;
-  --t-panel: 220ms;
-  --t-context: 280ms;
-  --ease: cubic-bezier(.2, .7, .2, 1);
-
-  /* Floating dark surfaces (Atlas controls) */
-  --glass-dark: rgba(32, 36, 33, .94);
-
-  /* Atlas: graphite intelligence terminal. Green stays in the Regenera shell only. */
-  --atlas-black: #141715;          /* Near Black: globe canvas */
-  --atlas-canvas: #181c1a;         /* Carbon Graphite: map frame */
-  --atlas-toolbar: #1b1f1c;
-  --atlas-panel: #202421;          /* Graphite: layers panel */
-  --atlas-card: #272c28;
-  --atlas-card-hover: #303631;
-  --atlas-border: #353b36;
-  --atlas-frame: #303632;
-  --atlas-text: #e8eae6;           /* Warm White */
-  --atlas-text-2: #9ca39d;
-  --atlas-telemetry: #a0a7a1;
-  /* Shell interaction (sidebar) */
-  --shell-hover: #303832;
-  --shell-active: #343d36;
-  --shell-icon: #8f9790;
-}
-
-:root { color-scheme: light; }
 /* Density: FOCUS / STANDARD (default) / DENSE, set on <html data-density>. */
 :root[data-density="dense"] { --fs-body: 12.5px; }
 @media (prefers-reduced-motion: reduce) {
-  :root { --t-fast: 0ms; --t-standard: 0ms; --t-panel: 0ms; --t-context: 0ms; }
+  
 }
+
+
+/* 2026-10-05 — Operating clarity: authorized whole-application presentation revamp. */
+
+
+
+
+
+
+
+
+
+

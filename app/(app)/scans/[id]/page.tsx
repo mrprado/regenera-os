@@ -14,6 +14,8 @@ import { geoLabel } from "@/lib/scan/countries";
 import { queryTerms } from "@/lib/scan/web";
 import { cancelScanAction, reviewResultAction } from "../../scan-actions";
 import { ScanProgress } from "../scan-progress";
+import { filterResults, pageOf, reviewHref } from "@/lib/scan/review-filters";
+import { ReviewControls, ReviewPagination } from "../review-controls";
 import s from "../scans.module.css";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +32,12 @@ export default async function ScanRunPage({ params, searchParams }: { params: Pr
   const [run] = await db.select().from(scanRuns).where(and(eq(scanRuns.id, id), inArray(scanRuns.mandateId, user.scope.mandateIds.length ? user.scope.mandateIds : ["-"])));
   if (!run) notFound();
   const tab = sp.tab === "people" || sp.tab === "excluded" ? sp.tab : "results";
-  const rows = await db.select().from(scanResults).where(eq(scanResults.runId, id)).orderBy(asc(scanResults.name)).limit(600);
+  const rows = await db.select().from(scanResults).where(and(eq(scanResults.runId, id), eq(scanResults.mandateId, run.mandateId))).orderBy(asc(scanResults.name));
   const orgs = rows.filter(x => x.entityType === "organization");
-  const shown = tab === "people" ? rows.filter(x => x.entityType === "person") : tab === "excluded" ? orgs.filter(x => x.match === "excluded") : orgs.filter(x => x.match !== "excluded")
-    .sort((a, b) => ["matches", "partial", "unknown"].indexOf(a.match) - ["matches", "partial", "unknown"].indexOf(b.match));
+  const viewRows = tab === "people" ? rows.filter(x => x.entityType === "person") : tab === "excluded" ? orgs.filter(x => x.match === "excluded") : orgs.filter(x => x.match !== "excluded");
+  const filtered = filterResults(viewRows, sp);
+  const pagination = pageOf(filtered, sp.page);
+  const shown = pagination.rows;
   const active = run.status === "queued" || run.status === "running";
   const c = run.counts;
   const a = audience(run.audience);
@@ -58,11 +62,12 @@ export default async function ScanRunPage({ params, searchParams }: { params: Pr
       <div className={r.grid}>
         <div>
           <nav className={ui.tabs} aria-label="Result views">
-            <Link className={`${ui.tab} ${tab === "results" ? ui.tabActive : ""}`} href={`/scans/${id}`}>Organizations to review ({orgs.filter(x => x.match !== "excluded").length})</Link>
-            <Link className={`${ui.tab} ${tab === "people" ? ui.tabActive : ""}`} href={`/scans/${id}?tab=people`}>People ({rows.filter(x => x.entityType === "person").length})</Link>
-            <Link className={`${ui.tab} ${tab === "excluded" ? ui.tabActive : ""}`} href={`/scans/${id}?tab=excluded`}>Excluded ({orgs.filter(x => x.match === "excluded").length})</Link>
+            <Link className={`${ui.tab} ${tab === "results" ? ui.tabActive : ""}`} href={reviewHref(`/scans/${id}`, sp, { tab: undefined, page: undefined, match: undefined })}>Organizations to review ({orgs.filter(x => x.match !== "excluded").length})</Link>
+            <Link className={`${ui.tab} ${tab === "people" ? ui.tabActive : ""}`} href={reviewHref(`/scans/${id}`, sp, { tab: "people", page: undefined, match: undefined })}>People ({rows.filter(x => x.entityType === "person").length})</Link>
+            <Link className={`${ui.tab} ${tab === "excluded" ? ui.tabActive : ""}`} href={reviewHref(`/scans/${id}`, sp, { tab: "excluded", page: undefined, match: undefined })}>Excluded ({orgs.filter(x => x.match === "excluded").length})</Link>
           </nav>
-          {shown.length === 0 ? <p className={r.empty}>{active ? "Results appear here as the scan runs." : tab === "people" ? "No people search ran in this scan (needs Apollo and a people limit above 0)." : "Nothing in this view."}</p> : (
+          <ReviewControls path={`/scans/${id}`} sp={sp} kind="results" total={viewRows.length} filtered={filtered.length} providers={[...new Set(rows.map(x => x.provider))].sort()} />
+          {shown.length === 0 ? <p className={r.empty}>{viewRows.length ? "No results match these filters. Clear filters to see all results in this view." : active ? "Results appear here as the scan runs." : tab === "people" ? "No people results in this scan." : "Nothing in this view."}</p> : (
             <ul className={s.results}>{shown.map(x => (
               <li key={x.id} data-match={x.match}>
                 <div className={s.resultHead}>
@@ -77,14 +82,15 @@ export default async function ScanRunPage({ params, searchParams }: { params: Pr
                 {x.entityType === "organization" && (
                   <div className={ui.rowActions}>
                     {x.review === "needs_review" ? <>
-                      <form action={reviewResultAction}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="decision" value="accepted" /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Accept for review</button></form>
-                      <form action={reviewResultAction} className={s.reject}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="decision" value="rejected" /><input name="reason" placeholder="Why not (kept on record)" aria-label={`Reason to reject ${x.name}`} /><button className={ui.miniBtn} type="submit">Reject</button></form>
+                      <form action={reviewResultAction}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="decision" value="accepted" /><input type="hidden" name="back" value={reviewHref(`/scans/${id}`, sp)} /><button className={`${ui.miniBtn} ${ui.miniPrimary}`} type="submit">Accept for review</button></form>
+                      <form action={reviewResultAction} className={s.reject}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="decision" value="rejected" /><input type="hidden" name="back" value={reviewHref(`/scans/${id}`, sp)} /><input name="reason" placeholder="Why not (kept on record)" aria-label={`Reason to reject ${x.name}`} /><button className={ui.miniBtn} type="submit">Reject</button></form>
                     </> : <span className={ui.chipMuted}>{x.review === "accepted" ? `Accepted by ${x.reviewedBy ?? "reviewer"}` : `Rejected${x.reviewedBy ? ` by ${x.reviewedBy}` : ""}`}</span>}
                   </div>
                 )}
               </li>
             ))}</ul>
           )}
+          <ReviewPagination path={`/scans/${id}`} sp={sp} {...pagination} />
         </div>
         <aside>
           <section className={r.panel}>

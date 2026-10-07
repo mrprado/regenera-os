@@ -1,121 +1,24 @@
 "use client";
-
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Banknote, BriefcaseBusiness, ChevronRight, Earth, House, Landmark, Network, Radar, Search, Settings, Sprout, SquareCheckBig, SquareKanban, type LucideIcon, Crosshair } from "lucide-react";
-import { flatNav, navFor, type NavGroup, type NavLeaf, type NavUser, settingsFor } from "@/lib/nav";
-import styles from "./shell.module.css";
-
-const ICONS: Record<string, LucideIcon> = { house: House, earth: Earth, landmark: Landmark, sprout: Sprout, banknote: Banknote, kanban: SquareKanban, network: Network, radar: Radar, briefcase: BriefcaseBusiness, check: SquareCheckBig, target: Crosshair };
-
-/** A leaf is active when the path matches and every query param it names matches too (so /capital?tab=bonds ≠ /capital). */
-function leafActive(href: string, pathname: string, params: URLSearchParams) {
-  const [p, q] = href.split("?");
-  if (!(pathname === p || pathname.startsWith(`${p}/`))) return false;
-  const want = new URLSearchParams(q ?? "");
-  for (const [k, v] of want) if (params.get(k) !== v) return false;
-  if (!q) for (const k of ["tab", "view", "stage", "capital", "blocked", "path"]) if (params.get(k)) return false;
-  return true;
-}
-const groupActive = (g: NavGroup, pathname: string) => {
-  const own = g.href ? g.href.split("?")[0] : null;
-  if (own && (pathname === own || pathname.startsWith(`${own}/`))) return true;
-  return g.sections.some(s => s.items.some(i => { const p = i.href.split("?")[0]; return pathname === p || pathname.startsWith(`${p}/`); }));
-};
-
-function Leaves({ items, pathname, params, onPick }: { items: NavLeaf[]; pathname: string; params: URLSearchParams; onPick?: () => void }) {
-  return <>{items.map(i => <Link key={i.href + i.label} href={i.href} onClick={onPick} className={`${styles.subItem} ${leafActive(i.href, pathname, params) ? styles.subItemActive : ""}`}>{i.label}</Link>)}</>;
-}
-
-/**
- * Consolidated sidebar (phase 10 §3): major environments only; each group opens a flyout (desktop) or an accordion
- * (phone). Only modules the member may open are shown; the server refuses the rest regardless.
- */
-export function SidebarNav({ user, variant = "flyout" }: { user: NavUser; variant?: "flyout" | "accordion" }) {
-  const pathname = usePathname();
-  const params = useSearchParams();
-  const groups = useMemo(() => navFor(user), [user]);
-  const settings = useMemo(() => settingsFor(user), [user]);
-  // A flyout belongs to the page it was opened on: navigating closes it without an effect.
-  const [opened, setOpened] = useState<{ key: string; path: string } | null>(null);
-  const open = opened?.path === pathname ? opened.key : null;
-  const setOpen = (key: string | null) => setOpened(key ? { key, path: pathname } : null);
-  const [top, setTop] = useState(0);
-  const [q, setQ] = useState("");
-  const panel = useRef<HTMLDivElement>(null);
-  const flat = useMemo(() => flatNav(user), [user]);
-  const hits = q.trim().length > 1 ? flat.filter(f => `${f.path} ${f.keywords}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 12) : [];
-
-  useEffect(() => {
-    if (!open || variant !== "flyout") return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpened(null); };
-    const onDown = (e: MouseEvent) => { const t = e.target as HTMLElement; if (!panel.current?.contains(t) && !t.closest("[data-navgroup]")) setOpened(null); };
-    document.addEventListener("keydown", onKey); document.addEventListener("mousedown", onDown);
-    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onDown); };
-  }, [open, variant]);
-
-  const current = groups.find(g => g.key === open);
-  return (
-    <>
-      <div className={styles.navSearch}>
-        <Search size={14} aria-hidden />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search menu…" aria-label="Search the menu" />
-      </div>
-      {hits.length > 0 ? (
-        <nav className={styles.nav} aria-label="Menu search results">
-          {hits.map(h => <Link key={h.path} href={h.href} className={styles.subItem} onClick={() => setQ("")}>{h.path}</Link>)}
-        </nav>
-      ) : (
-        <nav className={styles.nav} aria-label="Main">
-          {groups.map(g => {
-            const Icon = ICONS[g.icon] ?? House;
-            const active = groupActive(g, pathname);
-            if (g.href && g.sections.length === 0) return (
-              <Link key={g.key} href={g.href} className={`${styles.navItem} ${active ? styles.navItemActive : ""}`} aria-current={active ? "page" : undefined} title={g.label}>
-                <Icon size={17} strokeWidth={1.75} aria-hidden /><span>{g.label}</span>
-              </Link>
-            );
-            const expanded = open === g.key;
-            // The label opens the group's landing page; the chevron (a separate button) opens its submenu.
-            return (
-              <div key={g.key} className={styles.navSplit}>
-                <Link href={g.href ?? g.sections[0]?.items[0]?.href ?? "/today"} className={`${styles.navItem} ${active ? styles.navItemActive : ""}`} aria-current={active && pathname === (g.href ?? "").split("?")[0] ? "page" : undefined} title={g.label} onClick={() => setOpen(null)}>
-                  <Icon size={17} strokeWidth={1.75} aria-hidden /><span>{g.label}</span>
-                </Link>
-                <button type="button" data-navgroup className={styles.navChevron} aria-expanded={expanded} aria-haspopup={variant === "flyout" ? "menu" : undefined} aria-label={`${expanded ? "Close" : "Open"} ${g.label} menu`} title={`${g.label} menu`}
-                  onClick={e => {
-                    const rows = g.sections.reduce((a, s) => a + s.items.length * 30 + (s.label ? 26 : 0), 50);
-                    setTop(Math.max(64, Math.min((e.currentTarget as HTMLElement).getBoundingClientRect().top - 8, window.innerHeight - rows - 16)));
-                    setOpen(expanded ? null : g.key);
-                  }}>
-                  <ChevronRight size={14} aria-hidden className={styles.chev} data-open={expanded && variant === "accordion" ? "" : undefined} />
-                </button>
-                {variant === "accordion" && expanded && (
-                  <div className={styles.accordion}>{g.sections.map((s, i) => <div key={i}>{s.label && <p className={styles.navGroupLabel}>{s.label}</p>}<Leaves items={s.items} pathname={pathname} params={params} /></div>)}</div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      )}
-      <div className={styles.navFooter}>
-        <Link href={user.internal ? "/settings" : "/org"} className={`${styles.navItem} ${pathname.startsWith("/settings") || pathname.startsWith("/org") ? styles.navItemActive : ""}`} title="Settings">
-          <Settings size={17} strokeWidth={1.75} aria-hidden /><span>Settings</span>
-        </Link>
-        {variant === "accordion" && settings.length > 1 && <div className={styles.accordion}><Leaves items={settings} pathname={pathname} params={params} /></div>}
-      </div>
-      {variant === "flyout" && current && (
-        <div ref={panel} role="menu" aria-label={current.label} className={`${styles.flyout} ${current.mega ? styles.mega : ""}`} style={current.mega ? undefined : { top }}>
-          <p className={styles.flyoutTitle}>{current.label}</p>
-          <div className={current.mega ? styles.megaCols : undefined}>
-            {current.sections.map((s, i) => (
-              <div key={i} className={styles.flyoutSection}>{s.label && <p className={styles.flyoutLabel}>{s.label}</p>}<Leaves items={s.items} pathname={pathname} params={params} onPick={() => setOpen(null)} /></div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
+import Link from 'next/link';
+import {usePathname,useSearchParams} from 'next/navigation';
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {Banknote,Inbox,BriefcaseBusiness,ChevronRight,Earth,House,Landmark,Network,Radar,Search,Settings,Sprout,SquareCheckBig,SquareKanban,Crosshair,X,type LucideIcon} from 'lucide-react';
+import {activeNavGroup,flatNav,navFor,settingsFor,type NavGroup,type NavLeaf,type NavUser} from '@/lib/nav';
+import s from './shell.module.css';
+const ICONS:Record<string,LucideIcon>={inbox:Inbox,house:House,earth:Earth,landmark:Landmark,sprout:Sprout,banknote:Banknote,kanban:SquareKanban,network:Network,radar:Radar,briefcase:BriefcaseBusiness,check:SquareCheckBig,target:Crosshair,settings:Settings};
+export function leafActive(href:string,pathname:string,params:URLSearchParams){const [path,query]=href.split('?');if(pathname!==path&&!pathname.startsWith(path+'/'))return false;const wanted=new URLSearchParams(query);if([...wanted].some(([key,value])=>params.get(key)!==value))return false;if(!query&&['tab','view','stage','capital','blocked','path','focus'].some(key=>params.has(key)))return false;return true;}
+function Leaves({items,pathname,params,onPick}:{items:NavLeaf[];pathname:string;params:URLSearchParams;onPick:()=>void}){return <ul className={s.leafList}>{items.map(item=><li key={item.href}><Link href={item.href} className={`${s.subItem} ${leafActive(item.href,pathname,params)?s.subItemActive:''}`} aria-current={leafActive(item.href,pathname,params)?'page':undefined} onClick={onPick}>{item.label}</Link></li>)}</ul>;}
+function settingsSections(items:NavLeaf[]){const sections=[{label:'Workspace & access',paths:['/org','/settings/mandates','/settings/members','/settings/demo']},{label:'Data & connections',paths:['/settings/connections','/settings/integrations','/intelligence/data?tab=health','/settings/extension']},{label:'Automation & governance',paths:['/settings/jobs','/settings/claude','/settings/product','/connect/mcp','/settings/sending']}];return sections.map(section=>({label:section.label,items:section.paths.map(path=>items.find(item=>item.href===path)).filter((item):item is NavLeaf=>!!item)})).filter(section=>section.items.length);}
+export function SidebarNav({user,variant='flyout'}:{user:NavUser;variant?:'flyout'|'accordion'}){
+ const pathname=usePathname(),params=useSearchParams(),routeKey=pathname+'?'+params.toString();
+ const groups=useMemo(()=>navFor(user),[user]),settings=useMemo(()=>settingsFor(user),[user]),flat=useMemo(()=>flatNav(user),[user]);
+ const settingGroup:NavGroup={key:'settings',label:'Settings',icon:'settings',href:user.internal?'/settings':'/org',description:'Workspace access, connections, and operating controls.',sections:settingsSections(settings)};
+ const [opened,setOpened]=useState<{key:string;route:string}|null>(null);const open=opened?.route===routeKey?opened.key:null;
+ const [query,setQuery]=useState('');const panel=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement|null>(null);
+ const active=activeNavGroup(groups,pathname,params);const current=open==='settings'?settingGroup:groups.find(g=>g.key===open);
+ const hits=query.trim()?flat.filter(item=>`${item.path} ${item.keywords}`.toLowerCase().includes(query.trim().toLowerCase())):[];
+ const close=(restore=false)=>{setOpened(null);if(variant==='accordion'){const menu=document.querySelector<HTMLDetailsElement>('details[data-mobile-navigation]');if(menu)menu.open=false;}if(restore)trigger.current?.focus();};
+ useEffect(()=>{if(!open)return;const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setOpened(null);trigger.current?.focus();}};const outside=(event:MouseEvent|FocusEvent)=>{const target=event.target as HTMLElement;if(!panel.current?.contains(target)&&!target.closest('[data-navgroup]'))setOpened(null);};document.addEventListener('keydown',key);document.addEventListener('mousedown',outside);if(variant==='flyout')document.addEventListener('focusin',outside);return()=>{document.removeEventListener('keydown',key);document.removeEventListener('mousedown',outside);document.removeEventListener('focusin',outside);};},[open,variant]);
+ const groupRow=(group:NavGroup)=>{const Icon=ICONS[group.icon]??House,expanded=open===group.key,selected=group.key===active?.key||(group.key==='settings'&&!active&&(pathname.startsWith('/settings')||pathname.startsWith('/org')));const id=`nav-${variant}-${group.key}`;return <li key={group.key} className={s.navGroup}><div className={s.navSplit}><Link href={group.href??group.sections[0]?.items[0]?.href??'/today'} className={`${s.navItem} ${selected?s.navItemActive:''}`} aria-current={selected?'true':undefined} onClick={()=>close()} title={group.label}><Icon size={19} strokeWidth={1.7} aria-hidden/><span>{group.label}</span></Link>{group.sections.length>0&&<button type="button" data-navgroup aria-expanded={expanded} aria-controls={expanded?id:undefined} className={s.navChevron} aria-label={`${expanded?'Close':'Open'} ${group.label} tools`} onClick={event=>{trigger.current=event.currentTarget;setOpened(expanded?null:{key:group.key,route:routeKey});}} onKeyDown={event=>{if(event.key==='ArrowDown'){event.preventDefault();trigger.current=event.currentTarget;setOpened({key:group.key,route:routeKey});requestAnimationFrame(()=>panel.current?.querySelector<HTMLAnchorElement>('a')?.focus());}}}><ChevronRight size={16} aria-hidden data-open={expanded?'':undefined}/></button>}</div>{variant==='accordion'&&expanded&&<div id={id} className={s.accordion}>{group.sections.map(section=><section key={section.label}><h3 className={s.flyoutLabel}>{section.label}</h3><Leaves items={section.items} pathname={pathname} params={params} onPick={()=>close()}/></section>)}</div>}</li>;};
+ return <><div className={s.navSearch}><Search size={17} aria-hidden/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Find a tool…" aria-label="Search all authorized workspace tools"/>{query&&<button className={s.searchClear} aria-label="Clear menu search" onClick={()=>setQuery('')}><X size={15} aria-hidden/></button>}</div>{query.trim()?<nav className={s.nav} aria-label="Tool search results"><p className={s.navGroupLabel}>{hits.length} matching tools</p>{hits.length?<ul className={s.leafList}>{hits.slice(0,18).map(hit=><li key={hit.path}><Link href={hit.href} className={s.searchHit} onClick={()=>{setQuery('');close();}}><strong>{hit.label}</strong><span>{hit.path}</span></Link></li>)}</ul>:<p className={s.searchEmpty}>No tool matches “{query}”. Try a project, capital, document, or delivery term.</p>}</nav>:<nav className={s.nav} aria-label="Main workspace">{groups.reduce<{label?:string;items:NavGroup[]}[]>((out,group)=>{const last=out[out.length-1];if(last&&last.label===group.section)last.items.push(group);else out.push({label:group.section,items:[group]});return out;},[]).map(section=><div key={section.label??'top'}>{section.label&&<p className={s.navGroupLabel}>{section.label}</p>}<ul className={s.navList}>{section.items.map(groupRow)}</ul></div>)}</nav>}<div className={s.navFooter}><ul className={s.navList}>{groupRow(settingGroup)}</ul></div>{variant==='flyout'&&current&&<div ref={panel} id={`nav-${variant}-${current.key}`} className={s.flyout} role="region" aria-label={`${current.label} tools`} onKeyDown={event=>{if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;const links=[...event.currentTarget.querySelectorAll<HTMLAnchorElement>('a')],index=links.indexOf(document.activeElement as HTMLAnchorElement);if(index<0)return;event.preventDefault();links[event.key==='Home'?0:event.key==='End'?links.length-1:event.key==='ArrowDown'?(index+1)%links.length:(index-1+links.length)%links.length]?.focus();}}><div className={s.flyoutHead}><div><h2 className={s.flyoutTitle}>{current.label}</h2><p className={s.flyoutDescription}>{current.description}</p></div><button className={s.panelClose} onClick={()=>close(true)} aria-label={`Close ${current.label} tools`}><X size={19}/></button></div><Link href={current.href??'/today'} className={s.overviewLink} onClick={()=>close()}>Open {current.label.toLowerCase()} overview</Link><div className={s.megaCols}>{current.sections.map(section=><section className={s.flyoutSection} key={section.label}><h3 className={s.flyoutLabel}>{section.label}</h3><Leaves items={section.items} pathname={pathname} params={params} onPick={()=>close()}/></section>)}</div></div>}</>;
 }

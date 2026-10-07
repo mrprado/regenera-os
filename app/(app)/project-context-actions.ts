@@ -1,0 +1,14 @@
+"use server";
+import {and,eq} from 'drizzle-orm';
+import {redirect} from 'next/navigation';
+import {withOsUser} from '@/lib/auth';
+import {appDb} from '@/lib/db/scoped';
+import {reportingPeriods,contextRecords} from '@/db/schema';
+import {addMemory,projectContext,proposeContext,runSpecialist} from '@/lib/project-context/engine';
+const str=(form:FormData,key:string)=>String(form.get(key)??'').trim();
+async function action(form:FormData,guard:typeof withOsUser,fn:(user:Awaited<ReturnType<typeof import('@/lib/auth').requireOsUser>>,projectId:string)=>Promise<unknown>){const id=str(form,'projectId');let notice='Saved';try{await guard(user=>fn(user,id));}catch(error){notice=(error as Error).message;}redirect(`/projects/${encodeURIComponent(id)}?tab=operating&view=${encodeURIComponent(str(form,'view')||'memory')}&notice=${encodeURIComponent(notice)}`);}
+export async function memoryAction(form:FormData){await action(form,cb=>withOsUser(cb),(user,id)=>addMemory(appDb(),user.scope,id,str(form,'note'),user.email));}
+export async function specialistAction(form:FormData){await action(form,cb=>withOsUser(cb),(user,id)=>runSpecialist(appDb(),user.scope,user.email,id,str(form,'specialty')));}
+export async function contextProposalAction(form:FormData){await action(form,cb=>withOsUser(cb),(user,id)=>{const args:Record<string,unknown>={};for(const key of ['recordKind','title','claimId','value','reason','decisionId','choice','expectedOutcome','periodId','type','dimension','score','due'])if(form.has(key))args[key]=str(form,key);if(form.has('data'))args.data=JSON.parse(str(form,'data'));return proposeContext(appDb(),user.scope,user.email,id,str(form,'action'),args,str(form,'evidenceId'));});}
+export async function beginCloseAction(form:FormData){await action(form,cb=>withOsUser(cb),async(user,id)=>{const db=appDb(),c=await projectContext(db,user.scope,id);const period=c.periods.find(p=>p.id===str(form,'periodId'));if(!period||!['OPEN','REOPENED'].includes(period.state))throw new Error('Period cannot begin review');await db.update(reportingPeriods).set({state:c.conflicts.length?'EXCEPTIONS':'REVIEW',updatedAt:new Date().toISOString()}).where(and(eq(reportingPeriods.id,period.id),eq(reportingPeriods.state,period.state)));});}
+export async function missionAction(form:FormData){await action(form,cb=>withOsUser(cb),async(user,id)=>{const c=await projectContext(appDb(),user.scope,id);const min=Number(str(form,'minCapacity')||0),days=Number(str(form,'days')||90);if(!Number.isFinite(min)||min<0||!Number.isFinite(days)||days<1||days>3650)throw new Error('Invalid mission thresholds');return appDb().insert(contextRecords).values({projectId:id,mandateId:c.project.mandateId,kind:'mission',title:str(form,'title')||'Saved intelligence mission',createdBy:user.email,data:{sector:str(form,'sector'),country:str(form,'country'),types:form.getAll('types').map(String),minCapacity:min,days}});});}

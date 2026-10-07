@@ -1,4 +1,5 @@
 import Link from "next/link";
+import WorkflowGuide from "@/components/workflow-guide";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
@@ -18,11 +19,12 @@ export default async function OverviewPage({ params }: { params: Promise<{ key: 
   if (!(HUB_KEYS as readonly string[]).includes(key)) notFound();
   const user = await requireOsUser(`/overview/${key}`);
   const hub = await hubData(appDb(), key as HubKey, user.scope.mandateIds);
-  const group = navFor({ modules: user.scope.modules, internal: isInternal(user.scope) }).find(g => g.key === key);
+  const group = navFor({ modules: user.scope.modules, internal: isInternal(user.scope), owner:user.scope.ownerOf.length>0 }).find(g => g.key === key);
   return (
     <>
-      <PageHeader title={hub.title} actions={<div className={h.actions}>{hub.actions.map((a, i) => <Link key={a.href} className={i === 0 ? "btn btn--primary" : "btn"} href={a.href}>{a.label}</Link>)}</div>} />
+      <PageHeader title={group?.label??hub.title} actions={<div className={h.actions}>{hub.actions.map((a, i) => <Link key={a.href} className={i === 0 ? "btn btn--primary" : "btn"} href={a.href}>{a.label}</Link>)}</div>} />
       <p className={h.purpose}>{hub.purpose}</p>
+      {group&&<WorkflowGuide group={group}/>}
       <section className={h.metrics} aria-label={`${hub.title} metrics`}>
         {hub.metrics.map(m => (
           <div key={m.label} className={h.metric}>

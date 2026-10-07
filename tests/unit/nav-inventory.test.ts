@@ -38,19 +38,22 @@ describe("navigation inventory", () => {
     expect(dead).toEqual([]);
   });
 
-  it("the sidebar keeps the frozen top-level set", () => {
-    expect(NAV.map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Projects", "Systems", "Capital", "Opportunities", "Relationships", "Intelligence", "Clients", "Operations"]);
+  it("the authorized redesign preserves work areas and task-focused primary ordering", () => {
+    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Deals", "Network", "Capital", "Projects", "Delivery", "Intelligence"]);
+    expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual(["", "Pipeline", "Workspace"]);
   });
 
   it("clients see only entitled modules and never Regenera-internal groups", () => {
     const client = navFor({ modules: ["command", "atlas", "projects", "documents", "reporting", "automations"], internal: false });
-    expect(client.map(g => g.key)).toEqual(["command", "atlas", "projects", "systems", "intelligence", "operations"]);
+    expect(client.map(g => g.key)).toEqual(["command", "atlas", "projects", "operations", "intelligence"]);
     expect(client.find(g => g.key === "intelligence")!.sections[0].items.map(i => i.href)).toEqual(["/reports", "/reports?tab=cases"]);
     const hrefs = flatNav({ modules: ["command"], internal: false }).map(f => f.href);
     expect(hrefs).not.toContain("/commercial");
     expect(hrefs).not.toContain("/settings/jobs");
     expect(hrefs).toContain("/org");
-    expect(navFor({ modules: "all", internal: true }).map(g => g.key)).toContain("clients");
+    // Client pages now sit inside Deals: staff reach them, clients never do.
+    expect(flatNav({ modules: "all", internal: true }).map(f => f.href)).toEqual(expect.arrayContaining(["/clients", "/commercial", "/systems"]));
+    expect(flatNav({ modules: "all", internal: false }).map(f => f.href)).not.toContain("/clients");
   });
 });
 

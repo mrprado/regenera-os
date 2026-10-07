@@ -11,7 +11,7 @@ import { requireOsUser } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { openPlaceholders, TEMPLATES } from "@/lib/documents/library";
-import { approveLegalAction, newVersionAction, recordSignatureAction, signatureAction, signedUploadAction } from "../../../generator-actions";
+import { approveLegalAction, newVersionAction, recordSignatureAction, saveToDriveAction, signatureAction, signedUploadAction } from "../../../generator-actions";
 import styles from "../../../projects/projects.module.css";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,7 @@ export default async function GeneratedPage({ params, searchParams }: { params: 
 
   return (
     <>
-      <PageHeader title={d.title} actions={<><a className="btn btn--primary" href={withBase(`/api/documents/generated/${d.id}?format=pdf`)}>PDF</a><a className="btn" href={withBase(`/api/documents/generated/${d.id}?format=docx`)}>DOCX</a><Link className="btn" href="/documents/generator">Generator</Link></>} />
+      <PageHeader title={d.title} actions={<><a className="btn btn--primary" href={withBase(`/api/documents/generated/${d.id}?format=pdf`)}>PDF</a><a className="btn" href={withBase(`/api/documents/generated/${d.id}?format=docx`)}>DOCX</a><form action={saveToDriveAction}><input type="hidden" name="id" value={d.id} /><input type="hidden" name="format" value="pdf" /><button className="btn" type="submit" title="Save the PDF to the Regenera OS folder in your Google Drive">Save to Drive</button></form><Link className="btn" href="/documents/generator">Generator</Link></>} />
       <Notice text={sp.notice} />
       <p className={ui.sub} style={{ marginTop: -6 }}>Version {d.version}{d.previousId ? <> · <Link href={`/documents/generator/${d.previousId}`}>previous version</Link></> : ""} · {d.createdAt.slice(0, 10)} by {d.createdBy} · {d.legal ? (d.legalReviewStatus === "approved" ? `counsel approved by ${d.reviewedBy} ${d.reviewedAt?.slice(0, 10)}` : "counsel review required") : "report"}{signed ? " · signed (read-only)" : ""}</p>
       {open.length > 0 && <p className={ui.notice}>Open items: {open.join(" · ")}</p>}

@@ -125,7 +125,7 @@ export default function CommandBar({ nav }: { nav: NavUser }) {
   return (
     <>
       <button type="button" className={styles.trigger} onClick={() => setOpen(true)} aria-label="Ask the OS">
-        Ask the OS <kbd>Ctrl K</kbd>
+        <span>Ask the OS</span> <kbd>Ctrl K</kbd>
       </button>
       <Command.Dialog open={open} onOpenChange={setOpen} label="Ask the OS" className={styles.dialog} overlayClassName={styles.overlay} shouldFilter={false}>
         <div className={styles.head}>

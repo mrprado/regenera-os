@@ -1,4 +1,5 @@
 import Link from "next/link";
+import IntegratedCommand from "./integrated-command";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import Loading from "../loading";
@@ -53,18 +54,21 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const scope = ws.length === 1 ? ws[0].name : ws.length > 1 ? `${ws.length} workspaces` : "No workspace";
   const scanPreset = BUILT_IN_PRESETS[0];
   const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
+  const deskContext = loadDeskContext(user, now);
   return (
     <>
-      <header className={t.hero}>
+      <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
+      <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
+      <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>
         <p className={t.brandLine}>REGENERA OS · ADVANCING A REGENERATIVE ECONOMY</p>
-        <h1 className={t.heroTitle}>Your workspace for projects, capital, and execution.</h1>
+        <h2 className={t.heroTitle}>Your workspace for projects, capital, and execution.</h2>
         <span className={t.heroRule} aria-hidden="true" />
         <p className={t.heroLead}>Connect intelligence, assess opportunities, structure engagements, and coordinate delivery.</p>
         <p className={t.sectors}>Energy · Land · Infrastructure · Waste &amp; Resources</p>
         <div className={t.row}>
           <p className={t.date}>{date} · {scope}{name ? ` · ${name}` : ""}</p>
           <nav className={t.actions} aria-label="Command actions">
-            <Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`} title={`Opens the scan launcher with "${scanPreset.name}" selected; you confirm scope before anything runs.`}>Scan prospects</Link>
+            <Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`} title={`Opens the scan launcher with "${scanPreset.name}" selected; you confirm scope before anything runs.`}>Scan</Link>
             <Link className="btn" href="/queue">Review outreach</Link>
             <Link className="btn" href="/deals?new=1">Add opportunity</Link>
           </nav>
@@ -73,10 +77,11 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
           <p className={t.statementTitle}>Measure what we restore.</p>
           <p className={t.statementText}>Align projects, capital, and daily action with healthier ecosystems, stronger communities, and resilient livelihoods.</p>
         </div>
-      </header>
+</div></details>
       <Notice text={sp.notice} />
+      <IntegratedCommand scope={user.scope} selectedProjectId={sp.project}/>
       <Suspense fallback={<Loading />}>
-        <Desk user={user} now={now} mapMode={mapMode} fullOpen={sp.full === "1"} />
+        <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} />
       </Suspense>
     </>
   );
@@ -96,7 +101,7 @@ const LENS = [
 ];
 const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
 
-async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; mapMode: MapMode | "off"; fullOpen: boolean }) {
+async function loadDeskContext(user: Awaited<ReturnType<typeof requireOsUser>>, now: Date) {
   const db = appDb(), ws = user.scope.mandateIds;
   const [pa, del, proc, reg, obl, changes, ready, mc, mail, pending] = await Promise.all([
     projectAlerts(db, ws), deliveryAlerts(db, ws), procurementAlerts(db, ws), regulatoryAlerts(db, ws), obligationAlerts(db, ws),
@@ -124,14 +129,12 @@ async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType
   const [ev] = await db.select({ pending: sql<number>`sum(case when ${claims.status} in ('unverified','ai_inferred','assumption','source_provided') then 1 else 0 end)`, verified: sql<number>`sum(case when ${claims.status} = 'verified' then 1 else 0 end)`, disputed: sql<number>`sum(case when ${claims.status} = 'disputed' then 1 else 0 end)` })
     .from(claims).where(inArray(claims.mandateId, ws.length ? ws : ["-"]));
 
-  return (
-    <>
-      <section className={t.lens} aria-labelledby="lens-h">
-        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
-        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
-      </section>
+  return {ws, del, obl, changes, ready, mc, mail, pending, desk, flagged, s, notReady, deliveryItems, maxStage, totalPriorities, decisions, focus, today, since, ev};
+}
 
-      {mapMode === "off" ? (
+async function CommandActivityMap({context, mapMode}: {context: ReturnType<typeof loadDeskContext>; mapMode: MapMode | "off"}) {
+  const {ws, flagged, focus, since} = await context;
+  return <>{mapMode === "off" ? (
         <p className={t.mapOff}><Link href="/today?map=today">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
       ) : (
         <section className={t.mapBand} aria-labelledby="map-h">
@@ -142,8 +145,14 @@ async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType
           </div>
           <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading map" />}><CommandMap ws={ws} flagged={flagged} mode={mapMode} since={since} focus={focus} /></Suspense>
         </section>
-      )}
+      )}</>;
+}
 
+async function Desk({user, now, fullOpen, context}: {user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; fullOpen: boolean; context: ReturnType<typeof loadDeskContext>}) {
+  const {del, obl, changes, ready, mc, mail, pending, desk, s, notReady, deliveryItems, maxStage, totalPriorities, decisions, today, ev} = await context;
+
+  return (
+    <>
       <section className={t.decisions} aria-labelledby="dec-h">
         <p className={r.panelTitle}><span id="dec-h">Needs your decision</span><Link href="/today?full=1#full-desk">All priorities ({totalPriorities})</Link></p>
         {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
@@ -164,6 +173,13 @@ async function Desk({ user, now, mapMode, fullOpen }: { user: Awaited<ReturnType
       <nav className={t.shortcuts} aria-label="Move work forward">
         {SHORTCUTS.map(x => <Link key={x.href} href={x.href} className={t.shortcut}><b>{x.label}</b><span>{x.body}</span></Link>)}
       </nav>
+
+
+      <section className={t.lens} aria-labelledby="lens-h">
+        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
+        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
+      </section>
+
 
       <div className={t.compactCols}>
         <section className={t.outcomes} aria-labelledby="out-h">

@@ -82,6 +82,7 @@ export type FetchJsonOptions<T> = {
 
 /** GET/POST JSON with identification, retries on 429/5xx, zod validation, cache and ledger. */
 export async function fetchJson<T>(db: Db, o: FetchJsonOptions<T>): Promise<T> {
+  if((await import('cloudflare:workers')).env.ISOLATED_DEMO==='true')throw new Error('External discovery disabled in isolated demo');
   const now = o.now ?? new Date();
   // Integration registry (phase 6 M5): disabled or licence-required sources are never called.
   await assertIntegrationAllowed(db, o.provider);

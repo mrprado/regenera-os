@@ -12,11 +12,14 @@ export type FeedStatus = { loading?: boolean; count?: number; shown?: number; up
 export type RecordLayer = { key: string; label: string; swatch: string; count: number };
 
 export const MISSIONS: { id: string; label: string; hint: string; base: string; layers: string[]; records?: string[]; mode?: string; camera?: "globe" | "fit" }[] = [
+  { id: "capital", label: "Structure capital", hint: "Project, opportunity and funding records; open the project Capital workspace for readiness and raises", base:"light",layers:[],records:["projects","deals","procurement"],camera:"fit" },
+  { id:"partners",label:"Find partners",hint:"Organizations and project relationships",base:"light",layers:[],records:["projects","organizations"],camera:"fit" },
+  { id: "grid", label: "Power grid & connections", hint: "Screen transmission and generation near projects; verify available capacity, connection rights and queue status separately", base: "light", layers: ["power"], records: ["projects", "organizations"], camera: "fit" },
   { id: "portfolio", label: "Portfolio", hint: "Projects, opportunities and partners on satellite imagery", base: "s2cloudless", layers: [], records: ["projects", "deals", "organizations", "triggers", "procurement"], camera: "fit" },
-  { id: "site", label: "Site scout", hint: "Vegetation, protected areas, grid and buildings around sites", base: "s2cloudless", layers: ["ndvi", "protected", "power", "buildings"], records: ["projects"], camera: "fit" },
-  { id: "hazard", label: "Hazard watch", hint: "Yesterday from orbit with quakes, fires, storms and events", base: "viirs_today", layers: ["quakes", "fires", "events", "cyclones"], records: ["projects", "hazards"], camera: "globe" },
-  { id: "energy", label: "Energy transition", hint: "Night lights, power grid and plants, land heat", base: "blackmarble", layers: ["power"], records: ["projects"], camera: "globe" },
-  { id: "forest", label: "Forest and land", hint: "Tree cover loss, vegetation and protected areas", base: "s2cloudless", layers: ["forest_loss", "protected", "fires"], records: ["projects"] },
+  { id: "site", label: "Site diligence", hint: "Vegetation, protected areas, grid and buildings around sites", base: "s2cloudless", layers: ["ndvi", "protected", "power", "buildings"], records: ["projects"], camera: "fit" },
+  { id: "hazard", label: "Project risk", hint: "Yesterday from orbit with quakes, fires, storms and events", base: "viirs_today", layers: ["quakes", "fires", "events", "cyclones"], records: ["projects", "hazards"], camera: "globe" },
+  { id: "energy", label: "Energy development", hint: "Grid infrastructure and project development context", base: "light", layers: ["power"], records: ["projects"], camera: "globe" },
+  { id: "forest", label: "Land & nature", hint: "Tree cover loss, vegetation and protected areas", base: "s2cloudless", layers: ["forest_loss", "protected", "fires"], records: ["projects"] },
   { id: "live", label: "Live traffic", hint: "Aircraft, military traffic and crewed spacecraft", base: "tactical", layers: ["flights", "military", "sat_stations"], mode: "nvg" },
   { id: "orbit", label: "Orbital watch", hint: "Earth-observation, weather, navigation satellites and stations", base: "blackmarble", layers: ["sat_eo", "sat_weather", "sat_gnss", "sat_stations"], camera: "globe" },
 ];
@@ -30,7 +33,7 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
         <input type="checkbox" checked={on} onChange={onToggle} />
         <span className={styles.swatch} style={{ background: l.swatch }} />
         <span className={styles.layerLabel}>{l.label}</span>
-        {l.provenance && <span className={styles.tier} title={TIERS[l.provenance.tier].label} data-tier={l.provenance.tier}>T{l.provenance.tier}</span>}
+        {l.provenance && <span className={styles.tier} title={`Source tier: ${TIERS[l.provenance.tier].label}. Separate from freshness, coverage and fitness for this decision.`} data-tier={l.provenance.tier}>T{l.provenance.tier}</span>}
         {l.freshness && (l.freshness.status === "aging" || l.freshness.status === "stale" || l.freshness.status === "unavailable") && <span className={styles.fresh} data-fresh={l.freshness.status}>{FRESHNESS[l.freshness.status]}</span>}
         <span className={styles.count} data-state={state ?? "off"}>
           {state === "error" ? "unavailable" : state === "loading" ? "…" : on && status?.count != null ? (status.shown != null && status.shown < status.count ? `${status.shown.toLocaleString("en-US")}/${status.count.toLocaleString("en-US")}` : status.count.toLocaleString("en-US")) : on ? "on" : ""}
@@ -43,7 +46,7 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
           {l.legend && <p className={styles.legend}>{l.legend.map(g => <span key={g.color}><i style={{ background: g.color }} />{g.label}</span>)}</p>}
           {l.provenance ? (
             <dl className={styles.prov}>
-              <dt>Tier</dt><dd>{TIERS[l.provenance.tier].label}</dd>
+              <dt>Source tier</dt><dd>{TIERS[l.provenance.tier].label}</dd>
               <dt>Provider</dt><dd><a href={l.provenance.sourceUrl} target="_blank" rel="noreferrer">{l.provenance.provider}</a></dd>
               <dt>Coverage</dt><dd>{l.provenance.geography}</dd>
               <dt>Resolution</dt><dd>{l.provenance.resolution}</dd>
@@ -74,17 +77,22 @@ export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, r
   catalog: OfferedLayer[]; base: string; setBase: (id: string) => void; overlays: Set<string>; toggle: (id: string) => void; status: Record<string, FeedStatus>;
   records: RecordLayer[]; recordsOn: Record<string, boolean>; toggleRecord: (k: string) => void; dayOffset: number; setDayOffset: (n: number) => void; runMission: (id: string) => void; firmsKey: boolean;
 }) {
-  const groups = (Object.keys(GROUP_LABELS) as LayerGroup[]).filter(g => g !== "basemap");
+  const [layerQuery,setLayerQuery]=useState("");
+  const [activeOnly,setActiveOnly]=useState(false);
+  // Diligence groups first; movement and space tracking stay available at the end.
+  const groups:LayerGroup[]=["infrastructure","nature","hazards","earth","weather","movement","space"];
   const daily = catalog.some(l => l.daily && (l.id === base || overlays.has(l.id)));
   const now = new Date();
   return (
     <>
-      <p className={styles.panelTitle}>Missions</p>
-      <div className={styles.missions}>
-        {MISSIONS.map(m => <button key={m.id} type="button" title={m.hint} onClick={() => runMission(m.id)}>{m.label}</button>)}
-      </div>
+      <h2 className={styles.panelTitle}>Evidence layers</h2><p className={styles.note}>Add spatial context without changing your project filters.</p>
+      {catalog.some(l => l.id === "power") && (
+        <label className={styles.gridToggle}><input type="checkbox" checked={overlays.has("power")} onChange={() => toggle("power")} />
+          <span><strong>Power grid</strong><small>Transmission lines, substations and plants (OpenStreetMap). Proximity is not available capacity, queue position or connection rights.</small></span>
+          <span className={styles.count} data-state={!overlays.has("power") ? "off" : status.power?.error ? "error" : "ok"}>{!overlays.has("power") ? "" : status.power?.error ? "unavailable" : "on"}</span></label>
+      )}
 
-      <p className={styles.panelTitle}>Basemap</p>
+      <details className={styles.catalogGroup}><summary>Imagery &amp; map style</summary>
       <div className={styles.basemaps}>
         {catalog.filter(l => l.group === "basemap").map(l => (
           <button key={l.id} type="button" aria-pressed={base === l.id} onClick={() => setBase(l.id)} title={`${l.description} ${l.attribution}`}>
@@ -99,8 +107,8 @@ export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, r
         </label>
       )}
 
-      <p className={styles.panelTitle}>Regenera records</p>
-      {records.map(r => (
+      </details><details className={styles.catalogGroup}><summary>Record layers on the map</summary>
+      {records.filter(r => r.key === "hazards").map(r => (
         <label key={r.key} className={styles.layerRow}>
           <input type="checkbox" checked={recordsOn[r.key]} onChange={() => toggleRecord(r.key)} />
           <span className={styles.swatch} style={{ background: r.swatch }} />
@@ -109,15 +117,17 @@ export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, r
           <span />
         </label>
       ))}
+      <p className={styles.note}>Projects, opportunities, organizations, funding and signals are filtered in Explore.</p></details>
 
+      <label className={styles.catalogSearch}>Find evidence layers<input value={layerQuery} onChange={e=>setLayerQuery(e.target.value)} placeholder="Grid, water, forests, hazards, provider…" /></label><label className={styles.layerRow}><input type="checkbox" checked={activeOnly} onChange={e=>setActiveOnly(e.target.checked)} />Show enabled layers only</label>
+      <details className={styles.catalogGroup}><summary>Specialist exploration (aircraft, satellites, sensor looks)</summary><div className={styles.missions}>{MISSIONS.filter(m=>["live","orbit"].includes(m.id)).map(m=><button key={m.id} type="button" title={m.hint} onClick={()=>runMission(m.id)}>{m.label}</button>)}</div></details>
       {groups.map(g => {
-        const rows = catalog.filter(l => l.group === g);
+        const rows = catalog.filter(l => l.group === g && (!activeOnly || overlays.has(l.id)) && `${l.label} ${l.description} ${l.provenance?.provider??""}`.toLowerCase().includes(layerQuery.toLowerCase()));
         if (!rows.length) return null;
         return (
-          <div key={g}>
-            <p className={styles.panelTitle}>{GROUP_LABELS[g]}</p>
+          <details key={g} className={styles.catalogGroup} open={!!layerQuery || activeOnly || rows.some(l=>overlays.has(l.id))}><summary>{GROUP_LABELS[g]} <span>{rows.filter(l=>overlays.has(l.id)).length} active · {rows.length} available</span></summary>
             {rows.map(l => <Row key={l.id} l={l.id === "fires" && firmsKey ? { ...l, description: "NASA FIRMS VIIRS 375 m detections for the view (last 24 h)." } : l} on={overlays.has(l.id)} status={status[l.id]} onToggle={() => toggle(l.id)} dated={l.daily ? productDate(now, (l.lagDays ?? 1) + dayOffset) : undefined} />)}
-          </div>
+          </details>
         );
       })}
       <p className={styles.note}>Every layer is registered in Settings → Integrations with its licence and state; disabled or licence-required sources are never loaded. Live positions come from public sources and can lag or have gaps.</p>

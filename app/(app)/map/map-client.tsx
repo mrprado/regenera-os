@@ -10,9 +10,13 @@ import type { GeoJSONSource, MapGeoJSONFeature, RasterTileSource } from "maplibr
 import type { Feature, FeatureCollection, Geometry, Point as GeoPoint } from "geojson";
 import Link from "next/link";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, PersonStanding, Play, Scan, Search, Share2, Square, X } from "lucide-react";
+import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, PanelLeftOpen, PersonStanding, Play, Scan, Search, Share2, Square, X } from "lucide-react";
 import type { MapPayload } from "@/lib/map/features";
-import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, type MapRecord } from "@/lib/map/discovery";
+import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, typeCounts, type AreaGeometry, type Bounds, type MapRecord } from "@/lib/map/discovery";
+import { objectiveById, suggestion } from "@/lib/map/objectives";
+import { stageLabel } from "@/lib/projects/labels";
+import { REGENERA_ROLES } from "@/lib/projects/vocab";
+import { ExplorePanel, type ContextInfo, type Scope } from "./explore-panel";
 import { fitGeometry, flyToCoordinates } from "./camera";
 import SavedViews from "./saved-views";
 import type { StreetViewConfig } from "./street-view";
@@ -36,7 +40,7 @@ maplibregl.setWorkerUrl(withBase("/maplibre-gl-worker.js"));
 
 const C = { fern: "#141715", ink: "#141715", wax: "#f2f0e9", pollen: "#a45f3f", reed: "#a9c799", ember: "#c8553d", sky: "#7fb7d6" };
 const SECTOR_COLORS: [string, string][] = [["energy", C.pollen], ["infrastructure", C.sky], ["land_built_environment", C.reed], ["waste_resource_systems", "#c08a5a"], ["water_food_nature", "#5fb3a1"]];
-const TRIGGER_COLORS: [string, string][] = [["capital", C.pollen], ["crisis", C.ember], ["people", "#d9c7f0"], ["project", C.reed], ["regulatory", "#e59f5a"], ["commitment", "#5fb3a1"], ["event", C.wax]];
+const TRIGGER_COLORS: [string, string][] = [["capital", C.pollen], ["crisis", C.ember], ["people", "#887298"], ["project", C.reed], ["regulatory", "#A56E42"], ["commitment", "#5fb3a1"], ["event", C.wax]];
 
 type LayerKey = "projects" | "organizations" | "deals" | "triggers" | "procurement" | "hazards";
 const RECORD_KEYS: LayerKey[] = ["projects", "deals", "organizations", "triggers", "procurement", "hazards"];
@@ -59,7 +63,7 @@ function addDataLayers(map: maplibregl.Map) {
   map.addSource("organizations", { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 9 });
   const sectorColor = ["match", ["get", "sector"], ...SECTOR_COLORS.flat(), C.wax] as unknown as maplibregl.ExpressionSpecification;
   const triggerColor = ["match", ["get", "type"], ...TRIGGER_COLORS.flat(), C.wax] as unknown as maplibregl.ExpressionSpecification;
-  map.addLayer({ id: "hazards", type: "circle", source: "hazards", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 8, 11], "circle-color": ["match", ["get", "level"], "Red", "#d9412b", "#e59a3a"], "circle-opacity": 0.25, "circle-stroke-color": ["match", ["get", "level"], "Red", "#ff6a4d", "#f2b35a"], "circle-stroke-width": 1.5 } });
+  map.addLayer({ id: "hazards", type: "circle", source: "hazards", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 5, 8, 11], "circle-color": ["match", ["get", "level"], "Red", "#d9412b", "#e59a3a"], "circle-opacity": 0.25, "circle-stroke-color": ["match", ["get", "level"], "Red", "#ff6a4d", "#B98236"], "circle-stroke-width": 1.5 } });
   map.addLayer({ id: "organizations-cluster", type: "circle", source: "organizations", filter: ["has", "point_count"], paint: { "circle-color": "rgba(19,27,19,0.82)", "circle-stroke-color": C.reed, "circle-stroke-width": 1.5, "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 50, 24] } });
   map.addLayer({ id: "organizations-count", type: "symbol", source: "organizations", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 11 }, paint: { "text-color": C.wax } });
   map.addLayer({ id: "organizations", type: "circle", source: "organizations", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3.5, 10, 7], "circle-color": sectorColor, "circle-stroke-color": "rgba(16,32,28,0.9)", "circle-stroke-width": 1.2 } });
@@ -103,7 +107,7 @@ function MapClient() {
   const [init] = useState(() => decodeView(window.location.hash));
   // Deep link: /map?project=<id> fits the project's site, selects it and opens its intelligence panel.
   const [deepProject] = useState(() => new URLSearchParams(window.location.search).get("project"));
-  const initialFit = useRef(init.lat != null || new URLSearchParams(window.location.search).has("project"));
+  const initialFit = useRef(true); // Default camera belongs to device location, not portfolio auto-fit.
   const [mapObj, setMapObj] = useState<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [data, setData] = useState<MapPayload | null>(null);
@@ -112,8 +116,8 @@ function MapClient() {
   const [firmsKey, setFirmsKey] = useState(false);
   const [streetCfg, setStreetCfg] = useState<StreetViewConfig>({ provider: "none", key: "" });
   const [streetAt, setStreetAt] = useState<{ lat: number; lng: number } | null>(null);
-  const [base, setBase] = useState<string>(init.base ?? "esri");
-  const [overlays, setOverlays] = useState<Set<string>>(() => new Set(init.layers?.filter(l => !RECORD_KEYS.includes(l as LayerKey)) ?? ["quakes", "events", "cyclones"]));
+  const [base, setBase] = useState<string>(init.base ?? "light");
+  const [overlays, setOverlays] = useState<Set<string>>(() => new Set(init.layers?.filter(l => !RECORD_KEYS.includes(l as LayerKey)) ?? []));
   const [visible, setVisible] = useState<Record<LayerKey, boolean>>(() => {
     const fromHash = init.layers?.filter(l => RECORD_KEYS.includes(l as LayerKey));
     return Object.fromEntries(RECORD_KEYS.map(k => [k, fromHash?.length ? fromHash.includes(k) : true])) as Record<LayerKey, boolean>;
@@ -121,7 +125,7 @@ function MapClient() {
   const [status, setStatus] = useState<Record<string, FeedStatus>>({});
   const [dayOffset, setDayOffset] = useState(0);
   const [mode, setMode] = useState<Mode>((MODES.find(m => m.key === init.mode)?.key) ?? "normal");
-  const [hudOn, setHudOn] = useState(true);
+  const [hudOn, setHudOn] = useState(false);
   const [detectOn, setDetectOn] = useState(false);
   const [orbitOn, setOrbitOn] = useState(false);
   const [touring, setTouring] = useState(false);
@@ -137,14 +141,27 @@ function MapClient() {
   const [searchNote, setSearchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"intel" | "directory" | "library" | "workbench" | "none">("intel");
+  const [panel, setPanel] = useState<"intel" | "directory" | "library" | "workbench" | "none">("directory");
   const [wbMode, setWbMode] = useState<WbMode>("analysis");
-  const [wbProject, setWbProject] = useState("");
+  const [wbProject, setWbProject] = useState(() => new URLSearchParams(window.location.search).get("project") ?? "");
   const [showKeys, setShowKeys] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [country, setCountry] = useState("");
-  const [sector, setSector] = useState("");
-  const [topic, setTopic] = useState("");
+  // Business filters and the objective travel in the share link (x=…). They hold keys and record ids only; opening a link
+  // still goes through sign-in and workspace membership, so no private record detail is exposed by the URL.
+  const [extra] = useState<{ o?: string; p?: string; t?: string[]; lc?: string; c?: string; r?: string; s?: Scope; se?: string; to?: string }>(() => {
+    try { const x = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("x"); const v = x ? JSON.parse(x) : {}; return v && typeof v === "object" ? v : {}; } catch { return {}; }
+  });
+  const [workObjective, setWorkObjective] = useState(() => objectiveById(extra.o ?? "portfolio").id);
+  const [assetTypes, setAssetTypes] = useState<string[]>(() => (Array.isArray(extra.t) ? extra.t.filter(x => typeof x === "string") : []));
+  const [lifecycle, setLifecycle] = useState(extra.lc ?? "");
+  const [region, setRegion] = useState(extra.r ?? "");
+  const [scope, setScope] = useState<Scope>(extra.s === "view" || extra.s === "boundary" ? extra.s : "all");
+  const [viewBounds, setViewBounds] = useState<Bounds | null>(null);
+  const [contextId, setContextId] = useState(() => deepProject ?? extra.p ?? "");
+  const [contextGeom, setContextGeom] = useState<{ id: string; geometry: AreaGeometry | null; loading: boolean; error?: string } | null>(null);
+  const [country, setCountry] = useState(extra.c ?? "");
+  const [sector, setSector] = useState(extra.se ?? "");
+  const [topic, setTopic] = useState(extra.to ?? "");
   const [limit, setLimit] = useState(50);
   const satsRef = useRef<Record<string, Sat[]>>({});
   const feedRef = useRef<Record<string, FeatureCollection>>({});
@@ -178,7 +195,11 @@ function MapClient() {
   }, [mapReady, deepPoint, deepProject]);
 
   const records = useMemo(() => data ? mapRecords(data) : [], [data]);
-  const filtered = useMemo(() => filterRecords(records, { query, country, sector, topic }, visible), [records, query, country, sector, topic, visible]);
+  // One filter set for map and list. Chip counts use every OTHER active filter (types excluded) so each count is what selecting it adds.
+  const baseFilters = useMemo(() => ({ query, country, sector, topic, lifecycle, region, bounds: scope === "view" ? viewBounds : null, boundary: scope === "boundary" && contextGeom?.id === contextId ? contextGeom.geometry : null }), [query, country, sector, topic, lifecycle, region, scope, viewBounds, contextGeom, contextId]);
+  const filtered = useMemo(() => filterRecords(records, { ...baseFilters, types: assetTypes }, visible), [records, baseFilters, assetTypes, visible]);
+  const typeStats = useMemo(() => typeCounts(filterRecords(records, baseFilters, visible)), [records, baseFilters, visible]);
+  const recordCounts = useMemo(() => { const all = filterRecords(records, { ...baseFilters, types: assetTypes }, {}); return Object.fromEntries(RECORD_LAYERS.map(l => [l, all.filter(r => r.layer === l).length])); }, [records, baseFilters, assetTypes]);
   const onSelectProject = useCallback((props: Record<string, unknown>, lngLat: [number, number]) => setSelected({ layer: "projects", props, lngLat }), []);
   const atlas = useAtlas(mapRef, mapReady, onSelectProject);
   const wb = useWorkbench(mapObj, wbProject);
@@ -197,7 +218,7 @@ function MapClient() {
     get<FeatureCollection>("/api/map/hazards").then(setHazards).catch(() => { if (!controller.signal.aborted) setStatus(s => ({ ...s, hazards: { error: "GDACS alerts unavailable" } })); });
     get<{ layers: OfferedLayer[]; firmsKey: boolean; streetView?: StreetViewConfig }>("/api/map/catalog").then(c => {
       setCatalog(c.layers); setFirmsKey(c.firmsKey); if (c.streetView) setStreetCfg(c.streetView);
-      if (!init.base && c.layers.some(l => l.id === "esri")) setBase("esri");
+      if (!init.base) setBase(c.layers.some(l => l.id === "light") ? "light" : c.layers.find(l => l.group === "basemap")?.id ?? "tactical");
     }).catch(e => { if (!controller.signal.aborted) setMapError(`Layer catalogue unavailable (${e.message}).`); });
     return () => controller.abort();
   }, [init.base]);
@@ -210,7 +231,7 @@ function MapClient() {
     try {
       map = new maplibregl.Map({
         container: container.current, style: baseStyle(),
-        center: v.lat != null ? [v.lng!, v.lat] : [-30, 20], zoom: v.zoom ?? 1.9, bearing: v.bearing ?? 0, pitch: v.pitch ?? 0,
+        center: v.lat != null ? [v.lng!, v.lat] : [-30, 20], zoom: v.zoom ?? 2.6, bearing: v.bearing ?? 0, pitch: v.pitch ?? 0,
         minZoom: 0.6, maxPitch: 85, attributionControl: false, renderWorldCopies: false,
       });
     } catch {
@@ -218,6 +239,21 @@ function MapClient() {
       return;
     }
     mapRef.current = map;
+    let locationCancelled=false;
+    let userMoved=false;
+    const markUserMove=(event:{originalEvent?:unknown})=>{if(event.originalEvent)userMoved=true;};
+    map.on('movestart',markUserMove);
+    const params=new URLSearchParams(window.location.search);
+    if(!params.has('project')&&!params.has('lat')){
+      if(navigator.geolocation)navigator.geolocation.getCurrentPosition(position=>{
+        if(locationCancelled||userMoved)return;
+        const center:[number,number]=[position.coords.longitude,position.coords.latitude];
+        const locate=()=>{if(!locationCancelled&&!userMoved)map.easeTo({center,zoom:2.6,pitch:0,bearing:0,duration:reducedMotion()?0:900});};
+        if(map.isStyleLoaded())locate();else map.once('load',locate);
+      },()=>{if(!locationCancelled){setSearchNote('Location unavailable. Search a place or allow browser location access to center Atlas near you.');setTimeout(()=>setSearchNote(n=>n==='Location unavailable. Search a place or allow browser location access to center Atlas near you.'?null:n),8000);}},{enableHighAccuracy:false,maximumAge:60000,timeout:10000});
+      else queueMicrotask(()=>setSearchNote('Device location is unavailable. Search a place to center Atlas.'));
+    }
+
     if (process.env.NODE_ENV !== "production") (window as unknown as { __atlas?: maplibregl.Map }).__atlas = map;
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
@@ -251,7 +287,7 @@ function MapClient() {
       setMapObj(map);
     });
     map.once("load", () => container.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
-    return () => { map.remove(); mapRef.current = null; setMapObj(null); };
+    return () => { locationCancelled=true;map.off("movestart",markUserMove);map.remove(); mapRef.current = null; setMapObj(null); };
   }, [init]);
 
   // Animation: trigger pulse, cyclone spin, orbit.
@@ -462,7 +498,7 @@ function MapClient() {
     const map = mapRef.current;
     if (!mapReady || !map) return;
     const wide = window.innerWidth > 820;
-    map.easeTo({ padding: { left: wide && panel !== "none" ? 340 : 0, right: wide && selected ? 380 : 0, top: 0, bottom: 0 }, duration: reducedMotion() ? 0 : 500 });
+    map.easeTo({ padding: { left: wide && panel !== "none" ? 380 : 0, right: wide && selected ? 380 : 0, top: 0, bottom: 0 }, duration: reducedMotion() ? 0 : 500 });
   }, [mapReady, panel, selected]);
 
   // Share state in the URL hash (replace, not push).
@@ -475,14 +511,45 @@ function MapClient() {
       timer = setTimeout(() => {
         const c = map.getCenter();
         const layers = [...overlays, ...RECORD_KEYS.filter(k => visible[k])];
-        const hash = encodeView({ lng: c.lng, lat: c.lat, zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), base, layers, mode, track: tracked ? `${tracked.layer}|${tracked.id}` : undefined });
+        const x = { o: workObjective, p: contextId || undefined, t: assetTypes.length ? assetTypes : undefined, lc: lifecycle || undefined, c: country || undefined, r: region || undefined, s: scope !== "all" ? scope : undefined, se: sector || undefined, to: topic || undefined };
+        const hash = `${encodeView({ lng: c.lng, lat: c.lat, zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), base, layers, mode, track: tracked ? `${tracked.layer}|${tracked.id}` : undefined })}&x=${encodeURIComponent(JSON.stringify(x))}`;
         history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${hash}`);
       }, 500);
     };
     write();
     map.on("moveend", write);
     return () => { map.off("moveend", write); clearTimeout(timer); };
-  }, [mapReady, overlays, visible, base, mode, tracked]);
+  }, [mapReady, overlays, visible, base, mode, tracked, workObjective, contextId, assetTypes, lifecycle, country, region, scope, sector, topic]);
+
+  // Current map area: follows the camera after each move while that scope is active.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || scope !== "view") return;
+    const read = () => { const b = map.getBounds(); setViewBounds({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() }); };
+    read();
+    map.on("moveend", read);
+    return () => { map.off("moveend", read); };
+  }, [mapReady, scope]);
+
+  // Project / site context: load its recorded site (point and boundary), carry it into the workbench, fit when chosen here.
+  const contextChosen = useRef(false);
+  useEffect(() => {
+    if (!contextId) return;
+    let live = true;
+    fetch(withBase(`/api/map/site?projectId=${encodeURIComponent(contextId)}`)).then(r => (r.ok ? r.json() as Promise<{ project?: { lat: number | null; lng: number | null; geometry: string | null } }> : Promise.reject(new Error(String(r.status))))).then(s => {
+      if (!live) return;
+      let g: Geometry | null = null;
+      try { const j = s.project?.geometry ? JSON.parse(s.project.geometry) : null; g = j?.type === "Feature" ? j.geometry : j; } catch { g = null; }
+      const area = g && (g.type === "Polygon" || g.type === "MultiPolygon") ? (g as AreaGeometry) : null;
+      setContextGeom({ id: contextId, geometry: area, loading: false });
+      const map = mapRef.current;
+      if (map && contextChosen.current) {
+        if (g) fitGeometry(map, g);
+        else if (s.project?.lat != null && s.project.lng != null) flyToCoordinates(map, s.project.lat, s.project.lng, 14);
+      }
+    }).catch(e => { if (live) setContextGeom({ id: contextId, geometry: null, loading: false, error: (e as Error).message }); });
+    return () => { live = false; };
+  }, [contextId]);
 
   const toggleOverlay = useCallback((id: string) => setOverlays(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }), []);
 
@@ -503,7 +570,7 @@ function MapClient() {
   }, []);
   const resetGlobe = useCallback(() => {
     setTracked(null); setTarget(null); setSelected(null);
-    mapRef.current?.flyTo({ center: [-30, 20], zoom: 1.7, pitch: 0, bearing: 0, duration: reducedMotion() ? 0 : 2000 });
+    mapRef.current?.flyTo({ center: [-30, 20], zoom: 2.6, pitch: 0, bearing: 0, duration: reducedMotion() ? 0 : 2000 });
   }, []);
   const tilt = () => { const map = mapRef.current; if (map) map.easeTo({ pitch: map.getPitch() > 10 ? 0 : 60, duration: 900 }); };
   const northUp = () => mapRef.current?.easeTo({ bearing: 0, duration: 800 });
@@ -515,6 +582,30 @@ function MapClient() {
     mapRef.current?.fitBounds(bounds, { padding: 100, maxZoom: 10, duration: reducedMotion() ? 0 : 1400 });
   }, [filtered]);
 
+  const objective = objectiveById(workObjective);
+  const offered = useMemo(() => new Set(catalog.map(l => l.id)), [catalog]);
+  const sug = suggestion(objective, offered, overlays);
+  const nameOf = (id: string) => byId.get(id)?.label ?? id;
+  const suggestionText = { add: sug.add.map(nameOf), already: sug.already.map(nameOf), unavailable: sug.unavailable };
+  const canApply = sug.add.length > 0 || (!!sug.base && sug.base !== base) || objective.records.some(k => visible[k as LayerKey] === false);
+  // Adds the objective's layers and record types; never removes what the person enabled.
+  const applySuggestion = () => {
+    setOverlays(cur => new Set([...cur, ...sug.add]));
+    if (sug.base) setBase(sug.base);
+    setVisible(v => ({ ...v, ...Object.fromEntries(objective.records.map(k => [k, true])) }) as Record<LayerKey, boolean>);
+  };
+  const clearFilters = () => { setQuery(""); setCountry(""); setRegion(""); setSector(""); setTopic(""); setAssetTypes([]); setLifecycle(""); setScope("all"); setContextId(""); setVisible(v => ({ ...v, ...Object.fromEntries(RECORD_LAYERS.map(k => [k, true])) }) as Record<LayerKey, boolean>); setLimit(50); };
+  const ctxGeom = contextGeom?.id === contextId ? contextGeom : contextId ? { id: contextId, geometry: null, loading: true } : null;
+  const ctxFeature = contextId ? data?.projects.features.find(f => String(f.properties.id) === contextId) : undefined;
+  const contextInfo: ContextInfo = contextId ? (() => {
+    const p = ctxFeature?.properties ?? {};
+    const gaps = [!ctxFeature ? "location not recorded (cannot be placed on the map)" : null, ctxGeom && !ctxGeom.loading && !ctxGeom.geometry ? "no site boundary recorded" : null,
+      ctxGeom && "error" in ctxGeom && ctxGeom.error ? `site record unavailable (${ctxGeom.error})` : null, ctxFeature && !p.assetClass && !p.technology ? "asset type not recorded" : null].filter(Boolean) as string[];
+    return { id: contextId, name: String(p.name ?? projectChoices.find(x => x.id === contextId)?.name ?? "Selected project"), stage: p.stage ? stageLabel(String(p.stage)) : null,
+      location: [p.location, p.country].filter(Boolean).join(", "), role: p.regeneraRole ? REGENERA_ROLES[p.regeneraRole as keyof typeof REGENERA_ROLES] ?? String(p.regeneraRole) : null,
+      hasBoundary: !!ctxGeom?.geometry, loading: !!ctxGeom?.loading, gaps };
+  })() : null;
+
   const runMission = useCallback((id: string) => {
     const m = MISSIONS.find(x => x.id === id);
     if (!m) return;
@@ -524,8 +615,12 @@ function MapClient() {
     else setVisible(Object.fromEntries(RECORD_KEYS.map(k => [k, false])) as Record<LayerKey, boolean>);
     setMode((m.mode as Mode) ?? "normal");
     if (m.camera === "globe") mapRef.current?.flyTo({ center: [-20, 18], zoom: 1.6, pitch: 0, bearing: 0, duration: reducedMotion() ? 0 : 2200 });
-    if (m.camera === "fit") setTimeout(fitResults, 50);
-  }, [byId, base, fitResults]);
+    if (m.camera === "fit") {
+      const matches=records.filter(r=>(!m.records || m.records.includes(r.layer)) && (!country || r.country===country));
+      if(matches.length){const first=matches[0].feature.geometry.coordinates;const bounds=matches.reduce((b,r)=>b.extend(r.feature.geometry.coordinates),new maplibregl.LngLatBounds(first,first));mapRef.current?.fitBounds(bounds,{padding:{left:380,right:60,top:90,bottom:80},maxZoom:11,duration:reducedMotion()?0:900});}
+      else setSearchNote("No located records for this objective in the selected market. Search a site or place to begin.");
+    }
+  }, [byId, base, records,country]);
 
   // Cinematic tour of projects: fly, orbit, next.
   useEffect(() => {
@@ -621,12 +716,12 @@ function MapClient() {
   ];
   const detectLayers = useMemo(() => [
     { id: "ov-flights-icon", color: "#7fe3ff", size: 22, label: (p: Record<string, unknown>) => String(p.callsign ?? p.id ?? "").toUpperCase() },
-    { id: "ov-military-icon", color: "#f2b35a", size: 24, label: (p: Record<string, unknown>) => `MIL ${String(p.callsign ?? p.id ?? "").toUpperCase()}` },
+    { id: "ov-military-icon", color: "#B98236", size: 24, label: (p: Record<string, unknown>) => `MIL ${String(p.callsign ?? p.id ?? "").toUpperCase()}` },
     ...["sat_eo", "sat_weather", "sat_stations", "sat_gnss"].map(id => ({ id: `ov-${id}-pt`, color: "#9dff8a", size: 18, label: (p: Record<string, unknown>) => `${p.norad} ${String(p.name ?? "").slice(0, 16)}` })),
     { id: "ov-quakes-pt", color: "#ff9f40", size: 26, label: (p: Record<string, unknown>) => `EQ M${p.mag}` },
     { id: "ov-events-pt", color: "#c07cff", size: 22, label: (p: Record<string, unknown>) => String(p.categoryLabel ?? "EVENT").toUpperCase() },
     { id: "ov-cyclones-icon", color: "#5ad1ff", size: 40, label: (p: Record<string, unknown>) => `TC ${String(p.name ?? "").toUpperCase()}` },
-    { id: "projects", color: "#f2d25c", size: 30, label: (p: Record<string, unknown>) => `PROJ ${String(p.name ?? "").toUpperCase().slice(0, 22)}` },
+    { id: "projects", color: "#B9943F", size: 30, label: (p: Record<string, unknown>) => `PROJ ${String(p.name ?? "").toUpperCase().slice(0, 22)}` },
   ], []);
   const live = activeOverlays.some(l => l.kind === "feed" || l.kind === "satellites");
   const baseLabel = baseLayer?.label ?? "Tactical vector";
@@ -646,15 +741,17 @@ function MapClient() {
           <input ref={searchRef} value={query} onChange={e => { setQuery(e.target.value); setSearchNote(null); if (panel !== "directory") setPanel("directory"); setLimit(50); }} placeholder="Search records, places or lat, lng  ( / )" aria-label="Search the map" />
           {query && <button type="button" onClick={() => { setQuery(""); setSearchNote(null); }} aria-label="Clear search"><X size={14} /></button>}
         </form>
-        {searchNote && <p className={`${styles.glass} ${styles.searchNote}`} role="status">{searchNote}</p>}
+        {searchNote && <p className={`${styles.glass} ${styles.searchNote}`} role="status">{searchNote} <button type="button" className={styles.noteClose} onClick={() => setSearchNote(null)} aria-label="Dismiss message"><X size={13} aria-hidden /></button></p>}
       </div>
       <SavedViews />
       {streetAt && <Suspense fallback={null}><StreetView lat={streetAt.lat} lng={streetAt.lng} config={streetCfg} onClose={() => setStreetAt(null)} /></Suspense>}
 
+      {panel === "none" && <button type="button" className={styles.reopen} onClick={() => setPanel("directory")} aria-label="Open the explore panel"><PanelLeftOpen size={16} aria-hidden /> Explore</button>}
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
-          <div className={styles.panelTabs}>
-            {(["intel", "workbench", "directory", "library"] as const).map(p => <button key={p} type="button" aria-pressed={panel === p} onClick={() => setPanel(p)}>{p === "intel" ? "Layers" : p === "workbench" ? "Workbench" : p[0].toUpperCase() + p.slice(1)}</button>)}
+          <div className={styles.panelTabs} role="tablist" aria-label="Panel sections">
+            {(["directory", "intel", "workbench", "library"] as const).map(p => <button key={p} type="button" role="tab" aria-selected={panel === p} onClick={() => setPanel(p)}>{p === "directory" ? "Explore" : p === "intel" ? `Evidence layers${activeOverlays.length ? ` (${activeOverlays.length})` : ""}` : p === "workbench" ? "Site diligence" : "Drawing & saved"}</button>)}
+            {panel !== "directory" && <button type="button" className={styles.iconBtn} onClick={() => setPanel("none")} aria-label="Collapse panel"><X size={14} /></button>}
           </div>
           {panel === "intel" && (
             <IntelPanel catalog={catalog} base={base} setBase={setBase} overlays={overlays} toggle={toggleOverlay} status={status} firmsKey={firmsKey}
@@ -663,28 +760,23 @@ function MapClient() {
           )}
           {panel === "library" && <LibraryPanel atlas={atlas} />}
           {panel === "workbench" && <WorkbenchPanel wb={wb} mode={wbMode} setMode={setWbMode} projects={projectChoices} projectId={wbProject} setProjectId={setWbProject} />}
+          {panel === "directory" && <ExplorePanel
+            objective={objective} setObjective={setWorkObjective} suggestionText={suggestionText} applySuggestion={applySuggestion} canApply={canApply}
+            projects={projectChoices} contextId={contextId} setContextId={id => { contextChosen.current = true; setContextId(id); if (id) setWbProject(id); else if (scope === "boundary") setScope("all"); setLimit(50); }} context={contextInfo} openWorkbench={() => setPanel("workbench")} unmappedProjects={data?.counts.unmappedProjects ?? 0}
+            typeCounts={typeStats.counts} unclassified={typeStats.unclassified} types={assetTypes} toggleType={t => { setAssetTypes(a => (a.includes(t) ? a.filter(x => x !== t) : [...a, t])); setLimit(50); }}
+            lifecycle={lifecycle} setLifecycle={v => { setLifecycle(v); setLimit(50); }} countries={discoveryOptions(records, "country")} country={country} setCountry={v => { setCountry(v); setRegion(""); setLimit(50); }}
+            regions={discoveryOptions(country ? records.filter(r => r.country === country) : records, "region")} region={region} setRegion={v => { setRegion(v); setLimit(50); }} scope={scope} setScope={s => { setScope(s); setLimit(50); }}
+            recordCounts={recordCounts} visible={visible} toggleRecord={k => setVisible(v => ({ ...v, [k]: !v[k as LayerKey] }))}
+            query={query} clearQuery={() => setQuery("")} filtered={filtered} total={records.length} limit={limit} more={() => setLimit(n => n + 50)}
+            onPick={flyTo} selectedKey={selected ? `${selected.layer}:${String(selected.props.kind ?? "")}:${String(selected.props.source ?? "")}:${String(selected.props.id)}` : null} swatch={l => LAYER_META[l as LayerKey]?.swatch ?? "#999"}
+            clearFilters={clearFilters} fitResults={fitResults} canFit={mapReady && filtered.length > 0} collapse={() => setPanel("none")}
+            loadNote={data ? null : loadError ? "Records unavailable." : "Loading records…"} />}
           {panel === "directory" && <>
-            <div className={styles.filters}>
-              <label>Country<select value={country} onChange={e => { setCountry(e.target.value); setLimit(50); }}><option value="">All countries</option>{discoveryOptions(records, "country").map(v => <option key={v} value={v}>{v}</option>)}</select></label>
+            <details className={styles.catalogGroup}><summary>More filters: sector and territorial system</summary><div className={styles.filters}>
               <label>Sector<select value={sector} onChange={e => { setSector(e.target.value); setLimit(50); }}><option value="">All sectors</option>{discoveryOptions(records, "sector").map(v => <option key={v} value={v}>{SECTORS[v as keyof typeof SECTORS] ?? v.replace(/_/g, " ")}</option>)}</select></label>
-              <label>Topic<select value={topic} onChange={e => { setTopic(e.target.value); setLimit(50); }}><option value="">All recorded topics</option>{discoveryOptions(records, "topic").map(v => <option key={v} value={v}>{TERRITORIAL_SYSTEMS[v as keyof typeof TERRITORIAL_SYSTEMS] ?? v.replace(/_/g, " ")}</option>)}</select></label>
-            </div>
-            <div className={styles.panelTabs}>
-              <button type="button" onClick={() => { setQuery(""); setCountry(""); setSector(""); setTopic(""); setLimit(50); }}>Clear filters</button>
-              <button type="button" disabled={!mapReady || !filtered.length} onClick={fitResults}>Fit results</button>
-            </div>
-            <p className={styles.note} role="status">{data ? `${filtered.length} of ${records.length} located records · enabled layers` : loadError ? "Records unavailable" : "Loading records…"}</p>
-            {data && filtered.length === 0 && <p className={styles.note}>No matching records. Press Enter to search places, or clear filters.</p>}
-            <ul className={styles.directory} aria-label="Map records">
-              {filtered.slice(0, limit).map(m => <li key={m.key}>
-                <button type="button" onClick={() => flyTo(m)} aria-pressed={selected?.layer === m.layer && selected?.props.id === m.feature.properties.id}>
-                  <span className={styles.swatch} style={{ background: LAYER_META[m.layer].swatch }} aria-hidden />
-                  <span><strong>{m.label}</strong><small>{LAYER_META[m.layer].label}{m.location ? ` · ${m.location}` : ""}</small></span>
-                </button>
-              </li>)}
-            </ul>
-            {filtered.length > limit && <button className={styles.more} type="button" onClick={() => setLimit(n => n + 50)}>Show 50 more</button>}
-            {data && (data.counts.unmapped > 0 || data.counts.unmappedProjects > 0) && <p className={styles.note}>{data.counts.unmapped} organizations and {data.counts.unmappedProjects} projects have missing or invalid coordinates. <Link href="/companies">Review organizations</Link> · <Link href="/projects">Review projects</Link></p>}
+              <label>Territorial system<select value={topic} onChange={e => { setTopic(e.target.value); setLimit(50); }}><option value="">All recorded systems</option>{discoveryOptions(records, "topic").map(v => <option key={v} value={v}>{TERRITORIAL_SYSTEMS[v as keyof typeof TERRITORIAL_SYSTEMS] ?? v.replace(/_/g, " ")}</option>)}</select></label>
+            </div></details>
+            {data && data.counts.unmapped > 0 && <p className={styles.note}>{data.counts.unmapped} organizations have missing or invalid coordinates. <Link href="/companies">Review organizations</Link></p>}
             {data && <p className={styles.note}>Events from {data.since} onward · snapshot {data.generatedAt.slice(0, 16).replace("T", " ")} UTC. Record updates do not imply verification.</p>}
           </>}
           {loadError && <p className={styles.error} role="alert">{loadError}</p>}
@@ -731,6 +823,21 @@ function MapClient() {
           {Boolean(selected.props.locationBasis) && <p className={styles.note}>{String(selected.props.locationBasis)}</p>}
           {Boolean(selected.props.source) && !byId.has(selected.layer) && <p className={styles.note}>Source: {String(selected.props.source)}</p>}
           {Boolean(selected.props.updatedAt) && <p className={styles.note}>Record updated {String(selected.props.updatedAt).slice(0, 10)} · verification is recorded separately.</p>}
+          {(() => {
+            const id = String(selected.props.id ?? "");
+            const links: [string, string][] = selected.layer === "projects" ? [["Risk & evidence", `/projects/${id}?tab=risk`], ["Capital", `/projects/${id}?tab=capital`]]
+              : selected.layer === "organizations" ? [["Open organization", `/companies/${id}`]]
+              : selected.layer === "deals" ? [["Open opportunity", `/deals/${id}`]]
+              : selected.layer === "triggers" ? [["Open signal", `/triggers/${id}`]]
+              : selected.layer === "procurement" && typeof selected.props.href === "string" ? [["Open funding record", selected.props.href]] : [];
+            return links.length || selected.layer === "projects" ? (
+              <p className={styles.links} aria-label="Actions">
+                {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+                {selected.layer === "projects" && <button type="button" onClick={() => { setWbProject(id); setContextId(id); setPanel("workbench"); }}>Open site workbench</button>}
+              </p>
+            ) : null;
+          })()}
+          <p className={styles.note}>Commitments, funding, rights, outreach and public claims are proposed for human approval in their workspace; nothing here executes them.</p>
         </aside>
       )}
 
