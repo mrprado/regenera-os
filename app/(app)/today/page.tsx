@@ -58,6 +58,10 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
+      <section className={t.lens} aria-labelledby="lens-h">
+        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
+        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
+      </section>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>
         <p className={t.brandLine}>REGENERA OS · ADVANCING A REGENERATIVE ECONOMY</p>
@@ -173,12 +177,6 @@ async function Desk({user, now, fullOpen, context}: {user: Awaited<ReturnType<ty
       <nav className={t.shortcuts} aria-label="Move work forward">
         {SHORTCUTS.map(x => <Link key={x.href} href={x.href} className={t.shortcut}><b>{x.label}</b><span>{x.body}</span></Link>)}
       </nav>
-
-
-      <section className={t.lens} aria-labelledby="lens-h">
-        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
-        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
-      </section>
 
 
       <div className={t.compactCols}>
