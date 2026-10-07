@@ -5,9 +5,11 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import {
-  contacts, equipment, landControls, ontologyMatches, organizations, permitDependencies, permits, projectEquipment, projectParties, projectQueueLinks,
+  contacts, equipment, landControls, ontologyMatches, organizations, permitDependencies, permits, placeFacts, projectEquipment, projectParties, projectQueueLinks,
   queueProjects, sanctionsChecks, stakeholders, type projects,
 } from "@/db/schema";
+import { COUNTRY_NOTES, LANES, matchProgrammes, programmesCsv } from "@/lib/capital/programmes";
+import { toGwh, yieldCheck } from "@/lib/diligence/yield";
 import type { UserScope } from "@/lib/db/scoped";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { dataRoom } from "@/lib/diligence/dataroom";
@@ -176,7 +178,7 @@ export async function StakeholdersTab({ project, scope }: { project: Project; sc
 export async function DiligenceTab({ project, scope }: { project: Project; scope: UserScope }) {
   const db = appDb();
   const gate = gateOf(project.stage);
-  const [room, fields, parties, permitRows, deps] = await Promise.all([
+  const [room, fields, parties, permitRows, deps, pv] = await Promise.all([
     dataRoom(db, scope.mandateIds, project.id),
     valuesBySource(db, scope.mandateIds, "project", project.id),
     db.select({ role: projectParties.role, orgId: projectParties.orgId, contactId: projectParties.contactId, orgName: organizations.name, contactName: contacts.fullName }).from(projectParties)
@@ -184,7 +186,11 @@ export async function DiligenceTab({ project, scope }: { project: Project; scope
       .where(and(eq(projectParties.projectId, project.id), mandateCondition(scope, projectParties.mandateId))),
     db.select().from(permits).where(and(eq(permits.projectId, project.id), mandateCondition(scope, permits.mandateId))),
     db.select().from(permitDependencies).where(and(eq(permitDependencies.projectId, project.id), mandateCondition(scope, permitDependencies.mandateId))),
+    db.select({ key: placeFacts.key, numeric: placeFacts.numeric }).from(placeFacts).where(and(eq(placeFacts.projectId, project.id), inArray(placeFacts.key, ["pv_specific_yield", "pv_specific_yield_tracking"]))),
   ]);
+  const energy = fields.find(f => f.field === "annual_energy")?.canonical;
+  const capMw = project.capacity && /^mw/i.test(project.capacityUnit ?? "") ? project.capacity : null;
+  const yc = capMw && energy ? yieldCheck(capMw, toGwh(energy.value, energy.unit) ?? 0, pv.find(x => x.key === "pv_specific_yield")?.numeric ?? null, pv.find(x => x.key === "pv_specific_yield_tracking")?.numeric ?? null) : null;
   const partyIds = parties.map(p => p.orgId ?? p.contactId).filter((x): x is string => !!x);
   const checks = partyIds.length ? await db.select().from(sanctionsChecks).where(and(inArray(sanctionsChecks.entityId, partyIds.slice(0, 90)), mandateCondition(scope, sanctionsChecks.mandateId))).orderBy(desc(sanctionsChecks.createdAt)) : [];
   const latest = (id: string) => checks.find(c => c.entityId === id) ?? null;
@@ -202,6 +208,14 @@ export async function DiligenceTab({ project, scope }: { project: Project; scope
         {room.map(f => <tr key={f.key}><td>{f.label}</td><td className={ui.num}>{f.final}</td><td className={ui.num}>{f.drafts}</td><td className={ui.sub}>{f.records.join("; ") || "—"}</td><td><span className={`${ui.chip} ${tone(f.state === "filled", f.state === "empty")}`}>{f.state === "filled" ? "Filled" : f.state === "draft_only" ? "Draft / records only" : "Empty"}</span></td></tr>)}
       </tbody></table>
       <p className={ui.sub}>Built from the <Link href="/documents">documents register</Link> (approved or executed = final) and project records. Add documents with this project selected to fill a folder.</p>
+
+      <p className={r.panelTitle} style={{ marginTop: 24 }}>Energy yield check</p>
+      {!yc ? <p className={r.empty}>{!capMw ? "Needs capacity in MW." : "Record the stated annual energy as a claim with field annual_energy (unit GWh or MWh) and its source, and build the place profile, to compare it with PVGIS."}</p> :
+        <div className={r.read}>
+          <span>Stated {yc.statedKwhPerKw.toLocaleString("en-US")} kWh/kW per year · PVGIS fixed {yc.fixed ? Math.round(yc.fixed).toLocaleString("en-US") : "—"} · single-axis tracking {yc.tracking ? Math.round(yc.tracking).toLocaleString("en-US") : "—"}</span>
+          <span className={`${ui.chip} ${tone(yc.reading === "consistent_fixed", yc.reading === "above_tracking")}`}>{yc.reading === "above_tracking" ? "Above tracking potential" : yc.reading === "needs_tracking" ? "Needs tracking or DC oversizing" : yc.reading === "below_fixed" ? "Below fixed potential" : yc.reading === "no_reference" ? "No reference yet" : "Consistent with resource"}</span>
+          <p className={ui.sub}>{yc.question}</p>
+        </div>}
 
       <p className={r.panelTitle} style={{ marginTop: 24 }}>Values by source</p>
       {fields.length === 0 ? <p className={r.empty}>No field-level claims on this project yet. Claims with a field and value (Overview → claims) appear here source by source.</p> :
@@ -245,6 +259,7 @@ export async function MatchesTab({ project, scope, kind }: { project: Project; s
     db.select({ m: ontologyMatches, name: organizations.name }).from(ontologyMatches).innerJoin(organizations, eq(organizations.id, ontologyMatches.orgId)).where(and(eq(ontologyMatches.projectId, project.id), mandateCondition(scope, ontologyMatches.mandateId), inArray(ontologyMatches.status, ["shortlisted", "dismissed"]))),
   ]);
   const status = new Map(decided.filter(d => d.m.kind === k).map(d => [d.m.orgId, d.m.status]));
+  const programmes = matchProgrammes(project);
   return <div className={r.grid}>
     <section className={r.panel}>
       <p className={r.panelTitle}>Matches: {MATCH_KINDS[k]}</p>
@@ -257,5 +272,17 @@ export async function MatchesTab({ project, scope, kind }: { project: Project; s
       </article>)}
     </section>
     <aside><section className={r.panel}><p className={r.panelTitle}>Elsewhere</p><p className={ui.sub}>Capital matching with private profiles is on the <Link href={`/projects/${project.id}?tab=capital`}>Capital</Link> tab; grants on <Link href={`/projects/${project.id}?tab=funding`}>Funding</Link>.</p></section></aside>
+    <section className={r.panel} style={{ gridColumn: "1 / -1" }}>
+      <p className={r.panelTitle}>Public capital programmes ({programmes.length})</p>
+      <p className={ui.sub}>Institutions whose public mandate covers this country and whose capital lanes fit the project&apos;s stage. Institutions only, no people; every entry lists what to verify before any approach, and outreach stays in the approval queue.</p>
+      {project.country && COUNTRY_NOTES[project.country.toUpperCase()] && <p className={r.read}><b>{project.country.toUpperCase()}:</b> {COUNTRY_NOTES[project.country.toUpperCase()]}</p>}
+      {programmes.length === 0 ? <p className={r.empty}>{project.country ? "No catalogued programme lists this country yet." : "Set the project's country to match programmes."}</p> :
+        <table className={ui.table}><thead><tr><th>Programme</th><th>Lanes</th><th>Instruments</th><th>Criteria</th><th>Verify</th></tr></thead><tbody>
+          {programmes.map(m => <tr key={m.programme.key}><td><a href={m.programme.url} target="_blank" rel="noreferrer"><b>{m.programme.name}</b></a><div className={ui.sub}>{m.programme.owner}</div></td>
+            <td className={ui.sub}>{m.programme.lanes.map(l => LANES[l].split(" (")[0]).join(", ")}</td><td className={ui.sub}>{m.programme.instruments}</td>
+            <td className={ui.sub}>{m.met.join(" · ")}{m.failed.length ? <><br />Failed: {m.failed.join(" · ")}</> : null}</td><td className={ui.sub}>{m.verify.join(" · ") || "—"}</td></tr>)}
+        </tbody></table>}
+      <p className={ui.sub}><a download={`capital-programmes-${project.country ?? "all"}.csv`} href={`data:text/csv;charset=utf-8,${encodeURIComponent(programmesCsv(programmes.map(m => m.programme)))}`}>Download as CSV</a> to import into Network as organizations.</p>
+    </section>
   </div>;
 }

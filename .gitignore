@@ -50,3 +50,6 @@ next-env.d.ts
 # TypeScript incremental build cache
 *.tsbuildinfo
 !.env.example
+
+# Confidential working files (third-party materials under NDA); never committed
+private/

@@ -20,19 +20,24 @@ export class LicenseRequired extends Error {
 // ---------- PVGIS (EU JRC): PV potential for a site, server-side only ----------
 export const zPvgis = z.object({
   inputs: z.object({ location: z.object({ latitude: z.number(), longitude: z.number() }).passthrough(), mounting_system: z.unknown().optional() }).passthrough(),
-  outputs: z.object({ totals: z.object({ fixed: z.object({ E_y: z.number(), "H(i)_y": z.number().optional(), SD_y: z.number().optional() }).passthrough() }).passthrough(), monthly: z.unknown().optional() }).passthrough(),
+  outputs: z.object({ totals: z.object({ fixed: z.object({ E_y: z.number(), "H(i)_y": z.number().optional(), SD_y: z.number().optional() }).passthrough(), inclined_axis: z.object({ E_y: z.number() }).passthrough().optional() }).passthrough(), monthly: z.unknown().optional() }).passthrough(),
 });
 export function normalizePvgis(r: z.infer<typeof zPvgis>): PlaceFact[] {
   const t = r.outputs.totals.fixed;
   const base = { integrationKey: "pvgis", sourceUrl: "https://joint-research-centre.ec.europa.eu/photovoltaic-geographical-information-system-pvgis_en", tier: 1, license: "PVGIS (EU JRC), free reuse with attribution", observedFor: "PVGIS reference years" };
-  const out: PlaceFact[] = [{ ...base, dimension: "climate", key: "pv_specific_yield", label: "PV specific yield (1 kWp, optimal fixed, 14% losses)", value: `${Math.round(t.E_y).toLocaleString("en-US")} kWh/kWp/year`, numeric: t.E_y, unit: "kWh/kWp/year" }];
+  const out: PlaceFact[] = [{ ...base, dimension: "climate", key: "pv_specific_yield", label: "PV specific yield (1 kWp, fixed, equator-facing, 14% losses)", value: `${Math.round(t.E_y).toLocaleString("en-US")} kWh/kWp/year`, numeric: t.E_y, unit: "kWh/kWp/year" }];
+  const tr = r.outputs.totals.inclined_axis;
+  if (tr) out.push({ ...base, dimension: "climate", key: "pv_specific_yield_tracking", label: "PV specific yield (1 kWp, single-axis north-south tracking, 14% losses)", value: `${Math.round(tr.E_y).toLocaleString("en-US")} kWh/kWp/year`, numeric: tr.E_y, unit: "kWh/kWp/year" });
   if (t["H(i)_y"] !== undefined) out.push({ ...base, dimension: "climate", key: "pv_plane_irradiation", label: "In-plane irradiation", value: `${Math.round(t["H(i)_y"]).toLocaleString("en-US")} kWh/m²/year`, numeric: t["H(i)_y"], unit: "kWh/m²/year" });
   if (t.SD_y !== undefined) out.push({ ...base, dimension: "climate", key: "pv_interannual_sd", label: "Year-to-year variability of PV output", value: `±${Math.round(t.SD_y).toLocaleString("en-US")} kWh/kWp`, numeric: t.SD_y, unit: "kWh/kWp" });
   return out;
 }
 export async function pvgis(db: Db, lat: number, lng: number, fetchImpl?: typeof fetch) {
-  const url = `https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?lat=${round(lat, 4)}&lon=${round(lng, 4)}&peakpower=1&loss=14&optimalangles=1&outputformat=json`;
-  return normalizePvgis(await fetchJson(db, { provider: "pvgis", endpoint: "PVcalc", url, schema: zPvgis, cacheKey: `pvcalc:${round(lat, 3)},${round(lng, 3)}`, cacheTtlMs: 365 * DAY, staleOnError: true, fetchImpl, timeoutMs: 30_000 }));
+  // Explicit equator-facing tilt: PVGIS "optimalangles" returns a flat panel for southern-hemisphere sites, which
+  // understated African yields by ~10-12%. inclined_axis=1 at 0° adds single-axis (north-south) tracking.
+  const mount = lat < 0 ? `angle=${Math.min(45, Math.round(-lat))}&aspect=180` : "optimalangles=1";
+  const url = `https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?lat=${round(lat, 4)}&lon=${round(lng, 4)}&peakpower=1&loss=14&${mount}&inclined_axis=1&inclinedaxisangle=0&outputformat=json`;
+  return normalizePvgis(await fetchJson(db, { provider: "pvgis", endpoint: "PVcalc", url, schema: zPvgis, cacheKey: `pvcalc2:${round(lat, 3)},${round(lng, 3)}`, cacheTtlMs: 365 * DAY, staleOnError: true, fetchImpl, timeoutMs: 30_000 }));
 }
 
 // ---------- Copernicus Data Space STAC: scene discovery (metadata only; no raster downloads) ----------
