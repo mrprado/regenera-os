@@ -1,14 +1,14 @@
-/* Regenera warm editorial palette: ivory header, sand canvas, white cards, forest actions. */
+/* Regenera palette: sage-white canvas (#F5F7F3), white cards, sage hairlines, forest actions (2026-10-07: replaces the warm ivory / tan surfaces). */
 :root{
  --forest-carbon:#1d2d26;
  --deep-moss:#273a31;
  --canopy:#3c5145;
  --sage-ash:#7B806E;
  --atlas-base:#141715;
- --limestone:#FAF9F5;
- --chalk:#FAF9F5;
- --warm-ash:#F1EFE8;
- --ash:#E2DED4;
+ --limestone:#F5F7F3;
+ --chalk:#FFFFFF;
+ --warm-ash:#ECF0EA;
+ --ash:#DFE5DD;
  --text-1:#302F28;
  --text-2:#686357;
  --text-3:#777164;
@@ -64,16 +64,16 @@
  --ice:#f1dc9c;
  --paper:var(--chalk);
  --paper-2:var(--limestone);
- --white:#FAF9F5;
+ --white:#FFFFFF;
  --ink:var(--text-1);
  --fern:var(--forest-carbon);
  --wax:var(--text-on-dark);
  --pollen:var(--gold);
  --leaf:var(--text-3);
  --reed:var(--lichen);
- --line:#E2DED4;
- --bg:#FAF9F5;
- --surface:#FAF9F5;
+ --line:#DFE5DD;
+ --bg:#F5F7F3;
+ --surface:#FFFFFF;
  --text:var(--text-1);
  --text-muted:var(--text-2);
  --heading:var(--text-1);
@@ -112,12 +112,12 @@
  --glass-dark:rgba(250,249,245,.97);
  --atlas-black:#141715;
  --atlas-canvas:#181c1a;
- --atlas-toolbar:#FAF9F5;
- --atlas-panel:#FAF9F5;
- --atlas-card:#FAF9F5;
- --atlas-card-hover:#F1EFE8;
- --atlas-border:#E2DED4;
- --atlas-frame:#E2DED4;
+ --atlas-toolbar:#FFFFFF;
+ --atlas-panel:#FFFFFF;
+ --atlas-card:#FFFFFF;
+ --atlas-card-hover:#ECF0EA;
+ --atlas-border:#DFE5DD;
+ --atlas-frame:#DFE5DD;
  --atlas-text:#302F28;
  --atlas-text-2:#686357;
  --atlas-telemetry:#686357;
@@ -126,13 +126,13 @@
  --shell-icon:#686357;
  color-scheme:light;
  --shadow-surface:none;
- --workspace-canvas:#FAF9F5;
- --surface-white:#FAF9F5;
+ --workspace-canvas:#F5F7F3;
+ --surface-white:#FFFFFF;
  --surface-selected:#EAF0E5;
- --control-hover:#F1EFE8;
+ --control-hover:#ECF0EA;
  --focus-ring:#246448;
- --header-surface:#FAF9F5;
- --secondary-surface:#FAF9F5;
+ --header-surface:#FFFFFF;
+ --secondary-surface:#FFFFFF;
 }
 /* Regenera OS design system — "Systems intelligence grounded in place" (docs/design-system.md, 2026-09-30, LOCKED).
    Graphite Moss shell, Saffron Gold Regenera signature, Oxidized Rust secondary accent, Warm Ivory canvas (2026-09-30 lock). Copper, lichen, water, plum

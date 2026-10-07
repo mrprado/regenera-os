@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { HandHeart, Sprout, TrendingUp } from "lucide-react";
 import IntegratedCommand from "./integrated-command";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
@@ -62,7 +61,6 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
       <section className={t.lens} aria-labelledby="lens-h">
         <div className={t.lensLintel}><h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2><p className={t.lensSub}>Three pillars every project, partner and decision is weighed against.</p></div>
         <ul className={t.pillars}>{LENS.map(x => <li key={x.title} className={t.pillar}>
-          <x.icon size={20} strokeWidth={1.6} aria-hidden="true" className={t.pillarIcon} />
           <h3>{x.title}</h3><p>{x.body}</p>
         </li>)}</ul>
       </section>
@@ -103,9 +101,9 @@ const SHORTCUTS = [
 ];
 // Decision dimensions, not measured results: no scores or totals are shown or implied.
 const LENS = [
-  { title: "Ecological renewal", body: "Soil, water, biodiversity, and ecosystem health.", icon: Sprout },
-  { title: "Community well-being", body: "Participation, equitable benefits, and community resilience.", icon: HandHeart },
-  { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity.", icon: TrendingUp },
+  { title: "Ecological renewal", body: "Soil, water, biodiversity, and ecosystem health." },
+  { title: "Community well-being", body: "Participation, equitable benefits, and community resilience." },
+  { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity." },
 ];
 const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
 

@@ -144,17 +144,13 @@
 @media(max-width:1050px){.commandHead{align-items:flex-start;flex-direction:column;gap:18px}.shortcuts{display:grid;grid-template-columns:1fr 1fr}.shortcut:nth-child(2){border-right:0}.shortcut:nth-child(n+3){border-top:1px solid var(--line)}.mapLinks{width:100%}.modes{margin-left:0}.full>.summary,.full>.main,.full>.columns{margin-left:18px;margin-right:18px}}
 @media(max-width:560px){.commandTitle{font-size:30px}.commandHead .actions{gap:8px}.commandHead .actions a{font-size:13px;padding:9px 12px}.mapBand{padding:16px}.mapBar{align-items:flex-start;flex-direction:column}.shortcuts{display:flex;flex-direction:column}.shortcut{border-right:0;border-bottom:1px solid var(--line);padding:18px}.shortcut:last-child{border-bottom:0}.decision{padding:18px}.lens{padding:20px}.workspacePurpose>summary{font-size:12px}.purposeBody{padding:18px}.compactCols{gap:16px}.outcomes,.recent{padding:20px}}
 
-/* Regeneration lens (2026-10-07): a title band and three side-by-side blocks in three greens. */
-.lens{margin:0 0 24px;padding:0;background:transparent;border:0;border-radius:var(--radius-card);overflow:hidden;color:var(--text-on-dark)}
-.lensLintel{background:var(--forest-carbon);padding:18px 24px 16px;border-bottom:2px solid var(--gold)}
+/* Regeneration lens (2026-10-07): centred title on a dark band, three equal green blocks, text centred. */
+.lens{margin:0 0 24px;padding:20px;background:var(--forest-carbon);border:0;border-radius:var(--radius-card);color:var(--text-on-dark);text-align:center}
+.lensLintel{padding:2px 0 18px}
 .lensTitle{margin:0;font-size:15px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
-.lensSub{margin:4px 0 0;font-size:14px;color:var(--text-on-dark-2)}
-.pillars{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.pillar{padding:22px 24px 24px;min-width:0}
-.pillar:nth-child(1){background:var(--accent)}
-.pillar:nth-child(2){background:var(--canopy)}
-.pillar:nth-child(3){background:var(--deep-moss)}
-.pillarIcon{color:var(--text-on-dark);opacity:.85;margin-bottom:10px}
+.lensSub{margin:6px auto 0;max-width:60ch;font-size:14px;color:var(--text-on-dark-2)}
+.pillars{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pillar{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;padding:26px 22px;background:var(--accent);border-radius:6px}
 .pillar h3{margin:0 0 8px;font-size:16px;font-weight:600;color:var(--text-on-dark)}
-.pillar p{margin:0;font-size:14px;line-height:1.55;color:var(--text-on-dark-2)}
-@media(max-width:720px){.pillars{grid-template-columns:1fr}.lensLintel{padding:16px 18px}.pillar{padding:18px}}
+.pillar p{margin:0;max-width:30ch;font-size:14px;line-height:1.55;color:var(--text-on-dark-2)}
+@media(max-width:720px){.pillars{grid-template-columns:1fr}.lens{padding:16px}.pillar{padding:20px 18px}}
