@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HandHeart, Sprout, TrendingUp } from "lucide-react";
 import IntegratedCommand from "./integrated-command";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
@@ -59,8 +60,11 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
     <>
       <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
       <section className={t.lens} aria-labelledby="lens-h">
-        <h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2>
-        <ul className={t.lensCols}>{LENS.map(x => <li key={x.title}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
+        <div className={t.lensLintel}><h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2><p className={t.lensSub}>Three pillars every project, partner and decision is weighed against.</p></div>
+        <ul className={t.pillars}>{LENS.map(x => <li key={x.title} className={t.pillar}>
+          <x.icon size={20} strokeWidth={1.6} aria-hidden="true" className={t.pillarIcon} />
+          <h3>{x.title}</h3><p>{x.body}</p>
+        </li>)}</ul>
       </section>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>
@@ -99,9 +103,9 @@ const SHORTCUTS = [
 ];
 // Decision dimensions, not measured results: no scores or totals are shown or implied.
 const LENS = [
-  { title: "Ecological renewal", body: "Soil, water, biodiversity, and ecosystem health." },
-  { title: "Community well-being", body: "Participation, equitable benefits, and community resilience." },
-  { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity." },
+  { title: "Ecological renewal", body: "Soil, water, biodiversity, and ecosystem health.", icon: Sprout },
+  { title: "Community well-being", body: "Participation, equitable benefits, and community resilience.", icon: HandHeart },
+  { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity.", icon: TrendingUp },
 ];
 const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
 
