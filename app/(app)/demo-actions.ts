@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { withOsUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { removeDemo, seedDemo } from "@/lib/demo/seed";
+import { seedDemoContext } from "@/lib/demo/integrated";
 import { setTestRecords } from "@/lib/test-records";
 import { audit } from "@/lib/audit";
 
 export async function loadDemoAction() {
   let msg = "";
-  await withOsUser(async user => { const r = await seedDemo(appDb(), user.email); msg = r.created ? "Demo data loaded into the DEMO entity. Switch entity in the header to focus on it." : "Demo data is already loaded."; }, { owner: true, internal: true });
+  await withOsUser(async user => { const r = await seedDemo(appDb(), user.email); await seedDemoContext(appDb()); msg = r.created ? "Demo workspace loaded (fictional sample data, kept apart from Regenera). Choose it in the workspace menu in the header." : "Demo workspace is already loaded; its project-context sample is up to date."; }, { owner: true, internal: true });
   redirect(`/settings/demo?notice=${encodeURIComponent(msg)}`);
 }
 

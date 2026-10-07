@@ -8,7 +8,14 @@ import {capitalDimensions,institutionalDimensions} from '@/lib/project-context/m
 export const DEMO_IDENTITIES={founder:'founder@example.test',reviewer:'reviewer@example.test'};
 export async function ensureIntegratedDemo(db:Db){
  const workspaces=await db.select({id:mandates.id}).from(mandates);if(workspaces.some(w=>w.id!==DEMO_MANDATE))throw new Error('This demo entry refuses a database containing any other workspace');
- await seedDemo(db,DEMO_IDENTITIES.founder);await db.update(mandates).set({sandbox:true}).where(eq(mandates.id,DEMO_MANDATE));for(const email of Object.values(DEMO_IDENTITIES))await db.insert(mandateMembers).values({mandateId:DEMO_MANDATE,email,role:'owner'}).onConflictDoNothing();
+ await seedDemo(db,DEMO_IDENTITIES.founder);for(const email of Object.values(DEMO_IDENTITIES))await db.insert(mandateMembers).values({mandateId:DEMO_MANDATE,email,role:'owner'}).onConflictDoNothing();
+ return seedDemoContext(db);
+}
+/** Project-context sample (claims with evidence, memory, readiness, scenarios, missions, decision, reporting period) for the
+ *  DEMO workspace only. Safe in a database with real workspaces: every row is written to DEMO_MANDATE, the workspace is
+ *  marked sandbox, and a second run changes nothing. Used by the isolated demo and by Settings → Demo data. */
+export async function seedDemoContext(db:Db){
+ await db.update(mandates).set({sandbox:true}).where(eq(mandates.id,DEMO_MANDATE));
  const [project]=await db.select().from(projects).where(and(eq(projects.mandateId,DEMO_MANDATE),eq(projects.assetClass,'solar')));if(!project)throw new Error('Demo project missing');
  const [existing]=await db.select().from(contextRecords).where(and(eq(contextRecords.projectId,project.id),eq(contextRecords.kind,'memory'))).limit(1);if(existing)return project;
  const claim=await addClaim(db,{mandateId:DEMO_MANDATE,entityType:'project',entityId:project.id,statement:'DEMO — calculated DC capacity 100 MWDC',claimType:'metric',field:'capacity',value:'100',unit:'MWDC',status:'calculated',createdBy:'demo'},'demo');
