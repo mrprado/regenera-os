@@ -10,6 +10,7 @@ import { classifyByRules } from "@/lib/triggers/rules";
 import { autoPlaceProjects } from "@/lib/projects/auto-place";
 import { ingestGppd } from "@/lib/infrastructure/gppd";
 import { runWbLoop } from "@/lib/intel/wb-projects";
+import { matchFundingToProjects } from "@/lib/funding/project-match";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -264,6 +265,11 @@ export const handlers: Record<string, JobHandler> = {
     await scanFunding(db, REGENERA_MANDATE_ID, now);
     await enqueue(db, "funding.read", {}, { dedupeKey: `funding-read:${now.toISOString().slice(0, 13)}`, now });
     await enqueue(db, "funding.place", {}, { dedupeKey: `funding-place:${now.toISOString().slice(0, 13)}`, now });
+    await enqueue(db, "funding.project_match", {}, { dedupeKey: `funding-pmatch:${now.toISOString().slice(0, 13)}`, now });
+  },
+  "funding.project_match": async ({ db, now }) => {
+    // Funding discovery workflow: every open record is matched to Regenera projects by hard gates, with reasons.
+    await matchFundingToProjects(db, REGENERA_MANDATE_ID, now);
   },
   "funding.read": async ctx => {
     // Without AI the rules read gives sectors and a summary; the AI read replaces it when available.

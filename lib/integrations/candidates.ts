@@ -229,7 +229,7 @@ export const CANDIDATES: Candidate[] = [
     ["CORDIS", "REST", "none", 1, "EU reuse", "https://cordis.europa.eu"],
     ["UN Development Business", "Commercial feed", "paid", 3, "Subscription", "https://devbusiness.un.org"],
     ["UK Contracts Finder", "REST", "none", 1, "OGL v3", "https://www.contractsfinder.service.gov.uk", "uk_contracts"],
-    ["UK Find a Tender", "REST", "none", 1, "OGL v3", "https://www.find-tender.service.gov.uk"],
+    ["UK Find a Tender", "REST", "none", 1, "OGL v3", "https://www.find-tender.service.gov.uk", "uk_fts"],
     ["ChileCompra (Mercado Público)", "REST", "free key", 2, "Chilean open data", "https://api.mercadopublico.cl"],
     ["SERCOP (Ecuador)", "REST", "none", 2, "Ecuador open data (OCDS)", "https://datosabiertos.compraspublicas.gob.ec"],
     ["CompraNet / ComprasMX (Mexico)", "Bulk download", "none", 2, "Mexican open data (OCDS)", "https://upcp-compranet.buengobierno.gob.mx"],

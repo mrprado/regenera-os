@@ -8,18 +8,19 @@ import { fetchJson } from "@/lib/sources/http";
 import { tedSignals, worldBankSignals, type RawSignal } from "@/lib/sources/signals";
 
 export type FundingItem = {
-  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts";
+  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts" | "uk_fts";
   externalId: string;
   title: string;
   funder: string | null;
   programme: string | null;
   type: "grant" | "tender" | "call" | "prize" | "concessional";
+  category?: "opportunity" | "award";
   amountMin: number | null;
   amountMax: number | null;
   currency: string | null;
   openDate: string | null;   // YYYY-MM-DD
   deadline: string | null;   // YYYY-MM-DD
-  status: "forthcoming" | "open";
+  status: "forthcoming" | "open" | "closed";
   countries: string[];
   applicantTypes: string[];
   url: string;
@@ -195,6 +196,40 @@ export async function tedFunding(db: Db, text: string, now = new Date(), fetchIm
   return (await tedSignals(db, text, now, fetchImpl)).map(fromSignal);
 }
 
+/** Pure: a World Bank notice that announces a past contract (award, signed contract) is never available funding. */
+export const isAwardNotice = (noticeType: string | null | undefined) => /award|contract signed|signed contract/i.test(noticeType ?? "");
+
 export async function worldBankFunding(db: Db, term: string, now = new Date(), fetchImpl?: typeof fetch) {
-  return (await worldBankSignals(db, term, now, fetchImpl)).map(fromSignal);
+  // Awards are kept, but as category "award" (closed): an award is a past contract, never an open opportunity.
+  return (await worldBankSignals(db, term, now, fetchImpl)).map(s => isAwardNotice(s.summary)
+    ? { ...fromSignal(s), category: "award" as const, status: "closed" as const, deadline: null, applicantTypes: [], title: `Contract award: ${s.title}`.slice(0, 500) }
+    : fromSignal(s));
+}
+
+// ---------- UK Find a Tender (OCDS release packages, keyless, OGL v3) ----------
+// No keyword search in the API: the latest tender releases (two weeks, one cached call per day) are filtered locally by
+// the query's words. Above-threshold UK procurement, complementary to Contracts Finder.
+const zFts = z.object({ releases: z.array(z.object({
+  ocid: z.string(), date: z.string().optional(), buyer: z.object({ name: z.string().optional() }).passthrough().optional(),
+  tender: z.object({ title: z.string().optional(), description: z.string().optional(), status: z.string().optional(),
+    tenderPeriod: z.object({ endDate: z.string().optional() }).passthrough().optional(),
+    value: z.object({ amount: z.number().optional(), currency: z.string().optional() }).passthrough().optional() }).passthrough().optional(),
+}).passthrough()).default([]) }).passthrough();
+
+/** Pure: every word of the query appears in the text (case-insensitive). */
+export const matchesAllWords = (text: string, query: string) => query.toLowerCase().split(/\s+/).filter(Boolean).every(w => text.toLowerCase().includes(w));
+
+export async function ukFindTender(db: Db, keyword: string, now = new Date(), fetchImpl?: typeof fetch): Promise<FundingItem[]> {
+  const from = new Date(now.getTime() - 14 * 86_400_000).toISOString().slice(0, 19);
+  const res = await fetchJson(db, {
+    provider: "uk_fts", endpoint: "ocds_release_packages",
+    url: `https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?stages=tender&limit=100&updatedFrom=${from}`,
+    schema: zFts, cacheKey: `fts:${now.toISOString().slice(0, 10)}`, cacheTtlMs: 12 * 3_600_000, fetchImpl,
+  });
+  return res.releases.filter(r => r.tender?.status !== "cancelled" && matchesAllWords(`${r.tender?.title ?? ""} ${r.tender?.description ?? ""}`, keyword)).map(r => ({
+    source: "uk_fts" as const, externalId: r.ocid, title: (r.tender?.title ?? r.ocid).slice(0, 500), funder: r.buyer?.name ?? null, programme: null, type: "tender" as const,
+    amountMin: null, amountMax: r.tender?.value?.amount ?? null, currency: r.tender?.value?.currency ?? null, openDate: r.date?.slice(0, 10) ?? null,
+    deadline: r.tender?.tenderPeriod?.endDate?.slice(0, 10) ?? null, status: "open" as const, countries: ["United Kingdom"], applicantTypes: ["Businesses"],
+    url: `https://www.find-tender.service.gov.uk/Notice/${encodeURIComponent(r.ocid.replace(/^ocds-h6vhtk-/, ""))}`, description: (r.tender?.description ?? "").slice(0, 4000),
+  }));
 }

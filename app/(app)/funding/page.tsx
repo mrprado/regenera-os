@@ -9,7 +9,7 @@ import { caseRecords, deals, fundingProspects, funders, organizations } from "@/
 import { requireOsUser } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { appDb, isInternal, isOwner, mandateCondition, type Scope } from "@/lib/db/scoped";
-import { bidDeals, funderProfiles, libraryBlocks, listFunding } from "@/lib/funding/queries";
+import { awardedContracts, bidDeals, funderProfiles, libraryBlocks, listFunding } from "@/lib/funding/queries";
 import { allProspects, applicationsList, awardsList, calendarEvents, originationDashboard } from "@/lib/funding/origination-queries";
 import { kindOf } from "@/lib/funding/origination";
 import { getState } from "@/lib/state";
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Funding" };
 
 type SP = Record<string, string | undefined>;
-const TABS = [["open", "Opportunities"], ["calendar", "Calendar"], ["bids", "Bids"], ["applicants", "Applicants"], ["origination", "Origination"], ["awards", "Awards"], ["funders", "Funders"], ["library", "Bid library"]] as const;
+const TABS = [["open", "Opportunities"], ["calendar", "Calendar"], ["bids", "Bids"], ["applicants", "Applicants"], ["origination", "Origination"], ["awards", "Awards"], ["contracts", "Awarded contracts"], ["funders", "Funders"], ["library", "Bid library"]] as const;
 const DECISION_LABEL: Record<string, string> = { new: "New", watching: "Watching", bidding: "Bidding", matched: "Applicants found", dismissed: "Dismissed" };
 
 export default async function FundingPage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -49,6 +49,7 @@ export default async function FundingPage({ searchParams }: { searchParams: Prom
       {tab === "applicants" && <ApplicantsTab scope={user.scope} stage={sp.stage} />}
       {tab === "origination" && <OriginationTab scope={user.scope} internal={internal} />}
       {tab === "awards" && <AwardsTab scope={user.scope} />}
+      {tab === "contracts" && <ContractsTab scope={user.scope} q={sp.q} region={sp.region} />}
       {tab === "funders" && <FundersTab scope={user.scope} />}
       {tab === "library" && <LibraryTab scope={user.scope} edit={sp.edit} />}
     </>
@@ -275,6 +276,30 @@ async function OriginationTab({ scope, internal }: { scope: Scope; internal: boo
             <tr key={r.p.id}><td className={ui.wrap}><Link href={`/funding/${r.p.opportunityId}`}>{r.title}</Link></td><td><Link href={`/companies/${r.p.orgId}`}>{r.orgName}</Link></td><td>{PROSPECT_STAGES[r.p.stage as keyof typeof PROSPECT_STAGES]}</td>
               <td>{r.p.engagementId ? <Link href={`/commercial/engagements/${r.p.engagementId}`}>{r.engStatus}</Link> : "—"}</td><td className={ui.num}>{r.fee ? compactMoney(r.fee, "USD") : "—"}</td></tr>
           ))}</tbody>
+        </table></div>
+      )}
+    </>
+  );
+}
+
+async function ContractsTab({ scope, q, region }: { scope: Scope; q?: string; region?: string }) {
+  const rows = await awardedContracts(scope, { q, region });
+  return (
+    <>
+      <p className={ui.notice}>Published contract awards (World Bank procurement notices). These are past contracts, not open funding: use them to see who wins work, with whom, and where. Opportunities stay under Opportunities.</p>
+      <form action="/funding" className={ui.filters} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <input type="hidden" name="tab" value="contracts" />
+        <input name="q" defaultValue={q ?? ""} placeholder="Search awards, projects" aria-label="Search awards" />
+        <input name="region" defaultValue={region ?? ""} placeholder="Country" aria-label="Country" />
+        <button className="btn" type="submit">Filter</button>
+      </form>
+      {rows.length === 0 ? <EmptyState icon={HandCoins} title="No awarded contracts yet" body="Contract-award notices appear here as the World Bank procurement scan finds them." /> : (
+        <div className={ui.tableWrap}><table className={ui.table}>
+          <thead><tr><th>Award</th><th>Project / funder</th><th>Country</th><th>Published</th><th>Source</th></tr></thead>
+          <tbody>{rows.map(r => <tr key={r.id}>
+            <td className={ui.wrap}>{r.title}</td><td className={ui.wrap}>{r.funder ?? "—"}</td><td>{(r.countries ?? []).join(", ") || "—"}</td><td>{r.openDate ?? "—"}</td>
+            <td><a href={r.url} target="_blank" rel="noreferrer">{r.source === "worldbank" ? "World Bank notice" : r.source}</a></td>
+          </tr>)}</tbody>
         </table></div>
       )}
     </>

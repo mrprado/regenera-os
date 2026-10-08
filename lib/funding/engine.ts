@@ -10,7 +10,7 @@ import { normalizeOrgName } from "@/lib/dedupe/normalize";
 import { geocode } from "@/lib/sources/geocode";
 import { getState, setState } from "@/lib/state";
 import { SECTORS } from "@/lib/vocab";
-import { euFunding, grantsGov, tedFunding, ukContracts, worldBankFunding, type FundingItem } from "./sources";
+import { euFunding, grantsGov, tedFunding, ukContracts, ukFindTender, worldBankFunding, type FundingItem } from "./sources";
 
 type SourceKey = FundingItem["source"];
 
@@ -33,7 +33,7 @@ export const FUNDING_QUERIES: { key: string; label: string; text: string; sector
 ];
 
 const SOURCES: Record<SourceKey, (db: Db, text: string, now: Date, f?: typeof fetch) => Promise<FundingItem[]>> = {
-  grants_gov: grantsGov, eu_funding: euFunding, uk_contracts: ukContracts, ted: tedFunding, worldbank: worldBankFunding,
+  grants_gov: grantsGov, eu_funding: euFunding, uk_contracts: ukContracts, ted: tedFunding, worldbank: worldBankFunding, uk_fts: ukFindTender,
 };
 const SOURCE_KEYS = Object.keys(SOURCES) as SourceKey[];
 const PAIRS = FUNDING_QUERIES.flatMap(q => SOURCE_KEYS.map(s => ({ q, s })));
@@ -86,7 +86,7 @@ export async function upsertFunding(db: Db, mandateId: string, raw: FundingItem,
     mandateId, source: item.source, externalId: item.externalId, dedupeKey: key, title: item.title.slice(0, 500), funder: item.funder, programme: item.programme,
     type: item.type, amountMin: item.amountMin, amountMax: item.amountMax, currency: item.currency, openDate: item.openDate, deadline: item.deadline,
     countries: item.countries, applicantTypes: item.applicantTypes, url: item.url, description: item.description, status: item.status,
-    fit: keywordFit(item), queryKey,
+    category: item.category ?? "opportunity", fit: keywordFit(item), queryKey,
   }).onConflictDoNothing();
   return "new";
 }
@@ -95,7 +95,10 @@ export async function upsertFunding(db: Db, mandateId: string, raw: FundingItem,
 export async function closeExpired(db: Db, now = new Date()) {
   const r = await db.update(fundingOpportunities).set({ status: "closed", updatedAt: now.toISOString() })
     .where(and(ne(fundingOpportunities.status, "closed"), lt(fundingOpportunities.deadline, now.toISOString().slice(0, 10)))).returning({ id: fundingOpportunities.id });
-  return r.length;
+  // Contract-award notices stored before phase 21 move to the "award" category (closed): never open opportunities.
+  const awards = await db.update(fundingOpportunities).set({ status: "closed", category: "award", updatedAt: now.toISOString() })
+    .where(and(eq(fundingOpportunities.category, "opportunity"), eq(fundingOpportunities.source, "worldbank"), sql`lower(${fundingOpportunities.description}) like '%award%'`)).returning({ id: fundingOpportunities.id });
+  return r.length + awards.length;
 }
 
 /** Runs the next `pairs` (query, source) combinations in rotation. A failing source never stops the others. */

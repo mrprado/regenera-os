@@ -92,3 +92,13 @@ export async function fundingCounts(scope: Scope, now = new Date()) {
   return { open: r.open ?? 0, strong: r.strong ?? 0, closing: r.closing ?? 0 };
 }
 
+
+/** Published contract awards (category "award"): past contracts kept for the contractor / developer picture, never
+ *  shown as available money. Filter: text and country. */
+export async function awardedContracts(scope: Scope, f: { q?: string; region?: string }) {
+  return appDb().select().from(fundingOpportunities).where(and(
+    mandateCondition(scope, fundingOpportunities.mandateId), eq(fundingOpportunities.category, "award"),
+    f.q ? or(like(sql`lower(${fundingOpportunities.title})`, `%${f.q.toLowerCase()}%`), like(sql`lower(coalesce(${fundingOpportunities.funder}, ''))`, `%${f.q.toLowerCase()}%`)) : undefined,
+    f.region ? like(sql`lower(coalesce(${fundingOpportunities.countries}, ''))`, `%${f.region.toLowerCase()}%`) : undefined,
+  )).orderBy(desc(fundingOpportunities.openDate)).limit(300);
+}

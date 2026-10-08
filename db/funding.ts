@@ -6,7 +6,7 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const now = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 const timestamps = { createdAt: text("created_at").notNull().default(now), updatedAt: text("updated_at").notNull().default(now) };
 
-export const FUNDING_SOURCES = ["grants_gov", "eu_funding", "ted", "worldbank", "uk_contracts"] as const;
+export const FUNDING_SOURCES = ["grants_gov", "eu_funding", "ted", "worldbank", "uk_contracts", "uk_fts"] as const;
 export const FUNDING_TYPES = ["grant", "tender", "call", "prize", "concessional"] as const;
 export const FUNDING_ROUTES = ["regenera_bid", "client_support", "consortium", "signal"] as const;
 export const FUNDING_DECISIONS = ["new", "watching", "bidding", "matched", "dismissed"] as const;
@@ -47,6 +47,9 @@ export const fundingOpportunities = sqliteTable("funding_opportunities", {
   url: text("url").notNull(),
   description: text("description").notNull().default(""),
   status: text("status", { enum: ["forthcoming", "open", "closed"] }).notNull().default("open"),
+  // opportunity = open/forthcoming call or tender; award = a published contract award (past, not available money).
+  // Awards are kept for the developer / contractor picture and shown only under the "Awarded contracts" filter.
+  category: text("category", { enum: ["opportunity", "award"] }).notNull().default("opportunity"),
   fit: integer("fit"),                               // Claude's 0-100 fit to Regenera's services
   route: text("route", { enum: FUNDING_ROUTES }),
   read: text("read", { mode: "json" }).$type<{ summary?: string; caveats?: string[]; consortium?: boolean; why?: string; rules?: boolean;
