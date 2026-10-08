@@ -16,6 +16,7 @@ import { eeStatus } from "@/lib/providers/earth-engine";
 import { runEe, type EeAnalysis } from "@/lib/providers/ee-service";
 import { aqueductFacts, aqueductForSite, lossFacts, refreshScreening } from "@/lib/data-providers/site";
 import { assessmentStage, capitalStage, partnersStage } from "./opportunity";
+import { nearestPlants } from "@/lib/infrastructure/queries";
 
 export const STAGES = [
   ["spatial", "Spatial analysis"], ["energy", "Energy resource"], ["grid", "Grid"], ["water", "Water"], ["ecology", "Ecology"], ["land", "Land & terrain"], ["remote_sensing", "Remote sensing (Earth Engine)"],
@@ -81,10 +82,12 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
     return { summary: pick.map(x => `${x.label}: ${x.value}`).join(" · ") || "No resource data", facts: pick.map(x => ({ label: x.label, value: x.value, source: `${x.integrationKey} · ${x.observedFor}` })) };
   },
   async grid({ db, lat, lng, fetchImpl }) {
-    const r = await nearestInfrastructure(db, lng, lat, fetchImpl);
+    const plants = await nearestPlants(db, lat, lng, 3).catch(() => []);
+    const plantFacts: StageFact[] = plants.map(x => ({ label: `Registry-listed plant: ${x.name}`, value: `${x.km.toFixed(1)} km · ${x.fuel ?? "fuel n/s"} · ${x.capacityMw != null ? `${x.capacityMw} MW` : "capacity n/s"}${x.owner ? ` · ${x.owner}` : ""}`, source: `${x.vintage ?? "WRI GPPD"} (CC BY 4.0) · great-circle distance`, kind: "observed" }));
+    const r = await nearestInfrastructure(db, lng, lat, fetchImpl).catch(e => { if (plantFacts.length) return { items: [], source: `OSM unavailable: ${(e as Error).message.slice(0, 80)}` }; throw e; });
     const pick = r.items.filter(i => i.key === "transmission" || i.key === "substation");
     const evidence: StageFact = { label: "Evidence class", value: "OSM-mapped lines and substations (not registry-listed, not utility-confirmed). Distance is not available interconnection capacity: ask the utility/TSO.", source: "Regenera evidence policy", kind: "inference" };
-    return { summary: pick.map(i => `${i.label}: ${i.status === "known" ? km(i.distanceM) : `none mapped within ${km(i.searchedRadiusM)}`}`).join(" · "), facts: pick.map(i => ({ label: i.label, value: i.status === "known" ? `${km(i.distanceM)}${i.name ? ` · ${i.name}` : ""}${i.detail ? ` · ${i.detail}` : ""}` : `None mapped within ${km(i.searchedRadiusM)}`, source: r.source })).concat([evidence]) };
+    return { summary: pick.map(i => `${i.label}: ${i.status === "known" ? km(i.distanceM) : `none mapped within ${km(i.searchedRadiusM)}`}`).join(" · "), facts: pick.map(i => ({ label: i.label, value: i.status === "known" ? `${km(i.distanceM)}${i.name ? ` · ${i.name}` : ""}${i.detail ? ` · ${i.detail}` : ""}` : `None mapped within ${km(i.searchedRadiusM)}`, source: r.source })).concat(plantFacts, [evidence]) };
   },
   async water({ db, lat, lng, fetchImpl }) {
     const [clim, infra] = await Promise.all([nasaPower(db, lat, lng, fetchImpl), nearestInfrastructure(db, lng, lat, fetchImpl)]);
@@ -181,11 +184,12 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
   },
 };
 
-export async function startRun(db: Db, projectId: string, actor: string) {
+/** Starts a run; `only` limits it to some stages (e.g. capital/partners/assessment for a country-level location). */
+export async function startRun(db: Db, projectId: string, actor: string, only?: StageKey[]) {
   const [p] = await db.select().from(projects).where(eq(projects.id, projectId));
   if (!p) throw new Error("Project not found");
   if (p.lat === null || p.lng === null) { const g = parseGeometry(p.geometry); if (!g) throw new Error("The project has no location: add coordinates or draw a boundary in Atlas"); }
-  const [r] = await db.insert(siteIntelRuns).values({ mandateId: p.mandateId, projectId, stages: STAGES.map(([key]) => ({ key, status: "queued" as const })), geometryHash: geometryHash(p), startedBy: actor }).returning();
+  const [r] = await db.insert(siteIntelRuns).values({ mandateId: p.mandateId, projectId, stages: STAGES.filter(([key]) => !only || only.includes(key)).map(([key]) => ({ key, status: "queued" as const })), geometryHash: geometryHash(p), startedBy: actor }).returning();
   await audit(db, { actor, action: "site_intel.start", entity: "project", entityId: projectId, after: { runId: r.id } });
   return r;
 }

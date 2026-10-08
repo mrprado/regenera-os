@@ -9,6 +9,7 @@ import { readFundingByRules } from "@/lib/funding/rules-read";
 import { classifyByRules } from "@/lib/triggers/rules";
 import { autoPlaceProjects } from "@/lib/projects/auto-place";
 import { ingestGppd } from "@/lib/infrastructure/gppd";
+import { runWbLoop } from "@/lib/intel/wb-projects";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -272,6 +273,10 @@ export const handlers: Record<string, JobHandler> = {
   "place.profile": async ({ db, job }) => {
     await buildPlaceProfile(db, String(job.payload.projectId));
   },
+  "intel.wb_projects": async ({ db, now }) => {
+    // Autonomous loop: World Bank projects → Market pipeline records, orgs with roles, screening and saved assessment.
+    await runWbLoop(db, now, 8);
+  },
   "registry.gppd": async ({ db, job, now }) => {
     // Registry-listed power plants, one slice per job until the file ends.
     const offset = Number(job.payload.offset ?? 0);
@@ -424,6 +429,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "place.refresh": "daily:04:10",
   "projects.autoplace": "every:1h",
   "registry.gppd": "monthly:5:03:30",
+  "intel.wb_projects": "every:6h",
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",

@@ -25,3 +25,18 @@ export async function plantsInView(db: Db, bbox: Bbox | null, zoom: number, limi
     meta: { count: n, shown: rows.length, source: "WRI Global Power Plant Database v1.3", floorMw: floor },
   };
 }
+
+const R = 6371;
+/** Pure: great-circle distance in km. */
+export function haversineKm(a: [number, number], b: [number, number]) {
+  const r = Math.PI / 180, dLat = (b[1] - a[1]) * r, dLng = (b[0] - a[0]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** Registry-listed plants nearest a point (searches ±1.5°, ~165 km), closest first. */
+export async function nearestPlants(db: Db, lat: number, lng: number, n = 3) {
+  const d = 1.5;
+  const rows = await db.select().from(registryAssets).where(and(gte(registryAssets.lat, lat - d), lte(registryAssets.lat, lat + d), gte(registryAssets.lng, lng - d), lte(registryAssets.lng, lng + d))).limit(2000);
+  return rows.map(r => ({ ...r, km: haversineKm([lng, lat], [r.lng, r.lat]) })).sort((a, b) => a.km - b.km).slice(0, n);
+}

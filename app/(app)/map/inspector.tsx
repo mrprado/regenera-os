@@ -15,7 +15,7 @@ export type Screen = { projectId: string | null; runId: string | null; stages: S
 const EVIDENCE: Record<string, string> = {
   power: "OSM-mapped (community). Not registry-listed, not a modeled corridor, not utility-confirmed.",
   registry_plants: "Registry-listed (WRI Global Power Plant Database v1.3, 2021). Not utility-confirmed.",
-  projects: "Regenera record. Figures are as recorded; claims carry their own evidence status.",
+  projects: "Regenera record. Figures are as recorded; claims carry their own evidence status. Hollow blue markers are public-pipeline projects (World Bank), not Regenera mandates.",
   organizations: "Regenera Network record (identity enrichment from GLEIF / Wikidata where linked).",
   procurement: "Funding or tender record as published by the source; eligibility and deadline need confirmation.",
   triggers: "Signal from a public source; not independent verification of the event.",

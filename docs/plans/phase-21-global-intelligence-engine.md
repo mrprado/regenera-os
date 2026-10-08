@@ -173,3 +173,38 @@ Stages (each deployed when verified, no disruption to records):
 - 2026-10-08 next commit: automatic approximate project placement (hourly), Command "last 24 h done by the OS" strip
   from persisted records, OSM evidence class on grid features. Correction to Phase 0 row 4: the power layer is vector
   and clickable already; what is missing is registry-listed assets, evidence classes and distance analysis.
+- 2026-10-08 51fb304: Atlas workbench (Explore · Layers · Analyze; 11 analyst layer groups with opacity; 8 workspaces;
+  grouped toolbar; Display settings for CRT/NVG/HUD/orbit/tour; docked inspector with Overview/Spatial/Evidence/Capital/
+  Actions/Site screen; status bar). Screen a site → site record + full run + Capital & opportunities, Partners, Saved
+  assessment stages. WRI GPPD registry-listed plants (registry_assets, migration 0054).
+- 2026-10-08: §2/§8 global source registry (230+ candidates, computed status, downstream counts on Integrations).
+- 2026-10-08: §5/§6 World Bank loop (intel.wb_projects every 6 h): Market pipeline projects with source_provided claims
+  + API evidence, typed parties (World Bank lender; borrower and implementing agency as government), country-level
+  placement, screening run (finance, capital, partners, saved assessment + review task), PROJECT_CREATED /
+  SOURCE_RECORD_UPDATED events; material change → new claims (old kept) + re-run. Test G passes in integration tests.
+
+## Architecture (as built)
+- Ingestion: connectors call `fetchJson` (registry gate, cache, ledger, cooldown/degraded) or stream bulk files
+  (sanctions, GPPD). Jobs (D1 jobs table: dedupe keys, retries, dead letters, credit pause) are the durable queue.
+- Knowledge: claims + claim_evidence (status source_provided / calculated / ai_inferred …; method api/document/registry),
+  registry_assets for registry-listed infrastructure, organizations + project_parties for typed relationships.
+- Analysis: site-intelligence runs (one stage per step, resumable; cron finishes abandoned runs), deterministic stages;
+  capital stage = programme geography/stage gates + funding geography; assessment = versioned generated_documents.
+- Execution: tasks for review, events for Command and rules; no external action without the existing approval gates.
+- Observability: Command "last 24 h" strip, Settings → Jobs (AI pause, failed jobs by type, re-run), Settings →
+  Integrations (health, degraded, records reaching the OS, global registry status).
+
+## Deploy and rollback
+- Deploy: `npm run deploy` (build, remote D1 migrations through 0054, Worker upload). Migration 0054 is additive.
+- Verify: /map loads; Layers → Energy → Power plants (registry-listed) shows a count after the registry.gppd job has run
+  (first hourly tick after deploy); Settings → Jobs shows intel.wb_projects and registry.gppd completing.
+- Rollback code: `npx wrangler deployments list --name regenera-os`, then
+  `npx wrangler rollback <previous-version-id> --name regenera-os`. The additive table stays and is unused by older code.
+- Turn off the loops without a deploy: Settings → Integrations → set `worldbank` or `wri_gppd` to Disabled.
+
+## Outstanding (honest status)
+- Not yet integrated: GEM (download form), EIA / ENTSO-E / NREL / IATI / SAM.gov (free keys the founder registers),
+  HIFLD, UNGM, DFI and climate-fund feeds, HydroBASINS, Global Solar/Wind Atlas tiles. Registered as candidates.
+- Site screen distances use OSM (Overpass); registry plant distances are not yet in the grid stage.
+- Multi-criteria suitability scoring, site comparison and mobile-specific Atlas tests remain (Atlas stage 5–6).
+- AI narrative in assessments waits for Anthropic credit; current assessments are deterministic.

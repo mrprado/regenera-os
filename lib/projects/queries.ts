@@ -1,5 +1,5 @@
 // Read models for the Projects screens. Every query is mandate-scoped.
-import { and, asc, desc, eq, inArray, isNull, like, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, like, notLike, or, sql, type SQL } from "drizzle-orm";
 import {
   activities, capitalOpportunities, capitalRequirements, constraints, contacts, contracts, deals, fundingMatches, fundingOpportunities, organizations,
   projectParties, projectReadiness, projects, projectStageHistory, tasks, triggers,
@@ -7,12 +7,15 @@ import {
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { capitalSummary } from "./engine";
 
-export type ProjectFilters = { q?: string; stage?: string; sector?: string; country?: string; blocked?: string; capital?: string };
+export type ProjectFilters = { q?: string; stage?: string; sector?: string; country?: string; blocked?: string; capital?: string; origin?: string };
+// Public-pipeline projects (World Bank loop) live in their own view so they never mix with Regenera's projects.
+const MARKET_LIKE = "Public pipeline:%";
 
 export async function listProjects(scope: Scope, f: ProjectFilters) {
   const db = appDb();
   const conds: (SQL | undefined)[] = [
     mandateCondition(scope, projects.mandateId), isNull(projects.archivedAt),
+    f.origin === "market" ? like(projects.originationSource, MARKET_LIKE) : or(isNull(projects.originationSource), notLike(projects.originationSource, MARKET_LIKE)),
     f.q ? or(like(sql`lower(${projects.name})`, `%${f.q.toLowerCase()}%`), like(sql`lower(${projects.description})`, `%${f.q.toLowerCase()}%`)) : undefined,
     f.stage ? eq(projects.stage, f.stage as never) : undefined,
     f.sector ? eq(projects.sector, f.sector) : undefined,
