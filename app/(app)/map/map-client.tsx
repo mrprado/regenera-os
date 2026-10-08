@@ -147,6 +147,7 @@ function MapClient() {
   const [searchNote, setSearchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [rendererDown, setRendererDown] = useState(false);
   const [panel, setPanel] = useState<"intel" | "directory" | "workbench" | "none">("directory");
   const [wbMode, setWbMode] = useState<WbMode>("analysis");
   const [wbProject, setWbProject] = useState(() => new URLSearchParams(window.location.search).get("project") ?? "");
@@ -255,7 +256,7 @@ function MapClient() {
       });
     } catch (e) {
       reportClientError("map", `Map renderer unavailable: ${(e as Error)?.message ?? e}`, (e as Error)?.stack ?? "");
-      queueMicrotask(() => setMapError("The map renderer is unavailable. You can still browse records in the directory."));
+      queueMicrotask(() => { setRendererDown(true); setMapError("The map renderer is unavailable. You can still browse records in the directory."); });
       return;
     }
     mapRef.current = map;
@@ -786,6 +787,20 @@ function MapClient() {
     <div className={styles.stage} data-fullbleed data-selection={selected || siteScreen.screen ? "true" : "false"} data-mode={mode} data-picking={picking ? "true" : "false"} data-panel={panel}>
       <SensorFilters />
       <div ref={container} className={styles.map} />
+      {rendererDown && (
+        <div className={styles.rendererDown} role="alert">
+          <p className={styles.kicker}>Atlas cannot draw the globe in this browser</p>
+          <h3>WebGL2 is unavailable</h3>
+          <p>The browser refused the 3D graphics context the map needs. This is a browser or graphics-driver setting, not your data: records, search and the directory still work.</p>
+          <ol>
+            <li>Close every Atlas tab, quit the browser completely and reopen it (a crashed graphics process recovers on restart).</li>
+            <li>Turn on hardware acceleration: Chrome / Edge → Settings → System → “Use graphics acceleration when available”, then relaunch.</li>
+            <li>Check <code>chrome://gpu</code> (or <code>edge://gpu</code>): “WebGL2” should read “Hardware accelerated”. If it says disabled, update the graphics driver.</li>
+            <li>Still blank? Try another browser (Chrome, Edge, Firefox or Safari, current versions).</li>
+          </ol>
+          <button type="button" className={styles.action} onClick={() => window.location.reload()}>Try again</button>
+        </div>
+      )}
       <div className={styles.fx} aria-hidden />
       {hudOn && <Hud map={mapObj} mode={mode} summary={summary} target={target} basemap={baseLabel} live={live} />}
       <Detection map={mapObj} layers={detectLayers} on={detectOn} />

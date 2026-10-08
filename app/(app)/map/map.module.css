@@ -446,3 +446,7 @@
   .displayToggles { grid-template-columns: 1fr; }
 }
 .stage[data-panel="none"] .statusBar { padding-left: 14px; }
+.rendererDown { position: absolute; z-index: 6; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(480px, calc(100% - 32px)); padding: 20px 22px; background: #FBFAF7; color: #252D27; border: 1px solid #D8D5CE; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+.rendererDown h3 { margin: 4px 0 8px; font-size: 18px; }
+.rendererDown ol { margin: 10px 0 14px; padding-left: 18px; display: grid; gap: 6px; }
+.rendererDown code { font-size: 12.5px; background: #ECF0EA; padding: 1px 4px; border-radius: 3px; }
