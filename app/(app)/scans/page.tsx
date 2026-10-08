@@ -33,7 +33,8 @@ const EMPTY_PRESET = { name: "", section: "prospecting", note: "", mode: "organi
 export default async function ScansPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/scans");
   const sp = await searchParams;
-  const ws = user.scope.mandateIds[0];
+  // ?ws= picks one of the user's workspaces (project partner scans run in the project's workspace); default: the first.
+  const ws = sp.ws && user.scope.mandateIds.includes(sp.ws) ? sp.ws : user.scope.mandateIds[0];
   const db = appDb();
   const tab = sp.tab === "runs" || sp.tab === "presets" || sp.tab === "economics" ? sp.tab : "launch";
   const economics = tab === "economics" ? await campaignEconomics(db, user.scope.mandateIds) : [];
@@ -113,7 +114,7 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
                 );
               })}</ul>
               <form action={startScanAction} className={s.start}>
-                <input type="hidden" name="preset" value={preset.key} /><input type="hidden" name="section" value={preset.section} /><input type="hidden" name="back" value={`/scans?preset=${preset.key}`} />
+                <input type="hidden" name="preset" value={preset.key} /><input type="hidden" name="section" value={preset.section} /><input type="hidden" name="ws" value={ws ?? ""} /><input type="hidden" name="back" value={`/scans?preset=${preset.key}&ws=${ws ?? ""}`} />
                 <label>Maximum {preset.config.mode === "opportunities" ? "items" : "new organizations"}<input name="maxOrganizations" type="number" min={1} max={500} defaultValue={preset.config.maxOrganizations} /></label>
                 {preset.config.mode === "organizations" && <label>People per organization (Apollo search, 0 = none)<input name="maxPeoplePerOrg" type="number" min={0} max={10} defaultValue={preset.config.maxPeoplePerOrg} disabled={!apollo} /></label>}
                 <p className={ui.sub}>Open-web research budget: ${preset.config.researchBudgetUsd} of Claude spend (every search and page read is logged against the scan). Credit ceiling: {creditCeiling(preset.config)} Apollo credit{creditCeiling(preset.config) === 1 ? "" : "s"} (organization search pages; people search returns no emails). Enrichment is never run by a scan.</p>

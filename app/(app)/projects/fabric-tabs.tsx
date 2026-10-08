@@ -12,6 +12,7 @@ import { COUNTRY_NOTES, LANES, matchProgrammes, programmesCsv } from "@/lib/capi
 import { countryRisk, fmtReading } from "@/lib/fabric/country";
 import { PRECISION } from "@/lib/portfolio/screen";
 import { placeApproximatelyAction } from "../casework-actions";
+import PartnerScanPanel from "./partner-scan";
 import { toGwh, yieldCheck } from "@/lib/diligence/yield";
 import type { UserScope } from "@/lib/db/scoped";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
@@ -289,7 +290,7 @@ export async function MatchesTab({ project, scope, kind }: { project: Project; s
         <div className={ui.sub}>{c.met.length > 0 && <>Met: {c.met.join(" · ")}<br /></>}{c.failed.length > 0 && <>Failed: {c.failed.join(" · ")}<br /></>}{c.unknown.length > 0 && <>Not known: {c.unknown.join(" · ")}<br /></>}{c.evidence.length > 0 && <>Evidence: {c.evidence.join("; ")}</>}</div>
       </article>)}
     </section>
-    <aside><section className={r.panel}><p className={r.panelTitle}>Elsewhere</p><p className={ui.sub}>Capital matching with private profiles is on the <Link href={`/projects/${project.id}?tab=capital`}>Capital</Link> tab; grants on <Link href={`/projects/${project.id}?tab=funding`}>Funding</Link>.</p></section></aside>
+    <aside><PartnerScanPanel project={project} /><section className={r.panel}><p className={r.panelTitle}>Elsewhere</p><p className={ui.sub}>Capital matching with private profiles is on the <Link href={`/projects/${project.id}?tab=capital`}>Capital</Link> tab; grants on <Link href={`/projects/${project.id}?tab=funding`}>Funding</Link>.</p></section></aside>
     <section className={r.panel} style={{ gridColumn: "1 / -1" }}>
       <p className={r.panelTitle}>Public capital programmes ({programmes.length})</p>
       <p className={ui.sub}>Institutions whose public mandate covers this country and whose capital lanes fit the project&apos;s stage. Institutions only, no people; every entry lists what to verify before any approach, and outreach stays in the approval queue.</p>

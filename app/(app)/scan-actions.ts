@@ -28,7 +28,8 @@ export async function startScanAction(formData: FormData) {
   let target = back;
   try {
     await withOsUser(async user => {
-      const ws = user.scope.mandateIds[0];
+      const wanted = str(formData, "ws", 100);
+      const ws = wanted && user.scope.mandateIds.includes(wanted) ? wanted : user.scope.mandateIds[0];
       if (!ws) throw new Error("No workspace");
       const db = appDb();
       const preset = await findPreset(db, ws, presetKey);

@@ -48,6 +48,7 @@ import PowerTab from "../power-tab";
 import BenchmarksTab from "../benchmarks-tab";
 import { runPlaybookOnProjectAction } from "../../playbook-actions";
 import { DiligenceTab, EquipmentTab, LandTab, MatchesTab, QuestionsTab, StakeholdersTab } from "../fabric-tabs";
+import PartnerScanPanel from "../partner-scan";
 
 export const dynamic = "force-dynamic";
 
@@ -298,6 +299,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "capital" && (
         <div className={r.grid}>
           <div>
+            <PartnerScanPanel project={p} group="capital" />
             {data.capital.requirements.length === 0 ? <section className={r.panel}><p className={r.empty}>No capital requirements yet. Do not record the project as &quot;seeking $X&quot;: add one requirement per purpose and instrument (pre-development, development, sponsor equity, senior debt, mezzanine, catalytic …).</p></section> : data.capital.requirements.map(req => {
               const tr = data.capital.tranches.filter(t => t.requirementId === req.id);
               return (

@@ -10,6 +10,9 @@ import { ROUTING } from "@/lib/capital/providers";
 import { PROGRAMMES } from "@/lib/capital/programmes";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { importProgrammesAction, setRoutingAction } from "../../casework-actions";
+import { startProjectScanAction } from "../../project-scan-actions";
+import { projects } from "@/db/schema";
+import { PARTNER_TYPES } from "@/lib/scan/project-scan";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Capital providers" };
@@ -21,9 +24,10 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const db = appDb();
   const ids = user.scope.mandateIds;
-  const [rows, ws] = await Promise.all([
+  const [rows, ws, projs] = await Promise.all([
     db.select().from(capitalProfiles).where(and(mandateCondition(user.scope, capitalProfiles.mandateId), or(isNotNull(capitalProfiles.programmeKey), isNotNull(capitalProfiles.lane)))).orderBy(capitalProfiles.name).limit(400),
     ids.length ? db.select({ id: mandates.id, name: mandates.name }).from(mandates).where(inArray(mandates.id, ids)) : Promise.resolve([]),
+    db.select({ id: projects.id, name: projects.name }).from(projects).where(mandateCondition(user.scope, projects.mandateId)).orderBy(projects.name).limit(500),
   ]);
   const stageOrder = Object.keys(ROUTING.routingStage);
   const lane = sp.lane && sp.lane in ROUTING.lane ? sp.lane : null;
@@ -46,7 +50,15 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Pr
                 <button className={ui.miniBtn} type="submit">Save</button></form></td></tr>)}
           </tbody></table>}
       </section>
-      <aside><section className={r.panel}><p className={r.panelTitle}>Import public programmes</p>
+      <aside><section className={r.panel}><p className={r.panelTitle}>Scan for partners for a project</p>
+        <p className={ui.sub}>Builds a scan from the project (country or region, technology, size, stage). You review scope and cost before it runs; nobody is contacted.</p>
+        <form action={startProjectScanAction} className={r.form}>
+          <label>Project<select name="projectId" required>{projs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+          <label>Looking for<select name="type">{Object.entries(PARTNER_TYPES).map(([k, t]) => <option key={k} value={k}>{t.group === "capital" ? "Capital: " : "Delivery: "}{t.label}</option>)}</select></label>
+          <button className="btn" type="submit">Prepare scan</button></form>
+        <p className={ui.sub}>General capital scans (not tied to a project): <Link href="/scans?preset=dfis">DFIs</Link> · <Link href="/scans?preset=lenders">lenders</Link> · <Link href="/scans?preset=infra_pe">infrastructure PE</Link> · <Link href="/scans?preset=real_asset_funds">real-asset funds</Link>.</p>
+      </section>
+      <section className={r.panel}><p className={r.panelTitle}>Import public programmes</p>
         <p className={ui.sub}>Adds the {PROGRAMMES.length} catalogued institutions (DFIs, MDBs, funds, guarantors, IPP acquirers) as organizations and capital profiles. Re-importing refreshes them; nothing is contacted.</p>
         <form action={importProgrammesAction} className={r.form}><label>Workspace<select name="mandateId">{ws.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label><button className="btn" type="submit">Import</button></form>
       </section></aside>

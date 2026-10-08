@@ -165,6 +165,21 @@ export const AUDIENCES: Audience[] = [
     titles: ["executive director", "conservation director", "finance director"], seniorities: [],
     buyingEvents: ["Funding gap", "Land-rights outcome", "Programme launch"],
     capture: ["Governance and consent process", "Territory", "Programmes", "Funding needs", "Existing relationships"], entryOffer: "Financing pathways session" },
+  // Project partnering (2026-10-08): who a project needs besides capital and an EPC.
+  { key: "equipment_suppliers", label: "Equipment manufacturers and suppliers (OEM)", kind: "partner", role: "delivery_partner",
+    purpose: "Manufacturers and distributors of modules, inverters, trackers, batteries, transformers and switchgear that supply utility-scale projects.",
+    orgTerms: ["solar module manufacturer", "inverter manufacturer", "battery energy storage supplier", "tracker manufacturer", "transformer manufacturer", "switchgear"],
+    evidence: /\b(manufactur|supplier|distribut|OEM|module|inverter|tracker|battery|transformer|switchgear|cell)/i, exclude: /\b(retail|consumer|rooftop installer|residential)\b/i,
+    titles: ["sales director", "business development director", "head of utility sales", "regional director"], seniorities: SENIOR,
+    buyingEvents: ["New regional office or distributor", "Factory or capacity expansion", "Utility-scale supply award"],
+    capture: ["Products and ratings", "Bankability (tier / track record)", "Lead time", "Warranty", "Regional service", "Certifications"], entryOffer: "Project supply shortlist" },
+  { key: "insurers_guarantors", label: "Insurers, guarantors and risk mitigators", kind: "capital", role: "capital_provider",
+    purpose: "Political-risk insurers, credit guarantors, export credit agencies and project insurers that de-risk projects for senior lenders.",
+    orgTerms: ["political risk insurance", "credit guarantee", "export credit agency", "infrastructure guarantee", "construction all risk insurance", "surety bond"],
+    evidence: /\b(insur|guarant|surety|export credit|reinsur|risk mitigation|underwrit)/i, exclude: /\b(health insurance|life insurance|car insurance|broker of homes)\b/i,
+    titles: ["head of political risk", "director guarantees", "underwriter energy", "head of structured credit"], seniorities: SENIOR,
+    buyingEvents: ["New guarantee facility", "Country programme opened", "Capacity increase"],
+    capture: CAPITAL_CAPTURE, entryOffer: "De-risking pathway brief" },
 ];
 
 // Legal-name words for registry discovery (GLEIF fulltext): registries hold legal names, often Spanish or Portuguese in
