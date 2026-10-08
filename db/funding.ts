@@ -6,7 +6,7 @@ const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const now = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
 const timestamps = { createdAt: text("created_at").notNull().default(now), updatedAt: text("updated_at").notNull().default(now) };
 
-export const FUNDING_SOURCES = ["grants_gov", "eu_funding", "ted", "worldbank", "uk_contracts", "uk_fts"] as const;
+export const FUNDING_SOURCES = ["grants_gov", "eu_funding", "ted", "worldbank", "uk_contracts", "uk_fts", "sam_gov"] as const;
 export const FUNDING_TYPES = ["grant", "tender", "call", "prize", "concessional"] as const;
 export const FUNDING_ROUTES = ["regenera_bid", "client_support", "consortium", "signal"] as const;
 export const FUNDING_DECISIONS = ["new", "watching", "bidding", "matched", "dismissed"] as const;

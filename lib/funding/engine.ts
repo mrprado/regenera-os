@@ -10,7 +10,7 @@ import { normalizeOrgName } from "@/lib/dedupe/normalize";
 import { geocode } from "@/lib/sources/geocode";
 import { getState, setState } from "@/lib/state";
 import { SECTORS } from "@/lib/vocab";
-import { euFunding, grantsGov, tedFunding, ukContracts, ukFindTender, worldBankFunding, type FundingItem } from "./sources";
+import { euFunding, grantsGov, samGov, tedFunding, ukContracts, ukFindTender, worldBankFunding, type FundingItem } from "./sources";
 
 type SourceKey = FundingItem["source"];
 
@@ -33,7 +33,7 @@ export const FUNDING_QUERIES: { key: string; label: string; text: string; sector
 ];
 
 const SOURCES: Record<SourceKey, (db: Db, text: string, now: Date, f?: typeof fetch) => Promise<FundingItem[]>> = {
-  grants_gov: grantsGov, eu_funding: euFunding, uk_contracts: ukContracts, ted: tedFunding, worldbank: worldBankFunding, uk_fts: ukFindTender,
+  grants_gov: grantsGov, eu_funding: euFunding, uk_contracts: ukContracts, ted: tedFunding, worldbank: worldBankFunding, uk_fts: ukFindTender, sam_gov: samGov,
 };
 const SOURCE_KEYS = Object.keys(SOURCES) as SourceKey[];
 const PAIRS = FUNDING_QUERIES.flatMap(q => SOURCE_KEYS.map(s => ({ q, s })));

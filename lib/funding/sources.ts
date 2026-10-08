@@ -8,7 +8,7 @@ import { fetchJson } from "@/lib/sources/http";
 import { tedSignals, worldBankSignals, type RawSignal } from "@/lib/sources/signals";
 
 export type FundingItem = {
-  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts" | "uk_fts";
+  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts" | "uk_fts" | "sam_gov";
   externalId: string;
   title: string;
   funder: string | null;
@@ -231,5 +231,25 @@ export async function ukFindTender(db: Db, keyword: string, now = new Date(), fe
     amountMin: null, amountMax: r.tender?.value?.amount ?? null, currency: r.tender?.value?.currency ?? null, openDate: r.date?.slice(0, 10) ?? null,
     deadline: r.tender?.tenderPeriod?.endDate?.slice(0, 10) ?? null, status: "open" as const, countries: ["United Kingdom"], applicantTypes: ["Businesses"],
     url: `https://www.find-tender.service.gov.uk/Notice/${encodeURIComponent(r.ocid.replace(/^ocds-h6vhtk-/, ""))}`, description: (r.tender?.description ?? "").slice(0, 4000),
+  }));
+}
+
+// ---------- SAM.gov contract opportunities (free key SAM_API_KEY; dormant without it) ----------
+const zSam = z.object({ opportunitiesData: z.array(z.object({
+  noticeId: z.string(), title: z.string().optional(), fullParentPathName: z.string().optional(), postedDate: z.string().optional(), type: z.string().optional(),
+  responseDeadLine: z.string().nullable().optional(), uiLink: z.string().optional(), active: z.string().optional(),
+}).passthrough()).default([]) }).passthrough();
+const toUsDate = (d: Date) => `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}/${d.getUTCFullYear()}`;
+
+export async function samGov(db: Db, keyword: string, now = new Date(), fetchImpl?: typeof fetch): Promise<FundingItem[]> {
+  const key = ((await import("cloudflare:workers")).env as unknown as Record<string, string | undefined>).SAM_API_KEY;
+  if (!key) return []; // credential not set: Settings → Integrations shows "credential required"
+  const q = new URLSearchParams({ api_key: key, postedFrom: toUsDate(new Date(now.getTime() - 30 * 86_400_000)), postedTo: toUsDate(now), title: keyword, limit: "50", ptype: "o,p,k,r" });
+  const res = await fetchJson(db, { provider: "sam_gov", endpoint: "opportunities", url: `https://api.sam.gov/prod/opportunities/v2/search?${q}`, schema: zSam, cacheKey: `sam:${keyword}:${now.toISOString().slice(0, 10)}`, cacheTtlMs: 12 * 3_600_000, fetchImpl });
+  return res.opportunitiesData.filter(o => o.active !== "No" && !/award/i.test(o.type ?? "")).map(o => ({
+    source: "sam_gov" as const, externalId: o.noticeId, title: (o.title ?? o.noticeId).slice(0, 500), funder: o.fullParentPathName?.split(".").slice(0, 2).join(" · ") ?? "US federal", programme: null,
+    type: "tender" as const, amountMin: null, amountMax: null, currency: "USD", openDate: o.postedDate?.slice(0, 10) ?? null, deadline: o.responseDeadLine?.slice(0, 10) ?? null,
+    status: /presol|sources sought/i.test(o.type ?? "") ? "forthcoming" as const : "open" as const, countries: ["United States"], applicantTypes: ["Businesses"],
+    url: o.uiLink ?? `https://sam.gov/opp/${o.noticeId}/view`, description: o.type ?? "",
   }));
 }
