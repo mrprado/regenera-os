@@ -18,6 +18,7 @@ const EVIDENCE: Record<string, string> = {
   projects: "Regenera record. Figures are as recorded; claims carry their own evidence status. Hollow blue markers are public-pipeline projects (World Bank), not Regenera mandates.",
   organizations: "Regenera Network record (identity enrichment from GLEIF / Wikidata where linked).",
   procurement: "Funding or tender record as published by the source; eligibility and deadline need confirmation.",
+  funding_region: "Country-level eligibility listed by funding records (Natural Earth boundaries, public domain). Not a project site.",
   triggers: "Signal from a public source; not independent verification of the event.",
   hazards: "GDACS alert (modelled impact estimate).",
 };

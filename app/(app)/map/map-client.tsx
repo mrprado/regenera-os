@@ -56,7 +56,7 @@ const LAYER_META: Record<LayerKey, { label: string; swatch: string }> = {
 };
 const LAYER_IDS: Record<LayerKey, string[]> = {
   organizations: ["organizations", "organizations-cluster", "organizations-count"],
-  projects: ["projects", "projects-glow", "projects-label"], deals: ["deals"], triggers: ["triggers", "triggers-halo"], procurement: ["procurement"], hazards: ["hazards"],
+  projects: ["projects", "projects-glow", "projects-label"], deals: ["deals"], triggers: ["triggers", "triggers-halo"], procurement: ["funding-regions-fill", "funding-regions-line"], hazards: ["hazards"],
 };
 
 function addDataLayers(map: maplibregl.Map) {
@@ -73,7 +73,11 @@ function addDataLayers(map: maplibregl.Map) {
   map.addLayer({ id: "projects-glow", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 14, 10, 26], "circle-color": C.pollen, "circle-opacity": 0.16, "circle-blur": 0.8 } });
   map.addLayer({ id: "projects", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 6, 10, 12], "circle-color": ["case", ["==", ["get", "market"], 1], "rgba(0,0,0,0)", C.wax] as unknown as maplibregl.ExpressionSpecification, "circle-stroke-color": ["case", ["==", ["get", "market"], 1], "#7fb7d6", "#173b2a"] as unknown as maplibregl.ExpressionSpecification, "circle-stroke-width": 3, "circle-opacity": ["case", ["==", ["get", "approx"], 1], 0.5, 1], "circle-stroke-opacity": ["case", ["==", ["get", "approx"], 1], 0.5, 1] } });
   map.addLayer({ id: "projects-label", type: "symbol", source: "projects", minzoom: 3.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-letter-spacing": 0.04, "text-optional": true }, paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,.92)", "text-halo-width": 1.5 } });
-  map.addLayer({ id: "procurement", type: "circle", source: "procurement", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } });
+  // Funding geography is drawn as country regions (Natural Earth admin-0, public domain), never as an invented point.
+  map.addSource("funding-regions", { type: "geojson", data: empty });
+  map.addLayer({ id: "funding-regions-fill", type: "fill", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "fill-color": C.sky, "fill-opacity": ["interpolate", ["linear"], ["coalesce", ["get", "n"], 0], 1, 0.12, 10, 0.28, 60, 0.45] } });
+  map.addLayer({ id: "funding-regions-line", type: "line", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "line-color": "#4f8db5", "line-width": 0.8, "line-opacity": 0.7 } });
+  map.addLayer({ id: "procurement", type: "circle", source: "procurement", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "triggers-halo", type: "circle", source: "triggers", paint: { "circle-radius": 12, "circle-color": triggerColor, "circle-opacity": 0.18, "circle-blur": 0.6 } });
   map.addLayer({ id: "triggers", type: "circle", source: "triggers", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, ["+", 3, ["coalesce", ["get", "urgency"], 3]], 10, ["+", 6, ["coalesce", ["get", "urgency"], 3]]], "circle-color": triggerColor, "circle-stroke-color": "#141715", "circle-stroke-width": 1.2 } });
 }
@@ -284,7 +288,15 @@ function MapClient() {
       addIcons(map);
       addDataLayers(map);
       addTrackLayers(map);
-      for (const layer of ["projects", "organizations", "deals", "triggers", "procurement", "hazards"] as LayerKey[]) {
+      map.on("click", "funding-regions-fill", e => {
+        const f = e.features?.[0];
+        if (!f || wbToolRef.current !== "none" || pickingRef.current) return;
+        if (map.queryRenderedFeatures(e.point, { layers: ["projects", "organizations", "deals", "triggers", "hazards"].filter(id => map.getLayer(id)) }).length) return;
+        setSelected({ layer: "funding_region", props: f.properties ?? {}, lngLat: [e.lngLat.lng, e.lngLat.lat] });
+      });
+      map.on("mouseenter", "funding-regions-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "funding-regions-fill", () => { map.getCanvas().style.cursor = ""; });
+      for (const layer of ["projects", "organizations", "deals", "triggers", "hazards"] as LayerKey[]) {
         const ids = layer === "organizations" ? ["organizations", "organizations-cluster"] : [layer];
         for (const id of ids) {
           map.on("click", id, e => {
@@ -333,6 +345,22 @@ function MapClient() {
     el.addEventListener("mousedown", stop); el.addEventListener("wheel", stop, { passive: true }); el.addEventListener("touchstart", stop, { passive: true });
     return () => { cancelAnimationFrame(raf); el.removeEventListener("mousedown", stop); el.removeEventListener("wheel", stop); el.removeEventListener("touchstart", stop); };
   }, [mapObj]);
+
+  // Funding regions: country polygons carry the count of open / forthcoming calls that list the country.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !data) return;
+    let live = true;
+    fetch(withBase("/geo/countries-110m.json")).then(r => r.json() as Promise<FeatureCollection>).then(fc => {
+      if (!live) return;
+      const by = data.fundingByCountry ?? {};
+      (map.getSource("funding-regions") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: fc.features.map(f => {
+        const iso = String(f.properties?.iso3 ?? "");
+        return { ...f, properties: { ...f.properties, n: by[iso]?.n ?? 0, items: JSON.stringify(by[iso]?.items ?? []) } };
+      }) });
+    }).catch(() => setStatus(s => ({ ...s, procurement: { error: "Country boundaries unavailable" } })));
+    return () => { live = false; };
+  }, [mapReady, data]);
 
   // Records → map
   useEffect(() => {
@@ -502,7 +530,7 @@ function MapClient() {
     };
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (atlas.draw !== "none" || wbToolRef.current !== "none" || pickingRef.current) return;
-      const recordHit = map.queryRenderedFeatures(e.point, { layers: ["projects", "organizations", "organizations-cluster", "deals", "triggers", "procurement", "hazards"].filter(id => map.getLayer(id)) });
+      const recordHit = map.queryRenderedFeatures(e.point, { layers: ["projects", "organizations", "organizations-cluster", "deals", "triggers", "funding-regions-fill", "hazards"].filter(id => map.getLayer(id)) });
       if (recordHit.length) return;
       const hit = pick(e.point);
       if (!hit) return;

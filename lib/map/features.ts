@@ -7,6 +7,7 @@ import { deals, fundingOpportunities, organizations, projects, triggers } from "
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { freshnessSince } from "@/lib/freshness";
 import { validCoordinates, type MapPoint } from "./discovery";
+import { country as countryOf } from "@/lib/scan/countries";
 
 type Point = MapPoint;
 const point = (lng: number, lat: number, properties: Point["properties"]): Point => ({ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties });
@@ -54,7 +55,7 @@ export async function mapFeatures(scope: Scope, now = new Date(), db: Db = appDb
 
   // Funding opportunities placed by eligible country (0,0 marks "not placeable": EU-wide or global calls).
   const fundingRows = await db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, funder: fundingOpportunities.funder, deadline: fundingOpportunities.deadline,
-    fit: fundingOpportunities.fit, type: fundingOpportunities.type, url: fundingOpportunities.url, lat: fundingOpportunities.lat, lng: fundingOpportunities.lng, summary: fundingOpportunities.read })
+    fit: fundingOpportunities.fit, type: fundingOpportunities.type, url: fundingOpportunities.url, lat: fundingOpportunities.lat, lng: fundingOpportunities.lng, summary: fundingOpportunities.read, countries: fundingOpportunities.countries })
     .from(fundingOpportunities).where(and(mandateCondition(scope, fundingOpportunities.mandateId), currentCall(new Date().toISOString().slice(0, 10)), ne(fundingOpportunities.decision, "dismissed")));
   const fundingPoints = fundingRows.filter(f => validCoordinates(f.lng, f.lat) && (f.lat !== 0 || f.lng !== 0)).map(f => point(f.lng!, f.lat!, {
     id: f.id, kind: "procurement", type: f.type, summary: f.title, eventDate: f.deadline, urgency: null, relevance: f.fit, source: "funding", url: f.url,
@@ -72,7 +73,15 @@ export async function mapFeatures(scope: Scope, now = new Date(), db: Db = appDb
     market: (p.originationSource ?? "").startsWith("Public pipeline:") ? 1 : 0,
     locationBasis: p.locationSource ? `${p.locationSource}` : "Recorded project coordinates (precision not recorded); see Place for evidence" }));
 
+  // Phase 22: funding geography as country regions (Atlas fills the Natural Earth country), never an invented point.
+  const fundingByCountry: Record<string, { n: number; items: { id: string; title: string; deadline: string | null }[] }> = {};
+  for (const f of fundingRows) for (const c of new Set((f.countries ?? []).map(x => countryOf(x)?.iso3).filter((x): x is string => !!x))) {
+    const g = fundingByCountry[c] ?? (fundingByCountry[c] = { n: 0, items: [] });
+    g.n++;
+    if (g.items.length < 12) g.items.push({ id: f.id, title: f.title.slice(0, 140), deadline: f.deadline });
+  }
   return {
+    fundingByCountry,
     generatedAt: now.toISOString(),
     projects: fc(projectPoints),
     since,

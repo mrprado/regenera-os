@@ -150,6 +150,20 @@ export function Detail({ selected, onTrack, onChase, tracked }: { selected: NonN
         <p className={styles.note}><b>Evidence class: OSM-mapped.</b> Not registry-listed, not a modeled corridor and not utility-confirmed: an OSM line or substation does not establish available capacity or a connection point. Source: Open Infrastructure Map, © OpenStreetMap contributors (ODbL). Verify with the TSO/utility before relying on it.</p>
       </>
     );
+    case "funding_region": {
+      let items: { id: string; title: string; deadline: string | null }[] = [];
+      try { items = JSON.parse(String(p.items ?? "[]")); } catch { items = []; }
+      return (
+        <>
+          <p className={styles.kicker}>Funding geography · country-level</p>
+          <h3>{String(p.name ?? p.iso3 ?? "Country")}</h3>
+          <p className={styles.meta}>{String(p.n ?? 0)} open or forthcoming funding records list this country (whole-country eligibility; not a site).</p>
+          <ul className={styles.links} style={{ display: "grid", gap: 4, listStyle: "none", padding: 0 }}>{items.map(i => <li key={i.id}><a href={`/funding/${i.id}`}>{i.title}</a>{i.deadline ? ` · ${i.deadline}` : ""}</li>)}</ul>
+          <a className={styles.open} href={`/funding?region=${encodeURIComponent(String(p.name ?? ""))}`}>All funding for this country</a>
+          <p className={styles.note}>Boundaries: Natural Earth (public domain), 1:110m. Eligibility is per call: open a record for its rules.</p>
+        </>
+      );
+    }
     case "registry_plants": return (
       <>
         <p className={styles.kicker}>Power plant · registry-listed · {String(p.fuel ?? "fuel not stated")}</p>
