@@ -4,6 +4,7 @@ declare namespace Cloudflare {
     BUCKET?: R2Bucket;
     // Comma-separated emails allowed to sign in until mandate_members exists (phase 0 bootstrap).
     OS_ALLOWLIST?: string;
+    OS_OPEN_ACCESS?: string; // "1": no password needed to view (as the first OS_ALLOWLIST email); visitors change nothing
     OS_PASSWORD?: string; // the OS password (secret); when unset, the tracker password is checked instead
     TRACKER_AUTH_URL?: string;
     JOBS_TICK_TOKEN?: string;

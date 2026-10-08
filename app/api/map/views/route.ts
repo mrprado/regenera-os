@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user) return Response.json({ error: "Not authorized" }, { status: 401 });
   const b = (await request.json().catch(() => ({}))) as { name?: string; view?: string };
   const name = String(b.name ?? "").trim().slice(0, 80), view = String(b.view ?? "").replace(/^#/, "").slice(0, 2000);
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user) return Response.json({ error: "Not authorized" }, { status: 401 });
   const id = new URL(request.url).searchParams.get("id") ?? "";
   await appDb().delete(atlasViews).where(and(eq(atlasViews.id, id), eq(atlasViews.createdBy, user.email), mandateCondition(user.scope, atlasViews.mandateId)));

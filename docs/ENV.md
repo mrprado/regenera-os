@@ -7,6 +7,7 @@ Secrets go in the Sites project's secret settings (production) and `.dev.vars` (
 | Name | Needed by phase | How to get it |
 |---|---|---|
 | `OS_ALLOWLIST` | 0 | Your sign-in email(s), comma-separated. The ChatGPT account email you will use to open the OS |
+| `OS_OPEN_ACCESS` | optional | `"1"` opens the OS without a password, view only, as the first `OS_ALLOWLIST` email (lib/auth.ts). Every server action and write route refuses visitors; /signin still gives full rights. Remove it to require sign-in again |
 | `JOBS_TICK_TOKEN` | 0 | Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Same value goes into the scheduler |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | 0 | Google Cloud project → OAuth consent screen **Internal** → OAuth client (Web). Redirect URI `https://os.regenera.bio/api/oauth/google/callback` (+ `http://localhost:5180/api/oauth/google/callback` for local). Enable Gmail, Calendar, Drive APIs |
 | `TOKEN_ENCRYPTION_KEY` | 0 | Generate 32 random bytes (same command as above) |

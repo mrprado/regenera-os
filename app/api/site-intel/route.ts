@@ -6,7 +6,7 @@ import { startRun } from "@/lib/site-intel/engine";
 
 // Guarded: POST { projectId } starts a site-intelligence run and returns its id. Stages then run one per step call.
 export async function POST(request: Request) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user) return Response.json({ error: "Not authorized" }, { status: 401 });
   const body = (await request.json().catch(() => ({}))) as { projectId?: string };
   const [p] = await appDb().select({ id: projects.id }).from(projects).where(and(eq(projects.id, String(body.projectId ?? "")), mandateCondition(user.scope, projects.mandateId)));

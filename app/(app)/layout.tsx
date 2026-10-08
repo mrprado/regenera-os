@@ -14,7 +14,7 @@ import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
 import WorkspaceTrail from './workspace-trail';
 import ErrorReporter from "@/components/error-reporter";
-import { currentEmail } from "@/lib/auth";
+import { currentOsUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ function initials(name: string): string {
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // Signed out: render the page alone, so its own guard redirects with the right return path (not always /today).
   // Every page calls requireOsUser itself (tests/unit/route-guard.test.ts), so nothing renders unauthenticated.
-  if (!(await currentEmail())) return <>{children}</>;
+  if (!(await currentOsUser())) return <>{children}</>;
   const user = await requireOsUser("/today");
   const { lastTick, stale: schedulerStale } = await schedulerStatus();
   const open = await openNotifications(appDb(), user.scope.mandateIds, user.email, new Date(), 200);
@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <Link href="/notifications" className={styles.accountName} aria-label={`Notifications: ${unread} unread`} title="Notifications" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Bell size={16} aria-hidden />{unread > 0 && <b style={{ color: open.some(n => n.priority === "critical" && !n.readAt) ? "#b0432f" : undefined }}>{unread}</b>}</Link>
           <span className={styles.accountName} title={user.email}>{user.displayName}</span>
           <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>
-          <form method="post" action={withBase("/api/auth/signout")}><button type="submit" className={styles.signOut}>Sign out</button></form>
+          {user.visitor ? <a className={styles.signOut} href={withBase("/signin?return_to=/today")}>Sign in</a> : <form method="post" action={withBase("/api/auth/signout")}><button type="submit" className={styles.signOut}>Sign out</button></form>}
         </div>
       </header>
 
@@ -69,6 +69,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       </aside>
 
       <div className={styles.content}>
+        {user.visitor && <div className={styles.banner} role="status"><b>OPEN ACCESS · VIEW ONLY</b> Opened without a password. Nothing can be changed, sent or spent until you <a href={withBase("/signin?return_to=/today")}>sign in</a>.</div>}
         {(env.ISOLATED_DEMO==='true'||sandboxFocus||(schedulerStale&&isInternal(user.scope)))&&<details className={styles.statusStrip}><summary><span className={styles.statusLabel}>{env.ISOLATED_DEMO==='true'?'Demo workspace':sandboxFocus?'Sandbox workspace':'Automation paused'}</span><span>{env.ISOLATED_DEMO==='true'?'Fictional records · external actions disabled':'Workspace operating status'}</span><span>Details</span></summary><div className={styles.statusBody}>
         {env.ISOLATED_DEMO === "true" && <div className={styles.banner} role="status"><b>PRIVATE DEMO</b> Same Regenera build; fictional data and isolated storage. External actions are disabled. <Link href="/demo">Change demo identity</Link></div>}
         {sandboxFocus && <div className={styles.banner} role="status"><b>SANDBOX</b> You are working in a sandbox workspace: test data only, never mixed with production records.</div>}

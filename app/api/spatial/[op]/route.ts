@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ op: 
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ op: string }> }) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user) return json({ error: "Not authorized" }, 401);
   const { op } = await params;
   const db = appDb();

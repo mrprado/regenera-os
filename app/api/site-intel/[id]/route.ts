@@ -5,8 +5,8 @@ import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { env } from "cloudflare:workers";
 import { runNextStage } from "@/lib/site-intel/engine";
 
-async function scoped(id: string) {
-  const user = await getOsApiUser();
+async function scoped(id: string, write = false) {
+  const user = await getOsApiUser({ write });
   if (!user) return { error: Response.json({ error: "Not authorized" }, { status: 401 }) };
   const [r] = await appDb().select().from(siteIntelRuns).where(and(eq(siteIntelRuns.id, id), mandateCondition(user.scope, siteIntelRuns.mandateId)));
   if (!r) return { error: Response.json({ error: "Not found" }, { status: 404 }) };
@@ -21,7 +21,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 }
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const s = await scoped((await params).id);
+  const s = await scoped((await params).id, true);
   if (s.error) return s.error;
   if (s.run.stages.some(x => x.status === "running")) return Response.json({ id: s.run.id, status: s.run.status, stages: s.run.stages, busy: true });
   const r = await runNextStage(appDb(), s.run.id, undefined, env as unknown as Record<string, string | undefined>);

@@ -10,7 +10,8 @@ import { SESSION_COOKIE, sessionEmail } from "./session";
 
 export const MANDATE_COOKIE = "os_mandate";
 
-export type OsUser = { userId: string; email: string; displayName: string; scope: UserScope };
+/** visitor: an anonymous visitor let in by OS_OPEN_ACCESS. They see the owner's view and change nothing. */
+export type OsUser = { userId: string; email: string; displayName: string; scope: UserScope; visitor?: boolean };
 
 // Deduplicated per request. mandate_members decides access; OS_ALLOWLIST only bootstraps the first owner.
 const toOsUser = cache(async (userId: string, email: string, displayName: string): Promise<OsUser | null> => {
@@ -32,11 +33,28 @@ export const currentEmail = cache(async (): Promise<string | null> => {
 // The verified email is the identity; membership rows bind to this id on first sign-in.
 const fromEmail = (email: string) => toOsUser(`email:${email}`, email, email);
 
+// Open access (OS_OPEN_ACCESS = "1"): with no session, a visitor gets the first OS_ALLOWLIST email's view without a
+// password. Every server action and write route refuses visitors (no sends, approvals, credit or AI spend, deletions);
+// signing in at /signin still gives full rights. Turn it off by removing the variable.
+export function openAccessEmail(): string | null {
+  if (env.OS_OPEN_ACCESS !== "1") return null;
+  return [...parseAllowlist(env.OS_ALLOWLIST)][0] ?? null;
+}
+
+/** The signed-in user, or the open-access visitor, or null. */
+export const currentOsUser = cache(async (): Promise<OsUser | null> => {
+  const email = await currentEmail();
+  if (email) return fromEmail(email);
+  const open = openAccessEmail();
+  const os = open ? await fromEmail(open) : null;
+  return os ? { ...os, visitor: true } : null;
+});
+
 /** Guard for every page under app/(app). Sends anonymous visitors to sign-in, others to /not-allowed. */
 export async function requireOsUser(returnTo: string): Promise<OsUser> {
   const email = await currentEmail();
-  if (!email) redirect(`/signin?return_to=${encodeURIComponent(returnTo)}`);
-  const os = await fromEmail(email);
+  if (!email && !openAccessEmail()) redirect(`/signin?return_to=${encodeURIComponent(returnTo)}`);
+  const os = await currentOsUser();
   if (!os) redirect("/not-allowed");
   // Module entitlements (lib/tenancy): a client user opening a module their organization does not license is sent away.
   if (!pathAllowed(os.scope.modules, returnTo)) redirect(`/not-allowed?module=${encodeURIComponent(moduleForPath(returnTo) ?? "")}`);
@@ -49,16 +67,19 @@ export async function requireOsOwner(returnTo: string): Promise<OsUser> {
   return os;
 }
 
-/** For API route handlers: returns null instead of redirecting. */
-export async function getOsApiUser(): Promise<OsUser | null> {
-  const email = await currentEmail();
-  return email ? fromEmail(email) : null;
+/** For API route handlers: returns null instead of redirecting. Pass { write: true } on anything that changes data
+ *  or spends: open-access visitors are refused there. */
+export async function getOsApiUser(opts: { write?: boolean } = {}): Promise<OsUser | null> {
+  const os = await currentOsUser();
+  if (opts.write && os?.visitor) return null;
+  return os;
 }
 
 /** Wrap every server action body. Throws rather than redirecting so a forged call gets nothing. */
 export async function withOsUser<T>(fn: (user: OsUser) => Promise<T>, opts: { owner?: boolean; internal?: boolean } = {}): Promise<T> {
   const os = await getOsApiUser();
   if (!os) throw new Error("Not authorized");
+  if (os.visitor) throw new Error("View only without a password: sign in at /signin to make changes");
   if (opts.owner && !isOwner(os.scope)) throw new Error("Owner only");
   // Platform administration (jobs, sending, demo data, prompts) is Regenera's; a client admin owning their own workspace is not enough.
   if (opts.internal && !isInternal(os.scope)) throw new Error("Regenera internal only");

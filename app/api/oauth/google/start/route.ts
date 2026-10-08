@@ -6,7 +6,7 @@ import { authUrl, createState, redirectUri, STATE_COOKIE, zMailboxRole } from "@
 
 // Guarded: only a signed-in owner can start connecting a mailbox.
 export async function GET(request: Request) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user || !isOwner(user.scope)) return Response.json({ error: "Not authorized" }, { status: 403 });
 
   const cfg = googleConfig();

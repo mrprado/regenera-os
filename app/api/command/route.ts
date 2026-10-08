@@ -12,7 +12,7 @@ const zBody = z.object({
 });
 
 export async function POST(request: Request) {
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user) return Response.json({ error: "Sign in first" }, { status: 401 });
   const cfg = aiConfig();
   if (!cfg) return Response.json({ error: "Ask the OS needs ANTHROPIC_API_KEY (docs/ENV.md)." }, { status: 503 });

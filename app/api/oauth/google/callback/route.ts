@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (!code || !state) return back("invalid_state");
 
   // The flow was started by an owner; the same signed-in owner must finish it.
-  const user = await getOsApiUser();
+  const user = await getOsApiUser({ write: true });
   if (!user || user.userId !== state.userId || !isOwner(user.scope)) return back("not_authorized");
 
   try {
