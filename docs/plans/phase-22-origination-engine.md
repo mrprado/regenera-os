@@ -110,7 +110,7 @@ tiers and development partnership (bands are hypotheses; capital-introduction wo
 | Commercial operations: service recommendation by need / role | implemented & tested |
 | /origination (Queue, Hypotheses, Rubric, Revenue engines), project readiness panel, Command counts | implemented, verify in production |
 | Funding geographies drawn as country regions in Atlas | planned (needs Natural Earth admin-0 file in the repo) |
-| Capital-partner "declare mandate" and sponsor "submit project" portal flows | planned (portal intake exists; mapping to origination items next) |
+| Capital-partner "declare mandate" and sponsor "submit project" flows | implemented (existing public intake: a converted sponsor submission becomes a project and enters the origination queue; a capital submission becomes an owner-only capital profile used by capital rematch) |
 | AI narrative in dossiers / proposals | blocked (Anthropic credit) |
 
 ### Agent permission matrix
