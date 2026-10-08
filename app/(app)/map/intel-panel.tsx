@@ -11,7 +11,16 @@ import styles from "./map.module.css";
 export type FeedStatus = { loading?: boolean; count?: number; shown?: number; updated?: string; error?: string; source?: string };
 export type RecordLayer = { key: string; label: string; swatch: string; count: number };
 
+// Saved workspaces (phase 21 Atlas §6): layer configurations and a camera, not separate applications.
 export const MISSIONS: { id: string; label: string; hint: string; base: string; layers: string[]; records?: string[]; mode?: string; camera?: "globe" | "fit" }[] = [
+  { id: "global_infra", label: "Global Infrastructure", hint: "Registry-listed power plants and the OSM grid on a quiet analytical map", base: "light", layers: ["registry_plants", "power"], records: ["projects"], camera: "globe" },
+  { id: "energy_transition", label: "Energy Transition", hint: "Generation by fuel, grid and your energy projects and opportunities", base: "light", layers: ["registry_plants", "power"], records: ["projects", "deals", "procurement"], camera: "globe" },
+  { id: "site_scout", label: "Site Scout", hint: "Imagery with grid, protected areas, vegetation, water and buildings; then Screen a site", base: "s2cloudless", layers: ["power", "registry_plants", "protected", "ndvi", "surface_water", "buildings"], records: ["projects"], camera: "fit" },
+  { id: "land_ecology", label: "Land & Ecology", hint: "Tree cover loss, protected areas and vegetation", base: "s2cloudless", layers: ["forest_loss", "protected", "ndvi"], records: ["projects"], camera: "fit" },
+  { id: "water_intel", label: "Water Intelligence", hint: "Surface-water history and precipitation around projects", base: "light", layers: ["surface_water", "precip"], records: ["projects"], camera: "fit" },
+  { id: "hazard_watch", label: "Hazard Watch", hint: "Quakes, fires, storms and events with GDACS alerts", base: "viirs_today", layers: ["quakes", "fires", "events", "cyclones"], records: ["projects", "hazards"], camera: "globe" },
+  { id: "project_portfolio", label: "Project Portfolio", hint: "Projects, opportunities and partners on imagery", base: "s2cloudless", layers: [], records: ["projects", "deals", "organizations"], camera: "fit" },
+  { id: "capital_opps", label: "Capital Opportunities", hint: "Funding calls and tenders with projects and opportunities", base: "light", layers: [], records: ["projects", "procurement", "deals"], camera: "fit" },
   { id: "capital", label: "Structure capital", hint: "Project, opportunity and funding records; open the project Capital workspace for readiness and raises", base:"light",layers:[],records:["projects","deals","procurement"],camera:"fit" },
   { id:"partners",label:"Find partners",hint:"Organizations and project relationships",base:"light",layers:[],records:["projects","organizations"],camera:"fit" },
   { id: "grid", label: "Power grid & connections", hint: "Screen transmission and generation near projects; verify available capacity, connection rights and queue status separately", base: "light", layers: ["power"], records: ["projects", "organizations"], camera: "fit" },
@@ -24,8 +33,18 @@ export const MISSIONS: { id: string; label: string; hint: string; base: string; 
   { id: "orbit", label: "Orbital watch", hint: "Earth-observation, weather, navigation satellites and stations", base: "blackmarble", layers: ["sat_eo", "sat_weather", "sat_gnss", "sat_stations"], camera: "globe" },
 ];
 
-function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean; status?: FeedStatus; onToggle: () => void; dated?: string }) {
+// Analyst layer groups (phase 21 Atlas §3). Catalogue groups map onto them; a few layers are placed by id.
+export const ATLAS_GROUPS = ["Energy", "Grid", "Land", "Water", "Ecology", "Climate & hazards", "Infrastructure", "Specialist (movement & space)"] as const;
+const BY_ID: Record<string, (typeof ATLAS_GROUPS)[number]> = {
+  registry_plants: "Energy", power: "Grid", nightlights_now: "Infrastructure", blackmarble: "Infrastructure", buildings: "Infrastructure", street_imagery: "Infrastructure",
+  surface_water: "Water", precip: "Water", forest_loss: "Ecology", protected: "Ecology", ndvi: "Land", lst: "Climate & hazards", aerosol: "Climate & hazards",
+};
+const BY_GROUP: Partial<Record<LayerGroup, (typeof ATLAS_GROUPS)[number]>> = { infrastructure: "Infrastructure", nature: "Ecology", hazards: "Climate & hazards", weather: "Climate & hazards", earth: "Land", movement: "Specialist (movement & space)", space: "Specialist (movement & space)" };
+export const atlasGroupOf = (l: Pick<OfferedLayer, "id" | "group">) => BY_ID[l.id] ?? BY_GROUP[l.group] ?? "Land";
+
+function Row({ l, on, status, onToggle, dated, setOpacity }: { l: OfferedLayer; on: boolean; status?: FeedStatus; onToggle: () => void; dated?: string; setOpacity?: (id: string, v: number) => void }) {
   const [open, setOpen] = useState(false);
+  const [opacity, setOp] = useState(l.opacity ?? 0.8);
   const state = !on ? null : status?.error ? "error" : status?.loading ? "loading" : status?.count != null ? "ok" : l.kind === "feed" || l.kind === "satellites" ? "loading" : "ok";
   return (
     <div className={styles.intelRow} data-on={on}>
@@ -40,6 +59,7 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
         </span>
         <button type="button" className={styles.infoBtn} aria-expanded={open} aria-label={`About ${l.label}`} onClick={e => { e.preventDefault(); setOpen(o => !o); }}><Info size={13} /></button>
       </label>
+      {on && l.kind === "raster" && setOpacity && <label className={styles.opacityRow}>Opacity <input type="range" min={0.1} max={1} step={0.05} value={opacity} onChange={e => { const v = Number(e.target.value); setOp(v); setOpacity(l.id, v); }} aria-label={`Opacity of ${l.label}`} /></label>}
       {open && (
         <div className={styles.intelInfo}>
           <p>{l.description}</p>
@@ -73,19 +93,20 @@ function Row({ l, on, status, onToggle, dated }: { l: OfferedLayer; on: boolean;
   );
 }
 
-export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, records, recordsOn, toggleRecord, dayOffset, setDayOffset, runMission, firmsKey }: {
+export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, records, recordsOn, toggleRecord, dayOffset, setDayOffset, runMission, firmsKey, setOpacity }: {
   catalog: OfferedLayer[]; base: string; setBase: (id: string) => void; overlays: Set<string>; toggle: (id: string) => void; status: Record<string, FeedStatus>;
-  records: RecordLayer[]; recordsOn: Record<string, boolean>; toggleRecord: (k: string) => void; dayOffset: number; setDayOffset: (n: number) => void; runMission: (id: string) => void; firmsKey: boolean;
+  records: RecordLayer[]; recordsOn: Record<string, boolean>; toggleRecord: (k: string) => void; dayOffset: number; setDayOffset: (n: number) => void; runMission: (id: string) => void; firmsKey: boolean; setOpacity?: (id: string, v: number) => void;
 }) {
   const [layerQuery,setLayerQuery]=useState("");
   const [activeOnly,setActiveOnly]=useState(false);
   // Diligence groups first; movement and space tracking stay available at the end.
-  const groups:LayerGroup[]=["infrastructure","nature","hazards","earth","weather","movement","space"];
   const daily = catalog.some(l => l.daily && (l.id === base || overlays.has(l.id)));
   const now = new Date();
   return (
     <>
-      <h2 className={styles.panelTitle}>Evidence layers</h2><p className={styles.note}>Add spatial context without changing your project filters.</p>
+      <h2 className={styles.panelTitle}>Workspaces</h2>
+      <div className={styles.missions}>{MISSIONS.filter(m => !["live", "orbit", "capital", "partners", "grid", "portfolio", "site", "hazard", "energy", "forest"].includes(m.id)).map(m => <button key={m.id} type="button" title={m.hint} onClick={() => runMission(m.id)}>{m.label}</button>)}</div>
+      <h2 className={styles.panelTitle}>Layers</h2><p className={styles.note}>Each layer shows its source, licence, coverage and freshness (ⓘ). A failed load says unavailable, never “none”.</p>
       {catalog.some(l => l.id === "power") && (
         <label className={styles.gridToggle}><input type="checkbox" checked={overlays.has("power")} onChange={() => toggle("power")} />
           <span><strong>Power grid</strong><small>Transmission lines, substations and plants (OpenStreetMap). Proximity is not available capacity, queue position or connection rights.</small></span>
@@ -107,7 +128,21 @@ export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, r
         </label>
       )}
 
-      </details><details className={styles.catalogGroup}><summary>Record layers on the map</summary>
+      </details>
+      {([["Regenera portfolio", ["projects"]], ["Development", ["deals", "organizations", "triggers"]], ["Capital & opportunity", ["procurement"]]] as [string, string[]][]).map(([label, keys]) => (
+        <details key={label} className={styles.catalogGroup} open><summary>{label} <span>{records.filter(r => keys.includes(r.key) && recordsOn[r.key]).length} on · {records.filter(r => keys.includes(r.key)).reduce((n, r) => n + r.count, 0)} located records</span></summary>
+          {records.filter(r => keys.includes(r.key)).map(r => (
+            <label key={r.key} className={styles.layerRow}>
+              <input type="checkbox" checked={recordsOn[r.key]} onChange={() => toggleRecord(r.key)} />
+              <span className={styles.swatch} style={{ background: r.swatch }} />
+              <span className={styles.layerLabel}>{r.label}</span>
+              <span className={styles.count}>{r.count}</span>
+              <span />
+            </label>
+          ))}
+        </details>
+      ))}
+      <details className={styles.catalogGroup}><summary>Alerts on the map</summary>
       {records.filter(r => r.key === "hazards").map(r => (
         <label key={r.key} className={styles.layerRow}>
           <input type="checkbox" checked={recordsOn[r.key]} onChange={() => toggleRecord(r.key)} />
@@ -117,16 +152,16 @@ export function IntelPanel({ catalog, base, setBase, overlays, toggle, status, r
           <span />
         </label>
       ))}
-      <p className={styles.note}>Projects, opportunities, organizations, funding and signals are filtered in Explore.</p></details>
+      <p className={styles.note}>Filter records by type, stage, country and area in Explore.</p></details>
 
       <label className={styles.catalogSearch}>Find evidence layers<input value={layerQuery} onChange={e=>setLayerQuery(e.target.value)} placeholder="Grid, water, forests, hazards, provider…" /></label><label className={styles.layerRow}><input type="checkbox" checked={activeOnly} onChange={e=>setActiveOnly(e.target.checked)} />Show enabled layers only</label>
       <details className={styles.catalogGroup}><summary>Specialist exploration (aircraft, satellites, sensor looks)</summary><div className={styles.missions}>{MISSIONS.filter(m=>["live","orbit"].includes(m.id)).map(m=><button key={m.id} type="button" title={m.hint} onClick={()=>runMission(m.id)}>{m.label}</button>)}</div></details>
-      {groups.map(g => {
-        const rows = catalog.filter(l => l.group === g && (!activeOnly || overlays.has(l.id)) && `${l.label} ${l.description} ${l.provenance?.provider??""}`.toLowerCase().includes(layerQuery.toLowerCase()));
+      {ATLAS_GROUPS.map(g => {
+        const rows = catalog.filter(l => l.group !== "basemap" && atlasGroupOf(l) === g && (!activeOnly || overlays.has(l.id)) && `${l.label} ${l.description} ${l.provenance?.provider??""}`.toLowerCase().includes(layerQuery.toLowerCase()));
         if (!rows.length) return null;
         return (
-          <details key={g} className={styles.catalogGroup} open={!!layerQuery || activeOnly || rows.some(l=>overlays.has(l.id))}><summary>{GROUP_LABELS[g]} <span>{rows.filter(l=>overlays.has(l.id)).length} active · {rows.length} available</span></summary>
-            {rows.map(l => <Row key={l.id} l={l.id === "fires" && firmsKey ? { ...l, description: "NASA FIRMS VIIRS 375 m detections for the view (last 24 h)." } : l} on={overlays.has(l.id)} status={status[l.id]} onToggle={() => toggle(l.id)} dated={l.daily ? productDate(now, (l.lagDays ?? 1) + dayOffset) : undefined} />)}
+          <details key={g} className={styles.catalogGroup} open={!!layerQuery || activeOnly || rows.some(l=>overlays.has(l.id))}><summary>{g} <span>{rows.filter(l=>overlays.has(l.id)).length} active · {rows.length} available</span></summary>
+            {rows.map(l => <Row key={l.id} l={l.id === "fires" && firmsKey ? { ...l, description: "NASA FIRMS VIIRS 375 m detections for the view (last 24 h)." } : l} on={overlays.has(l.id)} status={status[l.id]} onToggle={() => toggle(l.id)} setOpacity={setOpacity} dated={l.daily ? productDate(now, (l.lagDays ?? 1) + dayOffset) : undefined} />)}
           </details>
         );
       })}

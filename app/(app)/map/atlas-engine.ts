@@ -179,6 +179,7 @@ export function overlayLayerIds(l: OfferedLayer): string[] {
   if (l.id === "events") return [`${p}-track`, `${p}-pt`, `${p}-label`];
   if (l.id === "cyclones") return [`${p}-icon`];
   if (l.id === "flights" || l.id === "military") return [`${p}-icon`, `${p}-label`];
+  if (l.id === "registry_plants") return [`${p}-pt`, `${p}-label`];
   return [`${p}-pt`];
 }
 /** Clickable layer ids of an overlay. */
@@ -271,6 +272,15 @@ export function addOverlay(map: maplibregl.Map, l: OfferedLayer, date: string) {
     map.addLayer({ id: `${p}-icon`, type: "symbol", source: p, layout: { "icon-image": "storm", "icon-size": ["interpolate", ["linear"], ["coalesce", ["get", "windKt"], 30], 30, 0.55, 130, 1.1], "icon-allow-overlap": true, "icon-rotate": 0,
       "text-field": ["concat", ["get", "name"], "\n", ["get", "classLabel"], " · ", ["to-string", ["coalesce", ["get", "windKt"], "?"]], " kt"], "text-font": ["Noto Sans Bold"], "text-size": 11, "text-offset": [0, 2.2], "text-anchor": "top" },
       paint: { "icon-color": "#5ad1ff", "icon-halo-color": "rgba(0,0,0,.7)", "icon-halo-width": 1, "text-color": "#bfefff", "text-halo-color": "rgba(3,6,8,.9)", "text-halo-width": 1.3 } }, A_FEED);
+    return;
+  }
+  if (l.id === "registry_plants") {
+    const fuel = ["match", ["get", "fuel"], "Solar", "#e9b949", "Wind", "#7fb7d6", "Hydro", "#4a7fc1", "Nuclear", "#8e6fb5", "Coal", "#5a5a55", "Gas", "#c27a45", "Oil", "#8a6142", "Biomass", "#6f9b5f", "Geothermal", "#c0566f", "Storage", "#2f8f83", "Waste", "#8f8a5a", "#9aa39c"] as unknown as ExpressionSpecification;
+    map.addLayer({ id: `${p}-pt`, type: "circle", source: p, paint: {
+      "circle-radius": ["interpolate", ["linear"], ["sqrt", ["coalesce", ["get", "capacityMw"], 1]], 1, 2.5, 10, 4.5, 40, 11, 80, 18],
+      "circle-color": fuel, "circle-opacity": 0.85, "circle-stroke-color": "#252D27", "circle-stroke-width": 0.8 } }, A_FEED);
+    map.addLayer({ id: `${p}-label`, type: "symbol", source: p, minzoom: 7, layout: { "text-field": ["concat", ["get", "name"], " · ", ["to-string", ["round", ["coalesce", ["get", "capacityMw"], 0]]], " MW"], "text-font": ["Noto Sans Regular"], "text-size": 10.5, "text-offset": [0, 1.2], "text-anchor": "top", "text-optional": true },
+      paint: { "text-color": "#252D27", "text-halo-color": "rgba(251,250,247,.92)", "text-halo-width": 1.3 } }, A_FEED);
     return;
   }
   if (l.id === "flights" || l.id === "military") {

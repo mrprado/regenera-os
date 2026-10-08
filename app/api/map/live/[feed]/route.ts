@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 import { getOsApiUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
+import { plantsInView } from "@/lib/infrastructure/queries";
 import { cyclones, eonet, fires, flights, militaryFlights, parseBbox, quakes, SAT_GROUPS, satellites, type SatGroup } from "@/lib/map/live";
 
 // Guarded: Atlas live feeds. Every provider call goes through fetchJson (registry gate, cache, ledger). Short
 // browser caching matches each feed's refresh; failures say "unavailable", never "none".
-const CACHE: Record<string, number> = { quakes: 120, events: 900, cyclones: 600, fires: 600, flights: 10, military: 20, sat: 3600 };
+const CACHE: Record<string, number> = { plants: 3600, quakes: 120, events: 900, cyclones: 600, fires: 600, flights: 10, military: 20, sat: 3600 };
 
 export async function GET(request: Request, { params }: { params: Promise<{ feed: string }> }) {
   const user = await getOsApiUser();
@@ -20,6 +21,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ feed
     else if (feed === "cyclones") body = await cyclones(db);
     else if (feed === "fires") body = await fires(db, env.NASA_FIRMS_MAP_KEY, parseBbox(q.get("bbox")));
     else if (feed === "military") body = await militaryFlights(db);
+    else if (feed === "plants") {
+      body = await plantsInView(db, parseBbox(q.get("bbox")), Number(q.get("z") ?? 2));
+      if (!(body as { meta: { count: number } }).meta.count && !q.get("bbox")) return Response.json({ error: "Registry not ingested yet (job registry.gppd runs after deploy)" }, { status: 503 });
+    }
     else if (feed === "flights") {
       const lat = Number(q.get("lat")), lng = Number(q.get("lng")), dist = Number(q.get("dist") ?? 150);
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return Response.json({ error: "lat and lng required" }, { status: 400 });

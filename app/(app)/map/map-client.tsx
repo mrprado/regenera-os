@@ -10,7 +10,8 @@ import type { GeoJSONSource, MapGeoJSONFeature, RasterTileSource } from "maplibr
 import type { Feature, FeatureCollection, Geometry, Point as GeoPoint } from "geojson";
 import Link from "next/link";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Compass, Crosshair, Globe2, Keyboard, Mountain, Orbit, PanelLeftOpen, PersonStanding, Play, Scan, Search, Share2, Square, X } from "lucide-react";
+import { Compass, Crosshair, Globe2, Keyboard, MapPinPlus, Mountain, Orbit, PanelLeftOpen, PersonStanding, Play, Scan, Search, Share2, SlidersHorizontal, Square, X } from "lucide-react";
+import { Inspector, useSiteScreen } from "./inspector";
 import type { MapPayload } from "@/lib/map/features";
 import { discoveryOptions, filterRecords, mapRecords, RECORD_LAYERS, typeCounts, type AreaGeometry, type Bounds, type MapRecord } from "@/lib/map/discovery";
 import { objectiveById, suggestion } from "@/lib/map/objectives";
@@ -30,7 +31,7 @@ import { AnalysisTray, useWorkbench, WorkbenchPanel, type WbMode } from "./workb
 import { addIcons, addOverlay, addTrackLayers, baseStyle, clickableIds, removeOverlay, setBasemap } from "./atlas-engine";
 import { Detection, Hud, MODES, SensorFilters, type Mode, type Target } from "./hud";
 import { IntelPanel, MISSIONS, type FeedStatus } from "./intel-panel";
-import { Detail, type Selected } from "./detail";
+import type { Selected } from "./detail";
 import { buildSats, groundTrack, position, satFeatures, type Sat } from "./satellites";
 import { reportClientError } from "@/components/error-reporter";
 
@@ -142,10 +143,23 @@ function MapClient() {
   const [searchNote, setSearchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"intel" | "directory" | "library" | "workbench" | "none">("directory");
+  const [panel, setPanel] = useState<"intel" | "directory" | "workbench" | "none">("directory");
   const [wbMode, setWbMode] = useState<WbMode>("analysis");
   const [wbProject, setWbProject] = useState(() => new URLSearchParams(window.location.search).get("project") ?? "");
   const [showKeys, setShowKeys] = useState(false);
+  const [showDisplay, setShowDisplay] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const pickingRef = useRef(false);
+  useEffect(() => { pickingRef.current = picking; }, [picking]);
+  const [cursor, setCursor] = useState<[number, number] | null>(null);
+  const siteScreen = useSiteScreen();
+  const startScreen = useCallback((at: [number, number], projectId?: string) => { setPicking(false); void siteScreen.start(at, projectId); }, [siteScreen]);
+  const closeInspector = useCallback(() => {
+    setSelected(null); siteScreen.clear();
+    if (!tracked) (mapRef.current?.getSource("track") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+  }, [siteScreen, tracked]);
+  const startScreenRef = useRef(startScreen);
+  useEffect(() => { startScreenRef.current = startScreen; }, [startScreen]);
   const [copied, setCopied] = useState(false);
   // Business filters and the objective travel in the share link (x=…). They hold keys and record ids only; opening a link
   // still goes through sign-in and workspace membership, so no private record detail is exposed by the URL.
@@ -280,7 +294,7 @@ function MapClient() {
               (map.getSource("organizations") as GeoJSONSource).getClusterExpansionZoom(f.properties.cluster_id as number).then(z => map.easeTo({ center: (f.geometry as GeoPoint).coordinates as [number, number], zoom: z + 0.5 }));
               return;
             }
-            if (wbToolRef.current !== "none") return;
+            if (wbToolRef.current !== "none" || pickingRef.current) return;
             setSelected({ layer, props: f.properties ?? {}, lngLat: (f.geometry as GeoPoint).coordinates as [number, number] });
           });
           map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
@@ -291,6 +305,10 @@ function MapClient() {
       setMapObj(map);
     });
     map.once("load", () => container.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
+    // Site pick tool: the next click anywhere becomes a site screen. Cursor coordinates feed the status bar.
+    map.on("click", e => { if (pickingRef.current) startScreenRef.current([e.lngLat.lng, e.lngLat.lat]); });
+    let cursorRaf = 0;
+    map.on("mousemove", e => { if (cursorRaf) return; cursorRaf = requestAnimationFrame(() => { cursorRaf = 0; setCursor([e.lngLat.lng, e.lngLat.lat]); }); });
     return () => { locationCancelled=true;map.off("movestart",markUserMove);map.remove(); mapRef.current = null; setMapObj(null); };
   }, [init]);
 
@@ -392,6 +410,11 @@ function MapClient() {
         const nm = Math.min(250, haversineKm([c.lng, c.lat], [b.getEast(), b.getNorth()]) / 1.852);
         return `/api/map/live/flights?lat=${c.lat.toFixed(2)}&lng=${c.lng.toFixed(2)}&dist=${Math.max(20, Math.round(nm))}`;
       }
+      if (l.id === "registry_plants") {
+        const b = map.getBounds();
+        const box = [Math.max(-180, b.getWest()), Math.max(-90, b.getSouth()), Math.min(180, b.getEast()), Math.min(90, b.getNorth())].map(n => n.toFixed(2)).join(",");
+        return `/api/map/live/plants?bbox=${box}&z=${map.getZoom().toFixed(1)}`;
+      }
       if (l.id === "fires") {
         if (map.getZoom() < 3) return "/api/map/live/fires";
         const b = map.getBounds();
@@ -478,7 +501,7 @@ function MapClient() {
       return f ? { f, layer: ids.find(x => x.id === f.layer.id)!.layer } : null;
     };
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      if (atlas.draw !== "none" || wbToolRef.current !== "none") return;
+      if (atlas.draw !== "none" || wbToolRef.current !== "none" || pickingRef.current) return;
       const recordHit = map.queryRenderedFeatures(e.point, { layers: ["projects", "organizations", "organizations-cluster", "deals", "triggers", "procurement", "hazards"].filter(id => map.getLayer(id)) });
       if (recordHit.length) return;
       const hit = pick(e.point);
@@ -702,7 +725,8 @@ function MapClient() {
       else if (k === "l") setPanel(p => (p === "none" ? "intel" : "none"));
       else if (k === "?") setShowKeys(v => !v);
       else if (k === "/") { e.preventDefault(); searchRef.current?.focus(); }
-      else if (k === "escape") { setTouring(false); setOrbitOn(false); setTracked(null); setTarget(null); setSelected(null); setShowKeys(false); }
+      else if (k === "s") setPicking(v => !v);
+      else if (k === "escape") { setPicking(false); setShowDisplay(false); setTouring(false); setOrbitOn(false); setTracked(null); setTarget(null); setSelected(null); setShowKeys(false); }
       else return;
     };
     window.addEventListener("keydown", onKey);
@@ -731,7 +755,7 @@ function MapClient() {
   const baseLabel = baseLayer?.label ?? "Tactical vector";
 
   return (
-    <div className={styles.stage} data-fullbleed data-selection={selected ? "true" : "false"} data-mode={mode}>
+    <div className={styles.stage} data-fullbleed data-selection={selected || siteScreen.screen ? "true" : "false"} data-mode={mode} data-picking={picking ? "true" : "false"} data-panel={panel}>
       <SensorFilters />
       <div ref={container} className={styles.map} />
       <div className={styles.fx} aria-hidden />
@@ -754,16 +778,23 @@ function MapClient() {
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
           <div className={styles.panelTabs} role="tablist" aria-label="Panel sections">
-            {(["directory", "intel", "workbench", "library"] as const).map(p => <button key={p} type="button" role="tab" aria-selected={panel === p} onClick={() => setPanel(p)}>{p === "directory" ? "Explore" : p === "intel" ? `Evidence layers${activeOverlays.length ? ` (${activeOverlays.length})` : ""}` : p === "workbench" ? "Site diligence" : "Drawing & saved"}</button>)}
-            {panel !== "directory" && <button type="button" className={styles.iconBtn} onClick={() => setPanel("none")} aria-label="Collapse panel"><X size={14} /></button>}
+            {(["directory", "intel", "workbench"] as const).map(p => <button key={p} type="button" role="tab" aria-selected={panel === p} onClick={() => setPanel(p)}>{p === "directory" ? "Explore" : p === "intel" ? `Layers${activeOverlays.length ? ` (${activeOverlays.length})` : ""}` : "Analyze"}</button>)}
+            <button type="button" className={styles.iconBtn} onClick={() => setPanel("none")} aria-label="Collapse panel"><X size={14} /></button>
           </div>
           {panel === "intel" && (
             <IntelPanel catalog={catalog} base={base} setBase={setBase} overlays={overlays} toggle={toggleOverlay} status={status} firmsKey={firmsKey}
               records={RECORD_KEYS.map(k => ({ key: k, label: LAYER_META[k].label, swatch: LAYER_META[k].swatch, count: counts[k] }))} recordsOn={visible}
-              toggleRecord={k => setVisible(v => ({ ...v, [k]: !v[k as LayerKey] }))} dayOffset={dayOffset} setDayOffset={setDayOffset} runMission={runMission} />
+              toggleRecord={k => setVisible(v => ({ ...v, [k]: !v[k as LayerKey] }))} dayOffset={dayOffset} setDayOffset={setDayOffset} runMission={runMission}
+              setOpacity={(id, v) => { const m = mapRef.current; if (m?.getLayer(`ov-${id}`) && m.getLayer(`ov-${id}`)?.type === "raster") m.setPaintProperty(`ov-${id}`, "raster-opacity", v); }} />
           )}
-          {panel === "library" && <LibraryPanel atlas={atlas} />}
-          {panel === "workbench" && <WorkbenchPanel wb={wb} mode={wbMode} setMode={setWbMode} projects={projectChoices} projectId={wbProject} setProjectId={setWbProject} />}
+          {panel === "workbench" && <>
+            <div className={styles.analyzeHead}>
+              <button type="button" className={styles.action} aria-pressed={picking} onClick={() => setPicking(v => !v)}><MapPinPlus size={14} aria-hidden /> {picking ? "Click the map to screen a site… (Esc cancels)" : "Screen a site (S)"}</button>
+              <p className={styles.note}>Pick any point: Atlas saves a site record, runs grid, water, ecology, terrain, hazards, capital and partner screening, and saves a preliminary assessment.</p>
+            </div>
+            <WorkbenchPanel wb={wb} mode={wbMode} setMode={setWbMode} projects={projectChoices} projectId={wbProject} setProjectId={setWbProject} />
+            <details className={styles.catalogGroup}><summary>Drawing, import &amp; saved shapes</summary><LibraryPanel atlas={atlas} /></details>
+          </>}
           {panel === "directory" && <ExplorePanel
             objective={objective} setObjective={setWorkObjective} suggestionText={suggestionText} applySuggestion={applySuggestion} canApply={canApply}
             projects={projectChoices} contextId={contextId} setContextId={id => { contextChosen.current = true; setContextId(id); if (id) setWbProject(id); else if (scope === "boundary") setScope("all"); setLimit(50); }} context={contextInfo} openWorkbench={() => setPanel("workbench")} unmappedProjects={data?.counts.unmappedProjects ?? 0}
@@ -788,26 +819,43 @@ function MapClient() {
         </aside>
       )}
 
-      <div className={styles.modeBar} role="toolbar" aria-label="Sensor look">
-        {MODES.map((m, i) => <button key={m.key} type="button" aria-pressed={mode === m.key} onClick={() => setMode(m.key)} title={`${m.label} (${i + 1})`}>{m.label}</button>)}
+      {/* Grouped toolbar: navigation · analysis · view & save. Sensor looks, HUD, detection, orbit and tour live in Display. */}
+      <div className={styles.controls} role="toolbar" aria-label="Map tools">
+        <div className={styles.toolGroup} aria-label="Navigation">
+          <button type="button" className={styles.ctrl} onClick={() => mapRef.current?.zoomIn()} title="Zoom in" aria-label="Zoom in">+</button>
+          <button type="button" className={styles.ctrl} onClick={() => mapRef.current?.zoomOut()} title="Zoom out" aria-label="Zoom out">−</button>
+          <button type="button" className={styles.ctrl} onClick={northUp} title="North up (N)" aria-label="North up"><Compass size={16} /></button>
+          <button type="button" className={styles.ctrl} onClick={toggleProjection} aria-pressed={globe} title="Globe / flat (G)" aria-label="Globe or flat projection"><Globe2 size={16} /></button>
+          <button type="button" className={styles.ctrl} onClick={toggle3d} aria-pressed={terrain3d} title="3D terrain (T)" aria-label="3D terrain"><Mountain size={16} /></button>
+        </div>
+        <div className={styles.toolGroup} aria-label="Analysis">
+          <button type="button" className={styles.ctrl} onClick={() => { setPicking(v => !v); setPanel("workbench"); }} aria-pressed={picking} title="Screen a site (S)" aria-label="Screen a site"><MapPinPlus size={16} /></button>
+          <button type="button" className={styles.ctrl} onClick={() => setPanel(p => (p === "intel" ? "none" : "intel"))} aria-pressed={panel === "intel"} title="Layers and basemaps" aria-label="Layers and basemaps"><SlidersHorizontal size={16} style={{ transform: "rotate(90deg)" }} /></button>
+        </div>
+        <div className={styles.toolGroup} aria-label="View and save">
+          <button type="button" className={styles.ctrl} onClick={() => { const c = mapRef.current?.getCenter(); if (c) setStreetAt({ lat: c.lat, lng: c.lng }); }} aria-pressed={!!streetAt} title="Street view at the centre (V)" aria-label="Street view"><PersonStanding size={16} /></button>
+          <button type="button" className={styles.ctrl} onClick={share} title="Copy share link" aria-label="Copy share link"><Share2 size={16} /></button>
+          <button type="button" className={styles.ctrl} onClick={() => setShowDisplay(v => !v)} aria-pressed={showDisplay} title="Display settings" aria-label="Display settings"><SlidersHorizontal size={16} /></button>
+        </div>
       </div>
-
-      <div className={styles.controls}>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={toggleProjection} aria-pressed={globe} title="Globe / flat (G)"><Globe2 size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={toggle3d} aria-pressed={terrain3d} title="3D terrain (T)"><Mountain size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => { const c = mapRef.current?.getCenter(); if (c) setStreetAt({ lat: c.lat, lng: c.lng }); }} aria-pressed={!!streetAt} title="Street view at the crosshair (V)"><PersonStanding size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={tilt} title="Tilt (P)"><Square size={15} style={{ transform: "perspective(20px) rotateX(35deg)" }} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={northUp} title="North up (N)"><Compass size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setOrbitOn(v => !v)} aria-pressed={orbitOn} title="Orbit (O)"><Orbit size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setTouring(v => !v)} aria-pressed={touring} disabled={!data?.projects.features.length} title="Tour projects"><Play size={16} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setDetectOn(v => !v)} aria-pressed={detectOn} title="Detection overlay (D)"><Scan size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setHudOn(v => !v)} aria-pressed={hudOn} title="HUD (H)"><Crosshair size={17} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={resetGlobe} title="Reset globe (R)"><Globe2 size={13} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => mapRef.current?.zoomIn()} title="Zoom in">+</button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => mapRef.current?.zoomOut()} title="Zoom out">−</button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={share} title="Copy share link"><Share2 size={16} /></button>
-        <button type="button" className={`${styles.glass} ${styles.ctrl}`} onClick={() => setShowKeys(v => !v)} aria-pressed={showKeys} title="Keyboard shortcuts (?)"><Keyboard size={16} /></button>
-      </div>
+      {showDisplay && (
+        <div className={`${styles.glass} ${styles.displayMenu}`} role="dialog" aria-label="Display settings">
+          <button type="button" className={styles.close} onClick={() => setShowDisplay(false)} aria-label="Close"><X size={14} /></button>
+          <p className={styles.panelTitle}>Display</p>
+          <p className={styles.fieldLabel}>Look</p>
+          <div className={styles.modeChoices}>{MODES.map((m, i) => <button key={m.key} type="button" aria-pressed={mode === m.key} onClick={() => setMode(m.key)} title={`${m.label} (${i + 1})`}>{m.label}</button>)}</div>
+          <div className={styles.displayToggles}>
+            <button type="button" aria-pressed={hudOn} onClick={() => setHudOn(v => !v)}><Crosshair size={14} /> HUD (H)</button>
+            <button type="button" aria-pressed={detectOn} onClick={() => setDetectOn(v => !v)}><Scan size={14} /> Detection boxes (D)</button>
+            <button type="button" aria-pressed={orbitOn} onClick={() => setOrbitOn(v => !v)}><Orbit size={14} /> Orbit (O)</button>
+            <button type="button" aria-pressed={touring} disabled={!data?.projects.features.length} onClick={() => setTouring(v => !v)}><Play size={14} /> Tour projects</button>
+            <button type="button" onClick={tilt}><Square size={13} /> Tilt (P)</button>
+            <button type="button" onClick={resetGlobe}><Globe2 size={14} /> Reset globe (R)</button>
+            <button type="button" aria-pressed={showKeys} onClick={() => setShowKeys(v => !v)}><Keyboard size={14} /> Keyboard (?)</button>
+          </div>
+        </div>
+      )}
+      {picking && <p className={`${styles.glass} ${styles.pickHint}`} role="status">Click anywhere on the map to screen that location as a site · Esc to cancel</p>}
       {copied && <p className={`${styles.glass} ${styles.toast}`} role="status">Link copied: camera, layers, look and tracked target.</p>}
       {showKeys && (
         <div className={`${styles.glass} ${styles.keys}`} role="dialog" aria-label="Keyboard shortcuts">
@@ -819,36 +867,25 @@ function MapClient() {
         </div>
       )}
 
-      {selected && (
-        <aside className={`${styles.glass} ${styles.detail}`} aria-label="Selected item">
-          <button type="button" className={styles.close} onClick={() => { setSelected(null); if (!tracked) (mapRef.current?.getSource("track") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] }); }} aria-label="Close"><X size={16} /></button>
-          <Detail selected={selected} tracked={tracked?.id === String(selected.props.id)} onTrack={() => (tracked?.id === String(selected.props.id) ? (setTracked(null), setTarget(null)) : startTrack(false))} onChase={() => startTrack(true)} />
-          <p className={styles.coords}>{selected.lngLat[1].toFixed(4)}, {selected.lngLat[0].toFixed(4)}</p>
-          {Boolean(selected.props.locationBasis) && <p className={styles.note}>{String(selected.props.locationBasis)}</p>}
-          {Boolean(selected.props.source) && !byId.has(selected.layer) && <p className={styles.note}>Source: {String(selected.props.source)}</p>}
-          {Boolean(selected.props.updatedAt) && <p className={styles.note}>Record updated {String(selected.props.updatedAt).slice(0, 10)} · verification is recorded separately.</p>}
-          {(() => {
-            const id = String(selected.props.id ?? "");
-            const links: [string, string][] = selected.layer === "projects" ? [["Risk & evidence", `/projects/${id}?tab=risk`], ["Capital", `/projects/${id}?tab=capital`]]
-              : selected.layer === "organizations" ? [["Open organization", `/companies/${id}`]]
-              : selected.layer === "deals" ? [["Open opportunity", `/deals/${id}`]]
-              : selected.layer === "triggers" ? [["Open signal", `/triggers/${id}`]]
-              : selected.layer === "procurement" && typeof selected.props.href === "string" ? [["Open funding record", selected.props.href]] : [];
-            return links.length || selected.layer === "projects" ? (
-              <p className={styles.links} aria-label="Actions">
-                {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-                {selected.layer === "projects" && <button type="button" onClick={() => { setWbProject(id); setContextId(id); setPanel("workbench"); }}>Open site workbench</button>}
-              </p>
-            ) : null;
-          })()}
-          <p className={styles.note}>Commitments, funding, rights, outreach and public claims are proposed for human approval in their workspace; nothing here executes them.</p>
-        </aside>
-      )}
+      {(selected || siteScreen.screen) && (() => {
+        const id = String(selected?.props.id ?? "");
+        const links: [string, string][] = !selected ? [] : selected.layer === "projects" ? [["Open project", `/projects/${id}`], ["Risk & evidence", `/projects/${id}?tab=risk`], ["Capital", `/projects/${id}?tab=capital`]]
+          : selected.layer === "organizations" ? [["Open organization", `/companies/${id}`]]
+          : selected.layer === "deals" ? [["Open opportunity", `/deals/${id}`]]
+          : selected.layer === "triggers" ? [["Open signal", `/triggers/${id}`]]
+          : selected.layer === "procurement" && typeof selected.props.href === "string" ? [["Open funding record", selected.props.href]] : [];
+        return <Inspector key={siteScreen.screen ? "screen" : `sel:${selected?.layer}:${id}`} selected={selected} screen={siteScreen.screen} links={links} onScreen={startScreen}
+          onClose={closeInspector}
+          tracked={!!selected && tracked?.id === String(selected.props.id)} onTrack={() => { if (!selected) return; if (tracked?.id === String(selected.props.id)) { setTracked(null); setTarget(null); } else startTrack(false); }} onChase={() => startTrack(true)}
+          extra={selected?.layer === "projects" ? <p className={styles.links}><button type="button" onClick={() => { setWbProject(id); setContextId(id); setPanel("workbench"); }}>Open site workbench</button></p> : null} />;
+      })()}
 
       {!hudOn && (
-        <div className={`${styles.glass} ${styles.readout}`}>
+        <div className={styles.statusBar} role="status" aria-label="Map status">
           <span>{baseLabel}</span>
-          <span>{now.toISOString().slice(0, 10)}</span>
+          {activeOverlays.map(l => { const st = status[l.id]; const state = st?.error ? "error" : st?.loading ? "loading" : "ok"; return <span key={l.id} data-state={state} title={st?.error ?? st?.source ?? l.attribution}>{l.label}{st?.error ? " · unavailable" : st?.loading ? " · loading" : st?.count != null ? ` · ${(st.shown ?? st.count).toLocaleString("en-US")}` : ""}</span>; })}
+          {data && <span title="Record snapshot">records {data.generatedAt.slice(11, 16)} UTC</span>}
+          {cursor && <span className={styles.coordsLive}>{cursor[1].toFixed(4)}, {cursor[0].toFixed(4)}</span>}
         </div>
       )}
     </div>

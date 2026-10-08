@@ -15,14 +15,16 @@ import { gbifBiodiversity, nasaPower, usgsSeismic, wbIndicators } from "@/lib/pl
 import { eeStatus } from "@/lib/providers/earth-engine";
 import { runEe, type EeAnalysis } from "@/lib/providers/ee-service";
 import { aqueductFacts, aqueductForSite, lossFacts, refreshScreening } from "@/lib/data-providers/site";
+import { assessmentStage, capitalStage, partnersStage } from "./opportunity";
 
 export const STAGES = [
   ["spatial", "Spatial analysis"], ["energy", "Energy resource"], ["grid", "Grid"], ["water", "Water"], ["ecology", "Ecology"], ["land", "Land & terrain"], ["remote_sensing", "Remote sensing (Earth Engine)"],
   ["infrastructure", "Infrastructure"], ["climate", "Climate & hazards"], ["community", "Community"], ["regulatory", "Regulatory"], ["finance", "Finance relevance"],
+  ["capital", "Capital & opportunities"], ["partners", "Partners"], ["assessment", "Saved assessment"],
 ] as const;
 export type StageKey = (typeof STAGES)[number][0];
 type Project = typeof projects.$inferSelect;
-type Ctx = { db: Db; p: Project; g: SiteGeometry | null; lat: number; lng: number; fetchImpl?: typeof fetch; env: Record<string, string | undefined> };
+type Ctx = { db: Db; p: Project; g: SiteGeometry | null; lat: number; lng: number; fetchImpl?: typeof fetch; env: Record<string, string | undefined>; runId: string };
 class Skip extends Error {}
 type Out = { summary: string; facts: StageFact[] };
 
@@ -81,7 +83,8 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
   async grid({ db, lat, lng, fetchImpl }) {
     const r = await nearestInfrastructure(db, lng, lat, fetchImpl);
     const pick = r.items.filter(i => i.key === "transmission" || i.key === "substation");
-    return { summary: pick.map(i => `${i.label}: ${i.status === "known" ? km(i.distanceM) : `none mapped within ${km(i.searchedRadiusM)}`}`).join(" · "), facts: pick.map(i => ({ label: i.label, value: i.status === "known" ? `${km(i.distanceM)}${i.name ? ` · ${i.name}` : ""}${i.detail ? ` · ${i.detail}` : ""}` : `None mapped within ${km(i.searchedRadiusM)}`, source: r.source })) };
+    const evidence: StageFact = { label: "Evidence class", value: "OSM-mapped lines and substations (not registry-listed, not utility-confirmed). Distance is not available interconnection capacity: ask the utility/TSO.", source: "Regenera evidence policy", kind: "inference" };
+    return { summary: pick.map(i => `${i.label}: ${i.status === "known" ? km(i.distanceM) : `none mapped within ${km(i.searchedRadiusM)}`}`).join(" · "), facts: pick.map(i => ({ label: i.label, value: i.status === "known" ? `${km(i.distanceM)}${i.name ? ` · ${i.name}` : ""}${i.detail ? ` · ${i.detail}` : ""}` : `None mapped within ${km(i.searchedRadiusM)}`, source: r.source })).concat([evidence]) };
   },
   async water({ db, lat, lng, fetchImpl }) {
     const [clim, infra] = await Promise.all([nasaPower(db, lat, lng, fetchImpl), nearestInfrastructure(db, lng, lat, fetchImpl)]);
@@ -161,6 +164,9 @@ const RUNNERS: Record<StageKey, (c: Ctx) => Promise<Out>> = {
     const open = ps.filter(x => x.status !== "approved").length;
     return { summary: `${js.length} jurisdiction(s) · ${ps.length} permit(s), ${open} not yet approved`, facts: [{ label: "Jurisdictions mapped", value: js.map(j => j.name).join(", ") || "None", source: "Regenera regulatory register" }, { label: "Permits", value: `${ps.length} recorded, ${open} not yet approved`, source: "Regenera permits register" }] };
   },
+  async capital({ db, p }) { return capitalStage(db, p); },
+  async partners({ db, p }) { return partnersStage(db, p); },
+  async assessment({ db, p, runId }) { return assessmentStage(db, p, runId); },
   async finance({ db, p }) {
     const [req, paths, [m]] = await Promise.all([
       db.select({ target: capitalRequirements.target, currency: capitalRequirements.currency }).from(capitalRequirements).where(eq(capitalRequirements.projectId, p.id)),
@@ -199,7 +205,7 @@ export async function runNextStage(db: Db, runId: string, fetchImpl?: typeof fet
   await db.update(siteIntelRuns).set({ stages, status: "running", updatedAt: new Date().toISOString() }).where(eq(siteIntelRuns.id, runId));
   try {
     if (!p || lat === null || lng === null) throw new Error("Project location missing");
-    const out = await RUNNERS[stages[i].key as StageKey]({ db, p, g, lat, lng, fetchImpl, env });
+    const out = await RUNNERS[stages[i].key as StageKey]({ db, p, g, lat, lng, fetchImpl, env, runId });
     stages[i] = { ...stages[i], status: "done", finishedAt: new Date().toISOString(), summary: out.summary, facts: out.facts };
   } catch (e) {
     stages[i] = { ...stages[i], status: e instanceof Skip ? "skipped" : "failed", finishedAt: new Date().toISOString(), ...(e instanceof Skip ? { summary: (e as Error).message } : { error: (e as Error).message.slice(0, 300) }) };

@@ -383,3 +383,66 @@
 .noteClose { margin-left: 6px; vertical-align: middle; display: inline-grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 4px; background: transparent; color: var(--atlas-text-2); cursor: pointer; }
 .noteClose:hover { background: var(--atlas-card-hover); }
 @media (max-width: 820px) { .layers { z-index: 6; box-shadow: 0 -6px 18px rgba(0,0,0,.18); } }
+
+/* Phase 21 Atlas workbench (2026-10-08): Graphite Moss #252D27 ink, warm white panels, moss interaction states, rust
+   only for semantic warnings. Map-first: left explorer (Explore · Layers · Analyze), docked right inspector, grouped
+   toolbar, bottom status bar. Sensor looks live in Display settings. */
+.stage { --gm: #252D27; --moss-1: #EAF0E5; --moss-2: #246448; --warm: #FBFAF7; --line: #D8D5CE; }
+.controls { top: 20px; right: 20px; gap: 10px; }
+.toolGroup { display: flex; flex-direction: column; background: var(--warm); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.toolGroup .ctrl { width: 38px; height: 36px; border: 0; border-radius: 0; box-shadow: none; background: transparent; color: var(--gm); }
+.toolGroup .ctrl + .ctrl { border-top: 1px solid var(--line); }
+.toolGroup .ctrl:hover { background: var(--moss-1); }
+.toolGroup .ctrl[aria-pressed="true"] { background: var(--moss-1); color: var(--moss-2); box-shadow: inset 2px 0 0 var(--moss-2); }
+.stage[data-selection="true"] .controls { right: 412px; }
+.displayMenu { position: absolute; top: 20px; right: 72px; z-index: 6; width: 300px; padding: 16px; background: var(--warm); color: var(--gm); border: 1px solid var(--line); border-radius: 8px; }
+.stage[data-selection="true"] .displayMenu { right: 464px; }
+.modeChoices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.modeChoices button, .displayToggles button { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--gm); font: inherit; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.modeChoices button[aria-pressed="true"], .displayToggles button[aria-pressed="true"] { background: var(--moss-1); border-color: var(--moss-2); color: #1C5039; }
+.displayToggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pickHint { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 5; margin: 0; padding: 8px 14px; background: var(--gm); color: #fff; border-radius: 6px; font-size: 13px; border: 0; }
+.stage[data-picking="true"] .map :global(canvas) { cursor: crosshair; }
+.inspector { top: 0; right: 0; bottom: 30px; width: 392px; max-height: none; border-radius: 0; border: 0; border-left: 1px solid var(--line); background: var(--warm); padding: 14px 20px 20px; box-shadow: none; }
+.inspectorTabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 28px 14px 0; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.inspectorTabs button { min-height: 30px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--atlas-text-2); font: inherit; font-size: 13px; cursor: pointer; }
+.inspectorTabs button[aria-selected="true"] { background: var(--moss-1); border-color: var(--moss-2); color: #1C5039; font-weight: 600; }
+.inspector .facts { display: grid; gap: 8px; margin: 0; }
+.inspector .facts div { display: grid; gap: 2px; }
+.inspector .facts dt { font-size: 12px; color: var(--atlas-text-2); }
+.inspector .facts dd { margin: 0; font-size: 13.5px; color: var(--gm); }
+.screen { display: grid; gap: 10px; }
+.stageList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.stageList > li { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; display: grid; gap: 2px; }
+.stageList > li b { font-weight: 600; color: var(--gm); }
+.stageList > li span { color: var(--atlas-text-2); }
+.stageList > li[data-status="running"], .stageList > li[data-status="queued"] { border-style: dashed; opacity: .75; }
+.stageList > li[data-status="failed"] { border-color: #A45F3F; }
+.stageList > li[data-status="failed"] span { color: #7D4633; }
+.stageList > li[data-status="done"] { border-left: 3px solid var(--moss-2); }
+.stageList details ul { margin: 6px 0 0; padding-left: 16px; display: grid; gap: 3px; }
+.stageList details small { color: var(--atlas-text-2); }
+.analyzeHead { display: grid; gap: 6px; margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.analyzeHead .action { display: inline-flex; align-items: center; gap: 6px; }
+.analyzeHead .action[aria-pressed="true"] { background: var(--gm); border-color: var(--gm); }
+.opacityRow { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; font-size: 12px; color: var(--atlas-text-2); padding: 0 0 8px 22px; }
+.opacityRow input { accent-color: var(--moss-2); }
+.statusBar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; height: 30px; display: flex; align-items: center; gap: 14px; padding: 0 14px 0 370px; overflow-x: auto; white-space: nowrap; background: var(--warm); border-top: 1px solid var(--line); color: var(--atlas-text-2); font-size: 12px; font-variant-numeric: tabular-nums; scrollbar-width: none; }
+.statusBar span[data-state="error"] { color: #7D4633; }
+.statusBar span[data-state="loading"] { opacity: .7; }
+.statusBar span[data-state="error"]::before { content: "● "; color: #A45F3F; }
+.statusBar span[data-state="ok"]::before { content: "● "; color: var(--moss-2); }
+.coordsLive { margin-left: auto; color: var(--gm); }
+.layers { bottom: 30px; }
+.map :global(.maplibregl-ctrl-bottom-left), .map :global(.maplibregl-ctrl-bottom-right) { bottom: 30px; }
+.stage[data-selection="true"] .map :global(.maplibregl-ctrl-bottom-right) { right: 392px; }
+@media (max-width: 820px) {
+  .statusBar { padding-left: 14px; }
+  .inspector { top: auto; left: 0; width: auto; max-height: 62%; bottom: 30px; border-left: 0; border-top: 1px solid var(--line); border-radius: 10px 10px 0 0; z-index: 7; }
+  .stage[data-selection="true"] .controls { right: 12px; }
+  .controls { right: 12px; top: 72px; }
+  .displayMenu { right: 12px; left: 12px; width: auto; top: 72px; }
+  .stage[data-selection="true"] .displayMenu { right: 12px; }
+  .displayToggles { grid-template-columns: 1fr; }
+}
+.stage[data-panel="none"] .statusBar { padding-left: 14px; }

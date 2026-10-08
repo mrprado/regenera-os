@@ -150,6 +150,15 @@ export function Detail({ selected, onTrack, onChase, tracked }: { selected: NonN
         <p className={styles.note}><b>Evidence class: OSM-mapped.</b> Not registry-listed, not a modeled corridor and not utility-confirmed: an OSM line or substation does not establish available capacity or a connection point. Source: Open Infrastructure Map, © OpenStreetMap contributors (ODbL). Verify with the TSO/utility before relying on it.</p>
       </>
     );
+    case "registry_plants": return (
+      <>
+        <p className={styles.kicker}>Power plant · registry-listed · {String(p.fuel ?? "fuel not stated")}</p>
+        <h3>{String(p.name ?? "Unnamed")}</h3>
+        <Facts rows={[["Capacity", p.capacityMw != null ? `${Number(p.capacityMw).toLocaleString("en-US")} MW` : "not stated"], ["Commissioned", String(p.commissioningYear ?? "not stated")], ["Owner", String(p.owner ?? "not stated")], ["Country", String(p.country ?? "—")], ["Registry source", String(p.sourceOfRecord ?? "—")], ["Dataset", String(p.vintage ?? "WRI GPPD")]]} />
+        {typeof p.url === "string" && p.url.startsWith("http") && <a className={styles.open} href={p.url} target="_blank" rel="noreferrer">Cited source</a>}
+        <p className={styles.note}><b>Evidence class: registry-listed.</b> WRI Global Power Plant Database (CC BY 4.0), 2021 vintage: status, capacity and ownership may have changed. Not utility-confirmed.</p>
+      </>
+    );
     case "protected": return (
       <>
         <p className={styles.kicker}>Protected area · OpenStreetMap</p>

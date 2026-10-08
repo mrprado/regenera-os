@@ -8,6 +8,7 @@ import { notifications } from "@/db/schema";
 import { readFundingByRules } from "@/lib/funding/rules-read";
 import { classifyByRules } from "@/lib/triggers/rules";
 import { autoPlaceProjects } from "@/lib/projects/auto-place";
+import { ingestGppd } from "@/lib/infrastructure/gppd";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -271,9 +272,18 @@ export const handlers: Record<string, JobHandler> = {
   "place.profile": async ({ db, job }) => {
     await buildPlaceProfile(db, String(job.payload.projectId));
   },
+  "registry.gppd": async ({ db, job, now }) => {
+    // Registry-listed power plants, one slice per job until the file ends.
+    const offset = Number(job.payload.offset ?? 0);
+    const r = await ingestGppd(db, offset, 4000);
+    if (!r.done) await enqueue(db, "registry.gppd", { offset: r.next }, { now, dedupeKey: `gppd:${now.toISOString().slice(0, 10)}:${r.next}` });
+    else await setState(db, "registry_gppd_last", JSON.stringify({ at: now.toISOString(), rows: r.next }));
+  },
   "projects.autoplace": async ({ db, now }) => {
     // Unlocated projects get an approximate point (town, region or country) so Atlas and site checks can run.
     const r = await autoPlaceProjects(db, 6, now);
+    // First run after deploy: start the registry-listed power plant ingestion if it has never completed.
+    if (!(await getState(db, "registry_gppd_last"))) await enqueue(db, "registry.gppd", { offset: 0 }, { now, dedupeKey: `gppd:kickoff:${now.toISOString().slice(0, 10)}` });
     if (r.more) await enqueue(db, "projects.autoplace", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `autoplace:${now.toISOString().slice(0, 16)}` });
   },
   "place.refresh": async ({ db, now }) => {
@@ -413,6 +423,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "events.dispatch": "every:5m",
   "place.refresh": "daily:04:10",
   "projects.autoplace": "every:1h",
+  "registry.gppd": "monthly:5:03:30",
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",
