@@ -4,6 +4,7 @@ import { and, eq, gte, like, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { aiRuns, auditLog, fundingOpportunities, fundingProjectMatches, generatedDocuments, jobs, organizations, providerCalls, systemState, triggers } from "@/db/schema";
 import { aiPausedUntil } from "@/lib/ai/run";
+import { originationHypotheses, originationItems } from "@/db/schema";
 
 const count = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
 
@@ -11,6 +12,11 @@ export async function opsSummary(db: Db, now = new Date()) {
   const since = new Date(now.getTime() - 86_400_000).toISOString();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const n = sql<number>`count(*)`;
+  const [queued, hypotheses, proposals] = await Promise.all([
+    count(db.select({ n: sql<number>`count(*)` }).from(originationItems).where(eq(originationItems.stage, "discovered"))),
+    count(db.select({ n: sql<number>`count(*)` }).from(originationHypotheses).where(eq(originationHypotheses.status, "to_validate"))),
+    count(db.select({ n: sql<number>`count(*)` }).from(originationItems).where(eq(originationItems.stage, "diagnostic_proposed"))),
+  ]);
   const [matches, assessments] = await Promise.all([
     count(db.select({ n }).from(fundingProjectMatches).where(gte(fundingProjectMatches.createdAt, since))),
     count(db.select({ n }).from(generatedDocuments).where(and(eq(generatedDocuments.templateKey, "site_assessment"), gte(generatedDocuments.createdAt, since)))),
@@ -27,5 +33,5 @@ export async function opsSummary(db: Db, now = new Date()) {
     db.select({ key: systemState.key, value: systemState.value }).from(systemState).where(like(systemState.key, "cool:%")),
   ]);
   const degraded = cool.flatMap(r => { try { const h = JSON.parse(r.value) as { failures: number }; return h.failures >= 3 ? [r.key.slice(5)] : []; } catch { return []; } });
-  return { matches, assessments, funding, triggers: signalsTriggered, orgs, placed, sourceCalls, sourceOk, dead, aiUsd: aiSpend[0]?.usd ?? 0, aiPaused: await aiPausedUntil(db, now), degraded };
+  return { queued, hypotheses, proposals, matches, assessments, funding, triggers: signalsTriggered, orgs, placed, sourceCalls, sourceOk, dead, aiUsd: aiSpend[0]?.usd ?? 0, aiPaused: await aiPausedUntil(db, now), degraded };
 }

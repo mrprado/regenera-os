@@ -88,3 +88,44 @@ columns, dossier versions in generated_documents).
 Tests A, B, C, E and F pass as integration tests with real fixtures of real source responses; on production, one real
 funding record and one real project traverse their slice with persisted record IDs, events and documents listed in the
 completion report, plus the status ledger above.
+
+---
+## Build record (2026-10-08) — approved by the founder ("finish and add")
+
+Added to scope: the commercial operations engine and five revenue engines (founder brief, same day): services catalogue
+gains Project Diagnostic, readiness assessment, Development Office retainer, managed intelligence, capital-provider
+screening, AI origination system implementation, market-access retainer, technology commercialization, OS subscription
+tiers and development partnership (bands are hypotheses; capital-introduction work carries a legal gate).
+
+### Status ledger
+| Capability | State |
+|---|---|
+| Eligibility engine (5 outcomes, checks, questions, capital stage) on funding ↔ project matches | implemented & tested |
+| Readiness rubric (6 sector templates, evidence caps, insufficient data, blocking, work packages) | implemented & tested |
+| Capital pathways by stage (viable and not-viable with reasons) | implemented & tested |
+| Origination dossier (versioned, confidential) | implemented & tested |
+| Diagnostic proposal: draft engagement + proposal doc + outreach draft + approval task | implemented & tested |
+| Market-first hypotheses (≥3 signals / country / sector / 60 days), validate / convert / dismiss | implemented & tested |
+| Unified origination queue (3 entrances, 20 stages, expected value from bands × evidence) | implemented & tested |
+| Commercial operations: service recommendation by need / role | implemented & tested |
+| /origination (Queue, Hypotheses, Rubric, Revenue engines), project readiness panel, Command counts | implemented, verify in production |
+| Funding geographies drawn as country regions in Atlas | planned (needs Natural Earth admin-0 file in the repo) |
+| Capital-partner "declare mandate" and sponsor "submit project" portal flows | planned (portal intake exists; mapping to origination items next) |
+| AI narrative in dossiers / proposals | blocked (Anthropic credit) |
+
+### Agent permission matrix
+| Automatic (audited) | Requires a person |
+|---|---|
+| Fetch public sources, normalize, dedupe, claims with evidence | Any external message (outreach drafts stay in documents / approval queue) |
+| Eligibility checks, matches, readiness scoring, hypotheses | Converting a hypothesis into a project |
+| Dossiers, site assessments, queue sync | Drafting a proposal / engagement (owner), sending, applying, introductions |
+| Review tasks | Stage changes, accept / dismiss matches, any commitment, deletion |
+
+### Environment variables (names only)
+OS_ALLOWLIST, OS_PASSWORD, OS_OPEN_ACCESS, JOBS_TICK_TOKEN, ANTHROPIC_API_KEY, APOLLO_API_KEY, GOOGLE_CLIENT_ID,
+GOOGLE_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY, COMPANIES_HOUSE_API_KEY, SAM_API_KEY, IATI_API_KEY, NASA_FIRMS_MAP_KEY,
+GFW_API_KEY, ESRI_API_KEY (full list with purpose: docs/ENV.md).
+
+### Tests
+tests/integration/origination.test.ts (Tests A, B, C, F), tests/unit/origination-rules.test.ts, tests/unit/funding-match.test.ts,
+tests/integration/wb-loop.test.ts (Test G).

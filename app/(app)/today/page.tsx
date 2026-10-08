@@ -68,6 +68,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
       </section>
       <section aria-label="What the OS did in the last 24 hours" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--border, #D8D5CE)", borderRadius: 6 }}>
         <p style={{ margin: 0, fontSize: 13 }}><b>Last 24 h, done by the OS:</b> {ops.funding} funding opportunities found · {ops.matches} funding matches to projects · {ops.assessments} site assessments saved · {ops.triggers} triggers created · {ops.orgs} organizations added · {ops.placed} projects placed · {ops.sourceOk}/{ops.sourceCalls} source calls succeeded · AI this month ${ops.aiUsd.toFixed(2)}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 13 }}><b>Origination:</b> <Link href="/origination">{ops.queued} opportunities to review</Link> · <Link href="/origination?tab=hypotheses">{ops.hypotheses} hypotheses to validate</Link> · {ops.proposals} diagnostic proposals awaiting approval</p>
         {(ops.aiPaused || ops.degraded.length > 0 || ops.dead > 0) && <p style={{ margin: "6px 0 0", fontSize: 13 }}>
           {ops.aiPaused && <><b>AI paused</b> (Anthropic credit) until {ops.aiPaused.slice(11, 16)} UTC: rules reads continue. </>}
           {ops.degraded.length > 0 && <><b>Degraded sources:</b> {ops.degraded.join(", ")}. </>}

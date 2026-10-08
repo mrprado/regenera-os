@@ -14,6 +14,12 @@ export const fundingProjectMatches = sqliteTable("funding_project_matches", {
   geography: text("geography", { enum: ["listed", "global"] }).notNull(),
   reasons: text("reasons", { mode: "json" }).$type<{ met: string[]; unknown: string[] }>().notNull(),
   status: text("status", { enum: ["proposed", "accepted", "dismissed"] }).notNull().default("proposed"),
+  // Phase 22: hard-gate eligibility outcome (never a score), each check with its basis, soft factors kept separate.
+  eligibility: text("eligibility", { enum: ["eligible", "potentially_eligible", "ineligible", "insufficient_evidence", "expired_or_closed"] }),
+  checks: text("checks", { mode: "json" }).$type<{ rule: string; result: "pass" | "fail" | "unknown"; basis: string }[]>(),
+  soft: text("soft", { mode: "json" }).$type<{ factor: string; note: string }[]>(),
+  questions: text("questions", { mode: "json" }).$type<string[]>(),
+  capitalStage: text("capital_stage", { enum: ["development", "construction", "long_term"] }),
   decidedBy: text("decided_by"),
   createdAt: text("created_at").notNull().default(now),
   updatedAt: text("updated_at").notNull().default(now),

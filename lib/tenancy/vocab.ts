@@ -90,7 +90,7 @@ export const ROUTE_MODULES: [string, ModuleKey][] = [
   ["/benchmarks", "markets"],
   ["/people", "network"], ["/companies", "network"], ["/partners", "network"], ["/relationships", "network"], ["/network", "network"], ["/lists", "network"],
   ["/prospecting", "network"], ["/scans", "network"], ["/objectives", "network"], ["/sequences", "network"], ["/queue", "network"], ["/inbox", "network"], ["/searches", "network"],
-  ["/deals", "deals"], ["/contracts", "deals"], ["/mandates", "deals"], ["/pursuits", "deals"], ["/approvals", "deals"],
+  ["/deals", "deals"], ["/contracts", "deals"], ["/mandates", "deals"], ["/origination", "deals"], ["/pursuits", "deals"], ["/approvals", "deals"],
   ["/triggers", "intelligence"], ["/intelligence", "intelligence"], ["/workbench", "intelligence"], ["/knowledge", "intelligence"],
   ["/documents", "documents"], ["/tasks", "automations"], ["/playbooks", "automations"], ["/workflows", "automations"], ["/meetings", "automations"],
   ["/reports", "reporting"],
