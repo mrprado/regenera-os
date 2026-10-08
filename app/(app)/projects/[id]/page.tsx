@@ -49,6 +49,8 @@ import BenchmarksTab from "../benchmarks-tab";
 import { runPlaybookOnProjectAction } from "../../playbook-actions";
 import { DiligenceTab, EquipmentTab, LandTab, MatchesTab, QuestionsTab, StakeholdersTab } from "../fabric-tabs";
 import PartnerScanPanel from "../partner-scan";
+import { archiveProjectAction } from "../../casework-actions";
+import { isOwner } from "@/lib/db/scoped";
 
 export const dynamic = "force-dynamic";
 
@@ -230,6 +232,13 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         </div>
       )}
 
+      {tab === "overview" && isOwner(user.scope, p.mandateId) && (
+        <details className={r.panel}><summary className={ui.sub}>Archive this project</summary>
+          <form action={archiveProjectAction} className={r.form} style={{ maxWidth: 520 }}><input type="hidden" name="projectId" value={p.id} />
+            <label>Reason<input name="reason" required minLength={3} placeholder="e.g. Duplicate of another record" /></label>
+            <p className={ui.sub}>Hidden from lists, Atlas and screening; kept with its history. Owners only.</p>
+            <button className={ui.miniBtn} type="submit">Archive</button></form></details>
+      )}
       {tab === "readiness" && (
         <section className={r.panel}>
           <p className={r.panelTitle}>Readiness by dimension</p>

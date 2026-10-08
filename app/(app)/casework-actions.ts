@@ -272,3 +272,19 @@ export async function recordOperatorAction(formData: FormData) {
   });
   redirect(note(`/projects/portfolio?org=${orgId}`, msg));
 }
+
+// ---------- archive a project ----------
+/** Owners archive a project (duplicate, withdrawn, out of scope): hidden from lists, Atlas and screening, never deleted. */
+export async function archiveProjectAction(formData: FormData) {
+  const projectId = zId.parse(formData.get("projectId"));
+  const reason = z.string().trim().min(3, "Say why").max(300).parse(formData.get("reason"));
+  let name = "";
+  await withOsUser(async user => {
+    const p = await scopedProject(user.scope, projectId);
+    name = p.name;
+    const at = new Date().toISOString();
+    await appDb().update(projects).set({ archivedAt: at, updatedAt: at }).where(eq(projects.id, p.id));
+    await audit(appDb(), { actor: user.email, action: "project_archived", entity: "projects", entityId: p.id, before: { archivedAt: p.archivedAt }, after: { archivedAt: at, reason } });
+  }, { owner: true });
+  redirect(note("/projects", `${name} archived (${reason}). It is kept and can be restored from the audit record.`));
+}
