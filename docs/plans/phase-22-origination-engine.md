@@ -108,7 +108,7 @@ tiers and development partnership (bands are hypotheses; capital-introduction wo
 | Market-first hypotheses (≥3 signals / country / sector / 60 days), validate / convert / dismiss | implemented & tested |
 | Unified origination queue (3 entrances, 20 stages, expected value from bands × evidence) | implemented & tested |
 | Commercial operations: service recommendation by need / role | implemented & tested |
-| /origination (Queue, Hypotheses, Rubric, Revenue engines), project readiness panel, Command counts | implemented, verify in production |
+| /origination (Queue, Hypotheses, Rubric, Revenue engines), project readiness panel, Command counts | implemented, tested, verified in production (deploy 98464fdc, 2026-10-08) |
 | Funding geographies drawn as country regions in Atlas | planned (needs Natural Earth admin-0 file in the repo) |
 | Capital-partner "declare mandate" and sponsor "submit project" flows | implemented (existing public intake: a converted sponsor submission becomes a project and enters the origination queue; a capital submission becomes an owner-only capital profile used by capital rematch) |
 | AI narrative in dossiers / proposals | blocked (Anthropic credit) |
