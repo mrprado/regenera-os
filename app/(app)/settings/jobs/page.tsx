@@ -8,7 +8,10 @@ import { appDb } from "@/lib/db/scoped";
 import { getState } from "@/lib/state";
 import { queueHealth, scheduleHealth } from "@/lib/jobs/health";
 import { fmtLocal } from "@/lib/time/zone";
-import { retryJob, runJobsNow } from "../actions";
+import { resumeAiAction, retryJob, retryJobTypeAction, runJobsNow } from "../actions";
+import { aiPausedUntil } from "@/lib/ai/run";
+import { jobs as jobsTable } from "@/db/schema";
+import { sql as sqlOp, eq as eqOp } from "drizzle-orm";
 import styles from "../settings.module.css";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +35,19 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const [q, sched] = await Promise.all([queueHealth(appDb()), scheduleHealth(appDb())]);
   // Browser errors from signed-in sessions (phase 20): owners only, last 30.
   const browserErrors = isOwner(user.scope) ? await appDb().select().from(clientErrors).orderBy(desc(clientErrors.createdAt)).limit(30) : [];
+  const aiPaused = await aiPausedUntil(appDb());
+  const aiReason = await getState(appDb(), "ai_paused_reason");
+  const deadByType = await appDb().select({ type: jobsTable.type, n: sqlOp<number>`count(*)`, err: sqlOp<string>`substr(max(${jobsTable.lastError}), 1, 160)` }).from(jobsTable).where(eqOp(jobsTable.status, "dead")).groupBy(jobsTable.type);
   const STATE_LABEL = { ok: "Completed", never: "Never completed", failing: "Failing", overdue: "Queued, not completed", paused: "Paused" } as const;
 
   return (
     <>
       <h2>Jobs</h2>
       {params.ran && <p className={`${styles.notice} ${styles.noticeOk}`}>Ran one tick.</p>}
+      {params.requeued && <p className={`${styles.notice} ${styles.noticeOk}`}>Re-queued {params.requeued} failed job(s).</p>}
+      {aiPaused && <p className={styles.notice}><b>AI paused</b> until {fmtLocal(aiPaused)}: {aiReason ?? "the Anthropic account reported no credit"}. Signals and funding continue on rules reads. Add credit at console.anthropic.com → Billing, then {isOwner(user.scope) ? <form action={resumeAiAction} style={{ display: "inline" }}><button className={styles.linkButton} type="submit">resume AI now</button></form> : "ask an owner to resume AI"}.</p>}
+      {deadByType.length > 0 && <div className={styles.notice}><b>Failed jobs by type</b>
+        <ul>{deadByType.map(d => <li key={d.type}><code>{d.type}</code>: {d.n} — {d.err}{isOwner(user.scope) && <form action={retryJobTypeAction} style={{ display: "inline" }}><input type="hidden" name="type" value={d.type} /> <button className={styles.linkButton} type="submit">Re-run all</button></form>}</li>)}</ul></div>}
       <p className={`${styles.notice} ${backup ? styles.noticeOk : ""}`}>
         Backups: {backup ? `last nightly export ${String(backup.day)} (${String(backup.tables)} tables, ${String(backup.rows)} rows, kept 30 days in R2)` : "no backup yet (runs nightly at 02:30 Pacific)"}.
         {" "}Read-back check: {check ? `${check.ok ? "passed" : "FAILED"} on ${String(check.at).slice(0, 10)}${check.ok ? "" : `: ${(check.problems as string[]).slice(0, 2).join("; ")}`}` : "not run yet (monthly)"}.

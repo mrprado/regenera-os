@@ -102,11 +102,55 @@ async function cacheGetStale(db: Db, key: string): Promise<unknown | undefined> 
   return row ? JSON.parse(row.value) : undefined;
 }
 
+// Source backoff (phase 21 §1.4): after a call ends in 429, 5xx or a network error the provider cools down
+// (5 min, doubling per consecutive failure, capped at 6 h) so a struggling source is not hammered by every tick.
+// Three consecutive failures mark it degraded (Settings → Integrations and Command show it). A success clears both.
+const coolKey = (p: string) => `cool:${p}`;
+export type SourceHealth = { failures: number; until: string | null; lastError: string | null };
+
+export async function sourceHealth(db: Db, provider: string): Promise<SourceHealth> {
+  const [row] = await db.select().from(systemState).where(eq(systemState.key, coolKey(provider)));
+  if (!row) return { failures: 0, until: null, lastError: null };
+  try { return JSON.parse(row.value) as SourceHealth; } catch { return { failures: 0, until: null, lastError: null }; }
+}
+
+export const isDegraded = (h: SourceHealth) => h.failures >= 3;
+
+/** Pure: next cooldown in ms after n consecutive failures. */
+export const cooldownMs = (failures: number) => Math.min(5 * 60_000 * 2 ** Math.max(0, failures - 1), 6 * 3_600_000);
+
+async function recordOutcome(db: Db, provider: string, ok: boolean, now: Date, error?: string) {
+  if (ok) {
+    const h = await sourceHealth(db, provider);
+    if (h.failures) await db.delete(systemState).where(eq(systemState.key, coolKey(provider)));
+    return;
+  }
+  const h = await sourceHealth(db, provider);
+  const failures = h.failures + 1;
+  const value = JSON.stringify({ failures, until: new Date(now.getTime() + cooldownMs(failures)).toISOString(), lastError: error?.slice(0, 200) ?? null });
+  await db.insert(systemState).values({ key: coolKey(provider), value, updatedAt: now.toISOString() }).onConflictDoUpdate({ target: systemState.key, set: { value, updatedAt: now.toISOString() } });
+}
+
 async function fetchJsonOnce<T>(db: Db, o: FetchJsonOptions<T>, now: Date): Promise<T> {
   if (o.cacheKey) {
     const hit = await cacheGet(db, `${o.provider}:${o.cacheKey}`, now);
     if (hit !== undefined) return o.schema.parse(hit);
   }
+  const health = await sourceHealth(db, o.provider);
+  if (health.until && health.until > now.toISOString()) throw new SourceError(o.provider, `cooling down after ${health.failures} failure(s) until ${health.until.slice(11, 16)} UTC`, 429, true);
+  try {
+    const data = await fetchJsonAttempts(db, o, now);
+    await recordOutcome(db, o.provider, true, now);
+    return data;
+  } catch (error) {
+    const e = error as SourceError;
+    // Only upstream trouble cools a source down; a 4xx (our request) or a schema mismatch does not.
+    if (e.status === undefined ? /network error/.test(e.message) : e.retryable) await recordOutcome(db, o.provider, false, now, e.message);
+    throw error;
+  }
+}
+
+async function fetchJsonAttempts<T>(db: Db, o: FetchJsonOptions<T>, now: Date): Promise<T> {
   const doFetch = o.fetchImpl ?? fetch;
   const retries = o.retries ?? 2;
   let lastError: SourceError | undefined;

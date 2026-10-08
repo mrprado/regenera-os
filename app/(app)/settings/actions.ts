@@ -11,7 +11,9 @@ import { getAccessToken } from "@/lib/google/accounts";
 import { googleConfig } from "@/lib/google/config";
 import { buildRawMessage, gmailSend } from "@/lib/google/gmail";
 import { zMailboxRole } from "@/lib/google/oauth";
-import { retryDead } from "@/lib/jobs/queue";
+import { retryDead, retryDeadOfType } from "@/lib/jobs/queue";
+import { AI_PAUSE_KEY } from "@/lib/ai/run";
+import { setState } from "@/lib/state";
 import { tick } from "@/lib/jobs/tick";
 
 export async function runJobsNow() {
@@ -20,6 +22,26 @@ export async function runJobsNow() {
     await audit(appDb(), { actor: user.email, action: "manual_tick", entity: "jobs", after: result });
   }, { owner: true, internal: true });
   redirect("/settings/jobs?ran=1");
+}
+
+/** Re-queues every dead job of one type (after the cause, e.g. AI credit, is fixed). */
+export async function retryJobTypeAction(formData: FormData) {
+  const type = z.string().min(1).max(80).parse(formData.get("type"));
+  const n = await withOsUser(async user => {
+    const count = await retryDeadOfType(appDb(), type, new Date());
+    await audit(appDb(), { actor: user.email, action: "retry_job_type", entity: "jobs", after: { type, count } });
+    return count;
+  }, { owner: true, internal: true });
+  redirect(`/settings/jobs?requeued=${n}`);
+}
+
+/** Lifts the AI pause now (after adding credit), instead of waiting for the hour to pass. */
+export async function resumeAiAction() {
+  await withOsUser(async user => {
+    await setState(appDb(), AI_PAUSE_KEY, new Date(0).toISOString());
+    await audit(appDb(), { actor: user.email, action: "resume_ai", entity: "jobs" });
+  }, { owner: true, internal: true });
+  redirect("/settings/jobs");
 }
 
 export async function retryJob(formData: FormData) {

@@ -3,7 +3,10 @@ import { expireBrokerRecords } from "@/lib/portal/broker";
 import { env } from "cloudflare:workers";
 import type { Db } from "@/db";
 import { processImportChunk, r2Store } from "@/lib/import/process";
-import { AiBudgetError } from "@/lib/ai/run";
+import { AI_PAUSE_KEY, AiBudgetError, aiPausedUntil, isCreditError } from "@/lib/ai/run";
+import { notifications } from "@/db/schema";
+import { readFundingByRules } from "@/lib/funding/rules-read";
+import { classifyByRules } from "@/lib/triggers/rules";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -69,6 +72,20 @@ async function deferOnBudget(ctx: JobContext, fn: () => Promise<unknown>) {
   try {
     await fn();
   } catch (error) {
+    // No credit on the Anthropic account: pause every AI job for an hour (one notification per pause) instead of
+    // burning five retries into dead jobs. The rules reads keep signals and funding moving meanwhile.
+    if (isCreditError(error)) {
+      const until = new Date(ctx.now.getTime() + 3_600_000).toISOString();
+      const wasPaused = await aiPausedUntil(ctx.db, ctx.now);
+      await setState(ctx.db, AI_PAUSE_KEY, until);
+      await setState(ctx.db, "ai_paused_reason", (error as Error).message.slice(0, 300));
+      if (!wasPaused && !(await getState(ctx.db, "ai_credit_notified_" + ctx.now.toISOString().slice(0, 10)))) {
+        await setState(ctx.db, "ai_credit_notified_" + ctx.now.toISOString().slice(0, 10), "1");
+        await ctx.db.insert(notifications).values({ mandateId: REGENERA_MANDATE_ID, category: "system", priority: "critical", title: "AI paused: the Anthropic account has no credit", body: "Funding reads, signal classification, memos and reports wait. Rules reads keep data moving. Add credit at console.anthropic.com → Billing; AI resumes within the hour.", link: "/settings/jobs" });
+      }
+      await enqueue(ctx.db, ctx.job.type, ctx.job.payload, { runAfter: new Date(until), now: ctx.now, dedupeKey: `deferred:${ctx.job.type}:${JSON.stringify(ctx.job.payload)}:${until.slice(0, 13)}` });
+      return;
+    }
     const wait = error instanceof AiBudgetError ? 24 : error instanceof AiUnavailableError ? 6 : 0;
     if (!wait) throw error;
     const runAfter = new Date(ctx.now.getTime() + wait * 3_600_000);
@@ -96,8 +113,9 @@ export const handlers: Record<string, JobHandler> = {
     await setState(db, "last_trigger_scan", JSON.stringify({ at: now.toISOString(), ...r }));
   },
   "triggers.classify": async ctx => {
-    // Unread signals stay "new" and are picked up by the next classify run once a key exists.
-    if (!aiConfig()) return;
+    // Without AI (no key, or paused for credit) the rules read turns well-sourced signals into triggers; the rest stay
+    // "new" for the AI classifier.
+    if (!aiConfig() || await aiPausedUntil(ctx.db, ctx.now)) { await classifyByRules(ctx.db, 40, ctx.now); return; }
     await deferOnBudget(ctx, () => classifyNewSignals(ctx.db, requireAi(), 15, ctx.now));
   },
   "triggers.read": async ctx => {
@@ -245,7 +263,8 @@ export const handlers: Record<string, JobHandler> = {
     await enqueue(db, "funding.place", {}, { dedupeKey: `funding-place:${now.toISOString().slice(0, 13)}`, now });
   },
   "funding.read": async ctx => {
-    if (!aiConfig()) return; // unread opportunities keep their keyword fit until a key exists
+    // Without AI the rules read gives sectors and a summary; the AI read replaces it when available.
+    if (!aiConfig() || await aiPausedUntil(ctx.db, ctx.now)) { await readFundingByRules(ctx.db, 60, ctx.now); return; }
     await deferOnBudget(ctx, () => readFunding(ctx.db, requireAi(), 12, ctx.now));
   },
   "place.profile": async ({ db, job }) => {

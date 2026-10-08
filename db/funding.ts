@@ -49,7 +49,7 @@ export const fundingOpportunities = sqliteTable("funding_opportunities", {
   status: text("status", { enum: ["forthcoming", "open", "closed"] }).notNull().default("open"),
   fit: integer("fit"),                               // Claude's 0-100 fit to Regenera's services
   route: text("route", { enum: FUNDING_ROUTES }),
-  read: text("read", { mode: "json" }).$type<{ summary?: string; caveats?: string[]; consortium?: boolean; why?: string;
+  read: text("read", { mode: "json" }).$type<{ summary?: string; caveats?: string[]; consortium?: boolean; why?: string; rules?: boolean;
     proposal?: { sections: { heading: string; body: string; basis?: string }[]; gaps: string[]; draftedAt: string; styleFlags: string[] } }>(),
   readAt: text("read_at"),
   decision: text("decision", { enum: FUNDING_DECISIONS }).notNull().default("new"),

@@ -12,12 +12,17 @@ import { CsvStream, EntrySet, euPick, HeaderCsv, ofacAliases, ofacPrimary, ukPic
 
 export const SANCTIONS_LISTS = {
   ofac: { label: "OFAC SDN (US Treasury)", provider: "ofac_sdn", page: "https://sanctionslist.ofac.treas.gov/", urls: ["https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV", "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ALT.CSV"] },
+  // Treasury's legacy download paths: tried when the list service fails (it returned HTTP 525 to Workers on 2026-10-08).
   uk: { label: "UK Sanctions List (FCDO)", provider: "uk_sanctions", page: "https://www.gov.uk/government/publications/the-uk-sanctions-list", urls: ["https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.csv"] },
   eu: { label: "EU consolidated financial sanctions", provider: "eu_sanctions", page: "https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions", urls: ["https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw"] },
   un: { label: "UN Security Council consolidated list", provider: "un_sanctions", page: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list", urls: ["https://scsanctions.un.org/resources/xml/en/consolidated.xml"] },
 } as const;
 export type ListKey = keyof typeof SANCTIONS_LISTS;
 export const LIST_KEYS = Object.keys(SANCTIONS_LISTS) as ListKey[];
+const OFAC_MIRRORS: Record<string, string> = {
+  "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV": "https://www.treasury.gov/ofac/downloads/sdn.csv",
+  "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ALT.CSV": "https://www.treasury.gov/ofac/downloads/alt.csv",
+};
 const PART = 2500;
 export const RESCREEN_DAYS = 90;
 
@@ -25,7 +30,12 @@ export const RESCREEN_DAYS = 90;
 async function streamText(db: Db, provider: string, url: string, onChunk: (s: string) => void, fetchImpl: typeof fetch = fetch) {
   if ((await import("cloudflare:workers")).env.ISOLATED_DEMO === "true") throw new Error("External sources are disabled in the isolated demo");
   await assertIntegrationAllowed(db, provider);
-  const res = await fetchImpl(url, { headers: { "user-agent": USER_AGENT, accept: "*/*" }, signal: AbortSignal.timeout(120_000) });
+  let res = await fetchImpl(url, { headers: { "user-agent": USER_AGENT, accept: "*/*" }, signal: AbortSignal.timeout(120_000) }).catch(() => null);
+  if ((!res || !res.ok) && OFAC_MIRRORS[url]) {
+    await logCall(db, { provider, endpoint: "list", ok: false, httpStatus: res?.status, detail: `HTTP ${res?.status ?? "network error"}: trying the treasury.gov mirror` });
+    res = await fetchImpl(OFAC_MIRRORS[url], { headers: { "user-agent": USER_AGENT, accept: "*/*" }, signal: AbortSignal.timeout(120_000) }).catch(() => null);
+  }
+  if (!res) { await logCall(db, { provider, endpoint: "list", ok: false, detail: "network error" }); throw new Error(`${provider}: network error`); }
   if (!res.ok || !res.body) { await logCall(db, { provider, endpoint: "list", ok: false, httpStatus: res.status, detail: `HTTP ${res.status}` }); throw new Error(`${provider}: HTTP ${res.status}`); }
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   for (;;) { const { done, value } = await reader.read(); if (done) break; onChunk(value); }

@@ -3,6 +3,8 @@
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { jobs } from "@/db/schema";
+import { AI_PAUSE_KEY, isCreditError } from "@/lib/ai/run";
+import { setState } from "@/lib/state";
 
 export type Job = {
   id: string;
@@ -66,6 +68,13 @@ export function backoffMs(attempts: number): number {
 
 export async function fail(db: Db, job: Job, error: unknown, now: Date): Promise<"retry" | "dead"> {
   const message = (error instanceof Error ? error.message : String(error)).slice(0, 2000);
+  // Any job that hit "no credit" waits an hour without spending an attempt (AI is paused meanwhile).
+  if (isCreditError(error)) {
+    const until = iso(new Date(now.getTime() + 3_600_000));
+    await setState(db, AI_PAUSE_KEY, until);
+    await db.update(jobs).set({ status: "queued", lockedUntil: null, lastError: message, attempts: Math.max(0, job.attempts - 1), runAfter: until, updatedAt: iso(now) }).where(eq(jobs.id, job.id));
+    return "retry";
+  }
   const dead = job.attempts >= job.maxAttempts;
   await db.update(jobs).set({
     status: dead ? "dead" : "queued",
@@ -81,6 +90,13 @@ export async function fail(db: Db, job: Job, error: unknown, now: Date): Promise
 export async function retryDead(db: Db, id: string, now: Date): Promise<void> {
   await db.run(sql`UPDATE jobs SET status = 'queued', attempts = 0, run_after = ${iso(now)}, locked_until = NULL, updated_at = ${iso(now)}
     WHERE id = ${id} AND status = 'dead'`);
+}
+
+/** Re-queues every dead job of one type (owner action, after the cause is fixed). Returns how many. */
+export async function retryDeadOfType(db: Db, type: string, now: Date): Promise<number> {
+  const rows = await db.all<{ id: string }>(sql`UPDATE jobs SET status = 'queued', attempts = 0, run_after = ${iso(now)}, locked_until = NULL, updated_at = ${iso(now)}
+    WHERE type = ${type} AND status = 'dead' RETURNING id`);
+  return rows.length;
 }
 
 /** Claims only jobs of the given types (a screen running its own queued work, e.g. a mandate universe build). */

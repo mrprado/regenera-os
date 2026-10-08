@@ -6,6 +6,7 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import type * as z4 from "zod/v4";
 import type { Db } from "@/db";
 import { aiRuns, prompts } from "@/db/schema";
+import { getState } from "@/lib/state";
 import { PROMPTS, type PromptDef, type PromptKey } from "./prompts";
 
 // Anthropic first-party prices per million tokens (claude-api skill, cached 2026-06-24).
@@ -20,6 +21,21 @@ export type AiConfig = { apiKey: string; monthlyBudgetUsd: number };
 
 export class AiBudgetError extends Error {}
 export class AiOutputError extends Error {}
+/** The Anthropic account cannot serve calls (credit balance, billing, or a paused state set after such an error). */
+export class AiCreditError extends Error {}
+
+/** True for provider errors that mean "no credit / billing": retrying minutes later burns attempts for nothing. */
+export function isCreditError(e: unknown) {
+  return e instanceof AiCreditError || /credit balance|billing|payment required|insufficient.?credit/i.test(String((e as Error)?.message ?? e));
+}
+
+/** State key: AI calls are refused until this ISO time after a credit error (lib/jobs/handlers.ts sets it). */
+export const AI_PAUSE_KEY = "ai_paused_until";
+
+export async function aiPausedUntil(db: Db, now = new Date()): Promise<string | null> {
+  const until = await getState(db, AI_PAUSE_KEY);
+  return until && until > now.toISOString() ? until : null;
+}
 
 export function costUsd(model: string, u: { input: number; output: number; cacheRead: number; cacheWrite: number; searches: number }): number {
   const p = PRICES[model] ?? PRICES["claude-sonnet-5"];
@@ -60,6 +76,8 @@ const usageOf = (u: Usage) => ({
 type RunMeta = { entity?: string; entityId?: string };
 
 async function guardBudget(db: Db, cfg: AiConfig, key: string, version: number, model: string, meta: RunMeta) {
+  const paused = await aiPausedUntil(db);
+  if (paused) throw new AiCreditError(`AI paused until ${paused.slice(11, 16)} UTC: the Anthropic account reported no credit.`);
   const spent = await spentThisMonth(db);
   if (spent >= cfg.monthlyBudgetUsd) {
     await db.insert(aiRuns).values({ promptKey: key, promptVersion: version, model, ...meta, status: "budget", error: `Monthly AI budget reached ($${spent.toFixed(2)} of $${cfg.monthlyBudgetUsd})` });
