@@ -148,6 +148,28 @@ function MapClient() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [rendererDown, setRendererDown] = useState(false);
+  // ?debug=atlas: a live status box (style, canvas, camera, GL) for diagnosing a blank globe on a given machine.
+  const [debugOn] = useState(() => new URLSearchParams(window.location.search).get("debug") === "atlas");
+  const [debugInfo, setDebugInfo] = useState("starting…");
+  useEffect(() => {
+    if (!debugOn) return;
+    const t = window.setInterval(() => {
+      const m = mapRef.current;
+      if (!m) { setDebugInfo(`no map object · rendererDown=${rendererDown} · error=${mapError ?? "none"}`); return; }
+      const canvas = m.getCanvas();
+      const gl = (m as unknown as { painter?: { context?: { gl?: WebGL2RenderingContext } } }).painter?.context?.gl;
+      const s = (m as unknown as { style?: { _loaded?: boolean; stylesheet?: { layers?: unknown[] } } }).style;
+      const c = m.getCenter();
+      setDebugInfo([
+        `styleLoaded=${m.isStyleLoaded()} style._loaded=${!!s?._loaded} styleLayers=${s?.stylesheet?.layers?.length ?? 0} mapLoaded=${m.loaded()}`,
+        `canvas=${canvas.width}x${canvas.height} css=${canvas.clientWidth}x${canvas.clientHeight} container=${container.current?.clientWidth}x${container.current?.clientHeight}`,
+        `center=${c.lat.toFixed(1)},${c.lng.toFixed(1)} zoom=${m.getZoom().toFixed(2)} pitch=${m.getPitch().toFixed(0)} projection=${m.getProjection?.()?.type ?? "?"}`,
+        `gl=${gl ? "webgl2" : "none"} lost=${gl ? gl.isContextLost() : "-"} renderer=${gl ? String(gl.getParameter(gl.RENDERER)).slice(0, 70) : "-"}`,
+        `visible=${!document.hidden} mapReady=${mapReady} base=${base} records=${data ? "loaded" : "pending"} error=${mapError ?? "none"}`,
+      ].join("\n"));
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [debugOn, rendererDown, mapError, mapReady, base, data]);
   const [panel, setPanel] = useState<"intel" | "directory" | "workbench" | "none">("directory");
   const [wbMode, setWbMode] = useState<WbMode>("analysis");
   const [wbProject, setWbProject] = useState(() => new URLSearchParams(window.location.search).get("project") ?? "");
@@ -798,6 +820,7 @@ function MapClient() {
     <div className={styles.stage} data-fullbleed data-selection={selected || siteScreen.screen ? "true" : "false"} data-mode={mode} data-picking={picking ? "true" : "false"} data-panel={panel}>
       <SensorFilters />
       <div ref={container} className={styles.map} />
+      {debugOn && <pre style={{ position: "absolute", zIndex: 9, left: "50%", bottom: 40, transform: "translateX(-50%)", margin: 0, padding: "10px 12px", background: "#FBFAF7", color: "#252D27", border: "1px solid #D8D5CE", borderRadius: 6, fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", maxWidth: "90%" }}>{debugInfo}</pre>}
       {rendererDown && (
         <div className={styles.rendererDown} role="alert">
           <p className={styles.kicker}>Atlas cannot draw the globe in this browser</p>
