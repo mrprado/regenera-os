@@ -38,9 +38,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ op: 
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ op: string }> }) {
-  const user = await getOsApiUser({ write: true });
-  if (!user) return json({ error: "Not authorized" }, 401);
   const { op } = await params;
+  // Open-access visitors may run screening calculations (measure, buffer, nearest, constraints, envelope) but not
+  // save or delete site features and observations.
+  const user = await getOsApiUser({ write: ["features", "features-delete", "observations", "observations-convert"].includes(op) });
+  if (!user) return json({ error: "Not authorized" }, 401);
   const db = appDb();
   let body: Record<string, unknown>;
   try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: "JSON body required" }, 400); }
