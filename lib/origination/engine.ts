@@ -5,7 +5,7 @@
 import { and, desc, eq, gte, inArray, isNull, like, ne, notLike, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
-  claims, deals, engagements, events, fundingOpportunities, fundingProjectMatches, generatedDocuments, organizations, originationHypotheses, originationItems,
+  claims, deals, engagements, events, fundingOpportunities, fundingProjectMatches, generatedDocuments, organizations, originationHypotheses, originationItems, policyDecisions,
   projectParties, projectReadiness, projects, services, siteIntelRuns, tasks, triggers,
 } from "@/db/schema";
 import { createEngagement } from "@/lib/commercial/engine";
@@ -14,6 +14,7 @@ import { country as countryOf } from "@/lib/scan/countries";
 import { SECTORS } from "@/lib/vocab";
 import { CAPITAL_STAGES, ELIGIBILITY, capitalStageOf, type CapitalStage } from "./eligibility";
 import { READING_LABEL, scoreReadiness, templateFor } from "./readiness";
+import { assertProjectCleared } from "@/lib/integrity/gate";
 
 export const ORIGINATION_STAGES = {
   discovered: "Discovered", verified: "Verified", qualified: "Qualified", outreach_proposed: "Outreach proposed", outreach_approved: "Outreach approved",
@@ -121,6 +122,10 @@ export async function syncOriginationQueue(db: Db, mandateId: string, now = new 
     else await db.insert(originationItems).values({ ...x, mandateId });
     upserts++;
   };
+  // Integrity decisions (phase 23): blocked projects get no service, no value and say why. Fee potential never changes this.
+  const decision = new Map((await db.select({ projectId: policyDecisions.projectId, state: policyDecisions.state, v: policyDecisions.policyVersion }).from(policyDecisions).where(and(eq(policyDecisions.mandateId, mandateId), eq(policyDecisions.current, true)))).map(d => [d.projectId, d]));
+  const blockedNote = (projectId: string | null) => { const d = projectId ? decision.get(projectId) : undefined; return d && (d.state === "excluded" || d.state === "human_review") ? `Integrity: ${d.state.replace(/_/g, " ")} (policy v${d.v}). No advancement until an owner reviews it.` : null; };
+  const integrityNote = (projectId: string | null) => { const d = projectId ? decision.get(projectId) : undefined; return d ? ` · integrity: ${d.state.replace(/_/g, " ")}` : " · integrity: not screened"; };
   // Capital-first: matched funding → project.
   const ms = await db.select({ id: fundingProjectMatches.id, projectId: fundingProjectMatches.projectId, opportunityId: fundingProjectMatches.opportunityId, eligibility: fundingProjectMatches.eligibility, title: fundingOpportunities.title, pname: projects.name })
     .from(fundingProjectMatches).innerJoin(fundingOpportunities, eq(fundingOpportunities.id, fundingProjectMatches.opportunityId)).innerJoin(projects, eq(projects.id, fundingProjectMatches.projectId))
@@ -129,6 +134,8 @@ export async function syncOriginationQueue(db: Db, mandateId: string, now = new 
     const svc = await serviceBand(db, mandateId, "funding_diagnostic");
     const mid = svc ? (svc.low + (svc.high ?? svc.low)) / 2 : null;
     const f = FACTOR[m.eligibility ?? "insufficient_evidence"] ?? 0.3;
+    const blockedM = blockedNote(m.projectId);
+    if (blockedM) { await upsert({ entrance: "capital_first", strategy: "funding_match", title: `${m.pname} ← ${m.title.slice(0, 120)}`, projectId: m.projectId, opportunityId: m.opportunityId, matchId: m.id, recommendedService: null, serviceReason: null, expectedValueUsd: null, valueBasis: "Not valued: integrity decision blocks advancement", priority: -1, nextAction: blockedM, dedupeKey: `match:${m.id}` }); continue; }
     await upsert({ entrance: "capital_first", strategy: "funding_match", title: `${m.pname} ← ${m.title.slice(0, 120)}`, projectId: m.projectId, opportunityId: m.opportunityId, matchId: m.id,
       recommendedService: "funding_diagnostic", serviceReason: `Funding match (${ELIGIBILITY[(m.eligibility ?? "insufficient_evidence") as keyof typeof ELIGIBILITY]})`,
       expectedValueUsd: mid ? Math.round(mid * f) : null, valueBasis: mid ? `Funding diagnostic band midpoint US$${mid.toLocaleString("en-US")} × ${f} (${m.eligibility ?? "unassessed"})` : "Service not in catalogue",
@@ -137,6 +144,8 @@ export async function syncOriginationQueue(db: Db, mandateId: string, now = new 
   // Project-first: existing projects (own, Market pipeline, extracted) and Atlas site screens.
   const ps = await db.select({ id: projects.id, name: projects.name, origin: projects.originationSource, stage: projects.stage }).from(projects).where(and(eq(projects.mandateId, mandateId), isNull(projects.archivedAt))).limit(600);
   for (const p of ps) {
+    const blockedP = blockedNote(p.id);
+    if (blockedP) { await upsert({ entrance: "project_first", strategy: (p.origin ?? "") === "Atlas site screen" ? "site_asset" : "existing_project", title: p.name, projectId: p.id, recommendedService: null, serviceReason: null, expectedValueUsd: null, valueBasis: "Not valued: integrity decision blocks advancement", priority: -1, nextAction: blockedP, dedupeKey: `project:${p.id}` }); continue; }
     const r = await projectReadinessScore(db, p.id);
     const hasFunding = ms.some(m => m.projectId === p.id && m.eligibility === "eligible");
     const rec = recommendForProject(r.reading, hasFunding);
@@ -145,7 +154,7 @@ export async function syncOriginationQueue(db: Db, mandateId: string, now = new 
     const market = (p.origin ?? "").startsWith("Public pipeline:");
     const f = market ? 0.2 : r.reading === "insufficient_evidence" ? 0.4 : 0.7; // public projects need a sponsor relationship first
     await upsert({ entrance: "project_first", strategy: (p.origin ?? "") === "Atlas site screen" ? "site_asset" : "existing_project", title: p.name, projectId: p.id,
-      recommendedService: rec.key, serviceReason: rec.why, expectedValueUsd: mid ? Math.round(mid * f) : null,
+      recommendedService: rec.key, serviceReason: rec.why + integrityNote(p.id), expectedValueUsd: mid ? Math.round(mid * f) : null,
       valueBasis: mid ? `${svc!.name} band midpoint US$${mid.toLocaleString("en-US")} × ${f}${market ? " (public project: sponsor not engaged)" : ""}` : "Service not in catalogue",
       priority: mid ? Math.round((mid * f) / 1000) : 0, nextAction: market ? "Identify the sponsor's credible contact channel" : r.blocking.length ? `Resolve: ${r.blocking.join(", ")}` : "Generate dossier and diagnostic proposal", dedupeKey: `project:${p.id}` });
   }
@@ -173,6 +182,7 @@ export async function syncOriginationQueue(db: Db, mandateId: string, now = new 
 
 /** Diagnostic proposal: dossier → recommended service → draft engagement + proposal document + outreach draft (for approval) + task. */
 export async function proposeDiagnostic(db: Db, projectId: string, actor: string) {
+  await assertProjectCleared(db, projectId, "A diagnostic proposal and outreach draft");
   const dossier = await buildDossier(db, projectId, actor);
   const p = dossier.readiness.project;
   const funding = await db.select({ e: fundingProjectMatches.eligibility }).from(fundingProjectMatches).where(and(eq(fundingProjectMatches.projectId, projectId), eq(fundingProjectMatches.eligibility, "eligible"))).limit(1);
@@ -238,3 +248,38 @@ export async function originationCounts(db: Db, mandateIds: string[]) {
   return { queue: q?.n ?? 0, hypotheses: h?.n ?? 0 };
 }
 export const MARKET_LIKE = MARKET;
+
+/** Gap intelligence (phase 23): open funding in a country and sector where Regenera has no project → a thesis to validate.
+ *  Always labelled HYPOTHESIS; open calls are evidence of available money for the sector, not of a project. */
+export async function generateGapTheses(db: Db, mandateId: string, now = new Date()) {
+  const opps = await db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, url: fundingOpportunities.url, deadline: fundingOpportunities.deadline, countries: fundingOpportunities.countries, sectors: fundingOpportunities.sectors })
+    .from(fundingOpportunities).where(and(eq(fundingOpportunities.mandateId, mandateId), ne(fundingOpportunities.status, "closed"), eq(fundingOpportunities.category, "opportunity"))).limit(3000);
+  const own = await db.select({ country: projects.country, sector: projects.sector, technology: projects.technology, name: projects.name, assetClass: projects.assetClass }).from(projects)
+    .where(and(eq(projects.mandateId, mandateId), isNull(projects.archivedAt), or(isNull(projects.originationSource), notLike(projects.originationSource, MARKET))));
+  const { projectSector } = await import("@/lib/site-intel/opportunity");
+  const covered = new Set(own.map(p => `${p.country}|${(p.sector as string | null) ?? projectSector(p) ?? ""}`));
+  const groups = new Map<string, typeof opps>();
+  for (const o of opps) for (const c of new Set((o.countries ?? []).map(x => countryOf(x)?.iso3).filter((x): x is string => !!x))) for (const s of o.sectors ?? []) {
+    const k = `${c}|${s}`;
+    if (!covered.has(k)) groups.set(k, [...(groups.get(k) ?? []), o]);
+  }
+  let created = 0;
+  for (const [k, list] of groups) {
+    if (list.length < 2) continue;
+    const [iso3, sector] = k.split("|");
+    const key = `gap:${k}|${now.toISOString().slice(0, 7)}`;
+    const [ex] = await db.select({ id: originationHypotheses.id }).from(originationHypotheses).where(eq(originationHypotheses.dedupeKey, key));
+    if (ex) continue;
+    const c = countryOf(iso3);
+    const orgs = await db.select({ id: organizations.id, name: organizations.name, roles: organizations.roles }).from(organizations).where(and(eq(organizations.mandateId, mandateId), eq(organizations.country, iso3), eq(organizations.sector, sector))).limit(8);
+    await db.insert(originationHypotheses).values({
+      mandateId, title: `Funding without a pipeline: ${SECTORS[sector as keyof typeof SECTORS] ?? sector} in ${c?.name ?? iso3}`, country: iso3, sector, dedupeKey: key,
+      thesis: `${list.length} open or forthcoming funding records list ${c?.name ?? iso3} for ${SECTORS[sector as keyof typeof SECTORS] ?? sector}, and Regenera has no project there in that sector. HYPOTHESIS: originate or partner on a project that fits these programmes. Not a project; eligibility is per call.`,
+      evidence: list.slice(0, 10).map(o => ({ kind: "funding", id: o.id, label: o.title, url: o.url, date: o.deadline })),
+      counterparts: orgs.map(o => ({ orgId: o.id, name: o.name, why: (o.roles ?? []).join(", ") || "recorded in this country and sector" })),
+      validation: ["Read the calls: eligible applicants, ticket size, deadlines", "Identify developers or authorities with a fitting project", "Check sites in Atlas (Screen a site) before any approach", "Convert, pursue with a partner, or dismiss"],
+    });
+    created++;
+  }
+  return { groups: groups.size, created };
+}

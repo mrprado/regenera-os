@@ -1,8 +1,8 @@
-# Phase 23 — Conscious Opportunity Origination: the Regenera Origination & Integrity Engine
+# Phase 23 — Origination & Integrity Engine
 
-Source: founder directives "Conscious Opportunity Origination & Regenerative Intelligence Architecture" and "Global Data
+Source: founder directives on opportunity origination and regenerative intelligence architecture and "Global Data
 Intelligence Integration" (2026-10-08). A governing layer across phases 6–22, not a dashboard or an ESG score.
-Status: **awaiting approval**.
+Status: **built 2026-10-08** (approved "build entire thing"; the product name is "Origination & Integrity Engine").
 
 Principle: three independent dimensions — Commercial Integrity, Regenerative Integrity, Strategic Alignment. None
 compensates for another; a hard exclusion is never outweighed by returns; a positive mission never implies feasibility;
@@ -119,3 +119,23 @@ Plus: policy versioning (old decisions unchanged), override needs owner + reason
 ## 4. Not in this phase
 Licensed datasets (IBAT/WDPA, GEM commercial, Earth Engine commercial, PitchBook-class capital data), certified
 verification, investor-facing publication, automatic external contact.
+
+## Build ledger (2026-10-08)
+
+| Area | Delivered |
+|---|---|
+| Schema (0057, additive) | origination_policies, policy_decisions, integrity_findings, impact_records, stewardship_obligations, redesign_scenarios; capital_profiles.impact_criteria + investor_status |
+| Policy + rules | lib/integrity/policy.ts (v1 published on first use; versions never rewrite decisions), evaluate.ts (pure, deterministic; seven readings side by side; no commercial input), engine.ts (facts from OS records + OSM constraint overlap via turf; supersede, never edit) |
+| Service-layer gate | lib/integrity/gate.ts: excluded / human review blocks diagnostic proposals, outreach / engagement stages and capital introductions; queue items lose service and value with the reason |
+| Override | Owner only, reason required (20+ characters to leave an exclusion or human review), audited, rule outcomes kept |
+| Redesign | lib/integrity/redesign.ts: original / lower-impact / regenerative variants per sector method; financial lines are assumptions unless a screening model exists; approve / reject / applied |
+| Impact + stewardship | 15-indicator catalogue (method + reference), baseline / forecast / target / reported / verified kept apart (verified names the verifier); obligations with recurrence, overdue → task |
+| Capital | Impact criteria, exclusions, safeguard standard, investor status ladder (potential → approved), fit vs screened projects (owner only) |
+| Origination | Gap theses: open funding by country + sector with no pipeline → hypotheses |
+| Connectors | South Africa eTenders (OCDS, keyless; awards kept as awards), World Bank EnergyData.info country datasets (CKAN); GCF / IFC remain "credentials required" |
+| Packs + services | Southern Africa, New Zealand, India packs; services "Regenerative redesign advisory" and "Monitoring & stewardship" |
+| UI | Project Capital tab integrity panel; /origination Integrity screening + Stewardship tabs; Command daily brief; Atlas inspector integrity block + "Regenerative Opportunity Intelligence" workspace; capital partner impact criteria |
+| Jobs | integrity.screen every 2 h (new or due for review, 6 per run), stewardship.due daily 06:40 |
+| Tests | tests/unit/integrity.test.ts (rules, spatial, redesign, capital fit), tests/integration/integrity.test.ts (acceptance 1–5, policy versioning, override, fee independence, stewardship) |
+
+Known limits: OSM protected / wetland / forest polygons are community-mapped, not legal boundaries (overlap routes to redesign, never to exclusion); WDPA via IBAT needs a licence. Water-stress readings depend on a completed site screen.

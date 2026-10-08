@@ -127,6 +127,30 @@ function EntityPicture({ selected }: { selected: NonNullable<Selected> }) {
   );
 }
 
+type IntegrityView = { none?: boolean; state?: string; blocking?: boolean; classification?: string; confidence?: string; policyVersion?: number; at?: string; readings?: { label: string; value: string }[]; outstanding?: string[] };
+
+/** A project's current integrity decision (seven readings side by side, evidence outstanding). */
+function IntegrityBlock({ selected }: { selected: NonNullable<Selected> }) {
+  const id = String(selected.props.id ?? "");
+  const [d, setD] = useState<IntegrityView | null>(null);
+  useEffect(() => {
+    if (selected.layer !== "projects" || !id) return;
+    let live = true;
+    fetch(withBase(`/api/map/integrity?id=${encodeURIComponent(id)}`)).then(r => r.json() as Promise<IntegrityView>).then(x => { if (live) setD(x); }).catch(() => { if (live) setD({ none: true }); });
+    return () => { live = false; };
+  }, [selected.layer, id]);
+  if (selected.layer !== "projects" || !d) return null;
+  if (d.none) return <p className={styles.note}>Integrity: not screened yet (screening runs every two hours).</p>;
+  return (
+    <div className={styles.note}>
+      <p style={{ margin: 0 }}><b>Integrity: {d.state}</b> · {d.classification} · confidence {d.confidence} · policy v{d.policyVersion} ({d.at}){d.blocking ? " · proposals and introductions blocked" : ""}</p>
+      <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>{(d.readings ?? []).map(r => <li key={r.label}>{r.label}: {r.value}</li>)}</ul>
+      {(d.outstanding ?? []).length > 0 && <p style={{ margin: "4px 0 0" }}>Outstanding: {d.outstanding!.join("; ")}</p>}
+      <a href={withBase(`/projects/${encodeURIComponent(id)}?tab=capital#integrity`)}>Open the integrity record</a>
+    </div>
+  );
+}
+
 /** A real picture of the place: Esri World Imagery (the Atlas satellite basemap) for the area around the point. */
 function PlaceImage({ selected }: { selected: NonNullable<Selected> }) {
   const [lng, lat] = selected.lngLat;
@@ -169,7 +193,7 @@ export function Inspector({ selected, onClose, tracked, onTrack, onChase, screen
     <aside className={`${styles.glass} ${styles.detail} ${styles.inspector}`} aria-label="Intelligence inspector">
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close inspector">×</button>
       <div className={styles.inspectorTabs} role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>)}</div>
-      {tab === "overview" && selected && <><EntityPicture key={`e:${selected.layer}:${String(selected.props.id ?? "")}`} selected={selected} /><PlaceImage key={`${selected.layer}:${selected.lngLat.join(",")}`} selected={selected} /><Detail selected={selected} tracked={tracked} onTrack={onTrack} onChase={onChase} />{extra}</>}
+      {tab === "overview" && selected && <><EntityPicture key={`e:${selected.layer}:${String(selected.props.id ?? "")}`} selected={selected} /><PlaceImage key={`${selected.layer}:${selected.lngLat.join(",")}`} selected={selected} /><IntegrityBlock key={`i:${String(selected.props.id ?? "")}`} selected={selected} /><Detail selected={selected} tracked={tracked} onTrack={onTrack} onChase={onChase} />{extra}</>}
       {tab === "spatial" && selected && (
         <dl className={styles.facts}>
           <div><dt>Coordinates</dt><dd>{selected.lngLat[1].toFixed(5)}, {selected.lngLat[0].toFixed(5)}</dd></div>

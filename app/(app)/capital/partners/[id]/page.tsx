@@ -20,6 +20,7 @@ import { EVIDENCE_LAYERS, MANDATE_FIELDS, THESIS_THEMES } from "@/lib/intelligen
 import { ALIGNMENT_FLAGS, CP_PREFERENCE, SUPPORTED_STRUCTURES } from "@/lib/community/vocab";
 import styles from "../../../projects/projects.module.css";
 import CriteriaFields from "../../criteria-fields";
+import ImpactCriteria from "../impact-criteria";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Capital partner" };
@@ -87,6 +88,7 @@ export default async function CapitalPartnerPage({ params, searchParams }: { par
               <button className="btn btn--primary" type="submit" style={{ marginTop: 10 }}>Save</button>
             </form>
           </section>
+          {isOwner(user.scope) && <ImpactCriteria profile={p} />}
           <MandateLayers profileId={p.id} orgId={p.orgId} />
         </div>
         <aside>

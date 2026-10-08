@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { screenBeforeAction } from "@/lib/sanctions/engine";
 import { activeProtections } from "@/lib/compliance/guardrails";
+import { assertProjectCleared, IntegrityBlocked } from "@/lib/integrity/gate";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { runMatches, setCommitment, setGate } from "@/lib/capital/engine";
@@ -276,6 +277,8 @@ export async function addIntroductionAction(formData: FormData) {
     if (!c) throw new Error("Introducer not found");
     // Sanctions screening runs before an introduction (phase 19): a possible or confirmed match blocks it until reviewed.
     const toOrg = zId.safeParse(formData.get("toOrgId")).data, toPerson = zId.safeParse(formData.get("toContactId")).data;
+    // Integrity gate (phase 23): no introduction for a project whose decision is excluded or awaiting human review.
+    try { await assertProjectCleared(appDb(), zId.safeParse(formData.get("projectId")).data, "Capital introduction"); } catch (e) { if (e instanceof IntegrityBlocked) { blocked = e.message; return; } throw e; }
     const parties: { entityType: "organization" | "person"; entityId: string; name: string }[] = [];
     if (toOrg) { const [o] = await appDb().select({ name: organizations.name }).from(organizations).where(and(eq(organizations.id, toOrg), mandateCondition(user.scope, organizations.mandateId))); if (o) parties.push({ entityType: "organization", entityId: toOrg, name: o.name }); }
     if (toPerson) { const [p] = await appDb().select({ name: contacts.fullName }).from(contacts).where(and(eq(contacts.id, toPerson), mandateCondition(user.scope, contacts.mandateId))); if (p) parties.push({ entityType: "person", entityId: toPerson, name: p.name }); }

@@ -51,6 +51,7 @@ import { DiligenceTab, EquipmentTab, LandTab, MatchesTab, QuestionsTab, Stakehol
 import PartnerScanPanel from "../partner-scan";
 import FundingMatches from "../funding-matches";
 import ReadinessPanel from "../readiness-panel";
+import IntegrityPanel from "../integrity-panel";
 import { archiveProjectAction } from "../../casework-actions";
 import { isOwner } from "@/lib/db/scoped";
 
@@ -311,6 +312,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <div className={r.grid}>
           <div>
             <PartnerScanPanel project={p} group="capital" />
+            <IntegrityPanel projectId={p.id} owner={isOwner(user.scope)} />
             <ReadinessPanel projectId={p.id} owner={isOwner(user.scope)} />
             <FundingMatches projectId={p.id} />
             {data.capital.requirements.length === 0 ? <section className={r.panel}><p className={r.empty}>No capital requirements yet. Do not record the project as &quot;seeking $X&quot;: add one requirement per purpose and instrument (pre-development, development, sponsor equity, senior debt, mezzanine, catalytic …).</p></section> : data.capital.requirements.map(req => {

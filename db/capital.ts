@@ -28,6 +28,9 @@ export const capitalProfiles = sqliteTable("capital_profiles", {
   id: id(),
   // Capital routing tags (phase 20): lane, preference, ticket band, routing stage; programme key when imported.
   lane: text("lane"),
+  // Phase 23: structured impact and safeguard criteria, and how far the relationship has actually gone. Owner-only.
+  impactCriteria: text("impact_criteria", { mode: "json" }).$type<{ environmental?: string[]; exclusions?: string[]; safeguardStandard?: string; impactReporting?: string; catalytic?: boolean; technicalAssistance?: boolean }>(),
+  investorStatus: text("investor_status", { enum: ["potential_eligibility", "preliminary_fit", "investor_interest", "confirmed_mandate", "approved_investment"] }),
   preference: text("preference"),
   ticketBand: text("ticket_band"),
   routingStage: text("routing_stage"),

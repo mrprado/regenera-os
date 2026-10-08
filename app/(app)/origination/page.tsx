@@ -4,7 +4,10 @@ import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
-import { engagements, originationHypotheses, originationItems, services } from "@/db/schema";
+import { engagements, impactRecords, originationHypotheses, originationItems, policyDecisions, projects, services, stewardshipObligations } from "@/db/schema";
+import { CLASSIFICATION_LABEL, DECISION_STATE_LABEL, POLICY_V1 } from "@/lib/integrity/policy";
+import { IMPACT_KINDS, indicatorByKey } from "@/lib/integrity/indicators";
+import { completeObligationAction } from "../integrity-actions";
 import { requireOsUser } from "@/lib/auth";
 import { appDb, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { ORIGINATION_STAGES } from "@/lib/origination/engine";
@@ -31,12 +34,14 @@ export default async function OriginationPage({ searchParams }: { searchParams: 
       <Notice text={sp.notice} />
       <p className={ui.notice}>One engine, three entrances: capital first (funding to eligible projects), project first (projects, sites and client needs to capital and partners) and market first (signals to hypotheses). Value figures are prioritization aids from service bands and evidence, never revenue. Nothing here contacts anyone.</p>
       <nav className={ui.tabs} aria-label="Origination views">
-        {[["queue", "Queue"], ["hypotheses", "Hypotheses"], ["rubric", "Readiness rubric"], ["engines", "Revenue engines"]].map(([k, v]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/origination?tab=${k}`}>{v}</Link>)}
+        {[["queue", "Queue"], ["hypotheses", "Hypotheses"], ["rubric", "Readiness rubric"], ["engines", "Revenue engines"], ["screening", "Integrity screening"], ["stewardship", "Stewardship"]].map(([k, v]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/origination?tab=${k}`}>{v}</Link>)}
       </nav>
       {tab === "queue" && <Queue scope={user.scope} entrance={entrance} />}
       {tab === "hypotheses" && <Hypotheses scope={user.scope} />}
       {tab === "rubric" && <Rubric />}
       {tab === "engines" && <Engines scope={user.scope} />}
+      {tab === "screening" && <Screening scope={user.scope} state={sp.state} />}
+      {tab === "stewardship" && <Stewardship scope={user.scope} />}
     </>
   );
 }
@@ -133,6 +138,75 @@ async function Engines({ scope }: { scope: Scope }) {
           </section>
         );
       })}
+    </>
+  );
+}
+
+async function Screening({ scope, state }: { scope: Scope; state?: string }) {
+  const db = appDb();
+  const rows = await db.select({ d: policyDecisions, name: projects.name, country: projects.country }).from(policyDecisions).innerJoin(projects, eq(projects.id, policyDecisions.projectId))
+    .where(and(mandateCondition(scope, policyDecisions.mandateId), eq(policyDecisions.current, true))).orderBy(desc(policyDecisions.createdAt)).limit(400);
+  const counts = new Map<string, number>();
+  for (const x of rows) counts.set(x.d.state, (counts.get(x.d.state) ?? 0) + 1);
+  const shown = state ? rows.filter(x => x.d.state === state) : rows;
+  return (
+    <>
+      <section className={r.panel}>
+        <p className={r.panelTitle}>Decisions by state</p>
+        <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link className={`${ui.chip}`} href="/origination?tab=screening">All · {rows.length}</Link>
+          {(Object.keys(DECISION_STATE_LABEL) as (keyof typeof DECISION_STATE_LABEL)[]).map(k => <Link key={k} className={ui.chip} href={`/origination?tab=screening&state=${k}`} style={{ fontWeight: state === k ? 600 : undefined }}>{DECISION_STATE_LABEL[k]} · {counts.get(k) ?? 0}</Link>)}
+        </p>
+        <p className={ui.sub}>Projects are screened every two hours (new or due for review) under the current policy. Excluded and human-review projects cannot receive a proposal, outreach or capital introduction until an owner overrides with a reason.</p>
+      </section>
+      <section className={r.panel}>
+        {shown.length === 0 ? <p className={r.empty}>No screened projects{state ? " in this state" : " yet"}.</p> : (
+          <table className={ui.table}><thead><tr><th>Project</th><th>Decision</th><th>Classification</th><th>Confidence</th><th>Outstanding</th><th>Review</th></tr></thead><tbody>{shown.map(x => (
+            <tr key={x.d.id}><td><Link href={`/projects/${x.d.projectId}?tab=capital#integrity`}>{x.name}</Link><span className={ui.sub}>{x.country ?? ""}</span></td>
+              <td>{DECISION_STATE_LABEL[x.d.state]}{x.d.overrides.length ? " (overridden)" : ""}</td><td>{CLASSIFICATION_LABEL[x.d.classification]}</td><td>{x.d.confidence}</td>
+              <td className={ui.wrap}><span className={ui.sub}>{x.d.outstanding.slice(0, 2).join("; ")}{x.d.outstanding.length > 2 ? ` +${x.d.outstanding.length - 2}` : ""}</span></td><td>{x.d.nextReviewAt?.slice(0, 10) ?? ""}</td></tr>
+          ))}</tbody></table>
+        )}
+      </section>
+      <section className={r.panel}>
+        <p className={r.panelTitle}>Policy v1 (published on first use; later versions never rewrite earlier decisions)</p>
+        <p className={ui.sub}><b>Exclusions:</b> {POLICY_V1.exclusions.map(e => e.key.replace(/_/g, " ")).join("; ")}.</p>
+        <p className={ui.sub}><b>Sector classes:</b> {POLICY_V1.sectorClasses.map(s => `${s.method} → ${CLASSIFICATION_LABEL[s.classification]}`).join("; ")}.</p>
+        <p className={ui.sub}>Protected areas within {POLICY_V1.protectedNearKm} km trigger enhanced due diligence; overlap requires redesign unless the project is itself conservation or restoration. Commercial inputs are not read by these rules.</p>
+      </section>
+    </>
+  );
+}
+
+async function Stewardship({ scope }: { scope: Scope }) {
+  const db = appDb();
+  const [obl, imp] = await Promise.all([
+    db.select({ o: stewardshipObligations, name: projects.name }).from(stewardshipObligations).innerJoin(projects, eq(projects.id, stewardshipObligations.projectId))
+      .where(mandateCondition(scope, stewardshipObligations.mandateId)).orderBy(asc(stewardshipObligations.dueAt)).limit(200),
+    db.select({ i: impactRecords, name: projects.name }).from(impactRecords).innerJoin(projects, eq(projects.id, impactRecords.projectId))
+      .where(mandateCondition(scope, impactRecords.mandateId)).orderBy(desc(impactRecords.createdAt)).limit(100),
+  ]);
+  const open = obl.filter(x => x.o.status === "open" || x.o.status === "overdue");
+  return (
+    <>
+      <section className={r.panel}>
+        <p className={r.panelTitle}>Obligations due · {open.length} open ({open.filter(x => x.o.status === "overdue").length} overdue)</p>
+        {open.length === 0 ? <p className={r.empty}>No open stewardship obligations. Add them on a project&apos;s Capital tab once agreed.</p> : (
+          <table className={ui.table}><tbody>{open.map(x => (
+            <tr key={x.o.id}><td><Link href={`/projects/${x.o.projectId}?tab=capital#integrity`}>{x.name}</Link></td><td>{x.o.title}<span className={ui.sub}>{x.o.kind.replace(/_/g, " ")}{x.o.owner ? ` · ${x.o.owner}` : ""}</span></td>
+              <td>{x.o.dueAt?.slice(0, 10) ?? "no date"}</td><td>{x.o.status}</td>
+              <td><form action={completeObligationAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="id" value={x.o.id} /><input type="hidden" name="back" value="/origination?tab=stewardship" /><input name="evidence" placeholder="Evidence" aria-label="Evidence" required /><button className="btn" type="submit">Done</button></form></td></tr>
+          ))}</tbody></table>
+        )}
+      </section>
+      <section className={r.panel}>
+        <p className={r.panelTitle}>Impact records</p>
+        {imp.length === 0 ? <p className={r.empty}>No impact records yet. Baselines, forecasts, targets, reported and independently verified values are kept apart.</p> : (
+          <table className={ui.table}><tbody>{imp.map(x => (
+            <tr key={x.i.id}><td><Link href={`/projects/${x.i.projectId}?tab=capital#integrity`}>{x.name}</Link></td><td>{indicatorByKey(x.i.indicator)?.label ?? x.i.indicator}</td><td>{IMPACT_KINDS[x.i.kind]}</td><td className={ui.num}>{x.i.value ?? "—"} {x.i.unit}</td><td><span className={ui.sub}>{x.i.source}</span></td></tr>
+          ))}</tbody></table>
+        )}
+      </section>
     </>
   );
 }

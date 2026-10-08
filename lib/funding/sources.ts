@@ -8,7 +8,7 @@ import { fetchJson } from "@/lib/sources/http";
 import { tedSignals, worldBankSignals, type RawSignal } from "@/lib/sources/signals";
 
 export type FundingItem = {
-  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts" | "uk_fts" | "sam_gov";
+  source: "grants_gov" | "eu_funding" | "ted" | "worldbank" | "uk_contracts" | "uk_fts" | "sam_gov" | "za_etenders";
   externalId: string;
   title: string;
   funder: string | null;
@@ -252,4 +252,34 @@ export async function samGov(db: Db, keyword: string, now = new Date(), fetchImp
     status: /presol|sources sought/i.test(o.type ?? "") ? "forthcoming" as const : "open" as const, countries: ["United States"], applicantTypes: ["Businesses"],
     url: o.uiLink ?? `https://sam.gov/opp/${o.noticeId}/view`, description: o.type ?? "",
   }));
+}
+
+// ---------- South Africa eTenders (OCDS API, keyless) ----------
+// Recent releases (two weeks, one cached call per day) filtered locally by the query's words. Releases with awards are
+// kept as category "award" (closed), never as open opportunities.
+const zZa = z.object({ releases: z.array(z.object({
+  ocid: z.string(), date: z.string().optional(), buyer: z.object({ name: z.string().optional() }).passthrough().optional(),
+  tender: z.object({ title: z.string().optional(), description: z.string().optional(), status: z.string().optional(), mainProcurementCategory: z.string().optional(),
+    tenderPeriod: z.object({ endDate: z.string().nullable().optional() }).passthrough().optional(),
+    value: z.object({ amount: z.number().nullable().optional(), currency: z.string().nullable().optional() }).passthrough().optional() }).passthrough().optional(),
+  awards: z.array(z.unknown()).optional(),
+}).passthrough()).default([]) }).passthrough();
+
+export async function zaETenders(db: Db, keyword: string, now = new Date(), fetchImpl?: typeof fetch): Promise<FundingItem[]> {
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  const res = await fetchJson(db, {
+    provider: "za_etenders", endpoint: "ocds_releases",
+    url: `https://ocds-api.etenders.gov.za/api/OCDSReleases?PageNumber=1&PageSize=500&dateFrom=${day(new Date(now.getTime() - 14 * 86_400_000))}&dateTo=${day(now)}`,
+    schema: zZa, cacheKey: `za:${day(now)}`, cacheTtlMs: 12 * 3_600_000, fetchImpl, timeoutMs: 40_000,
+  });
+  return res.releases.filter(r => matchesAllWords(`${r.tender?.title ?? ""} ${r.tender?.description ?? ""}`, keyword)).map(r => {
+    const award = (r.awards ?? []).length > 0;
+    const title = `${r.tender?.description || r.tender?.title || r.ocid}`.replace(/\s+/g, " ").trim().slice(0, 480);
+    return {
+      source: "za_etenders" as const, externalId: r.ocid, title: award ? `Contract award: ${title}` : title, funder: r.buyer?.name ?? "South African public body", programme: null, type: "tender" as const,
+      amountMin: null, amountMax: r.tender?.value?.amount || null, currency: r.tender?.value?.currency ?? "ZAR", openDate: r.date?.slice(0, 10) ?? null,
+      deadline: award ? null : r.tender?.tenderPeriod?.endDate?.slice(0, 10) ?? null, status: award ? "closed" as const : "open" as const, category: award ? "award" as const : "opportunity" as const,
+      countries: ["South Africa"], applicantTypes: ["Businesses"], url: `https://www.etenders.gov.za/Home/opportunities?id=${encodeURIComponent(r.ocid)}`, description: `${r.tender?.mainProcurementCategory ?? ""} · ${r.tender?.title ?? ""}`.trim(),
+    };
+  });
 }

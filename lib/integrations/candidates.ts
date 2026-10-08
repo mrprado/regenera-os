@@ -236,7 +236,7 @@ export const CANDIDATES: Candidate[] = [
     ["Compras.gov.br (Brazil)", "REST", "none", 2, "Brazil open data", "https://dadosabertos.compras.gov.br"],
     ["AusTender", "REST", "none", 2, "CC BY 3.0 AU (OCDS)", "https://www.tenders.gov.au"],
     ["GETS (New Zealand)", "RSS", "none", 2, "NZ government", "https://www.gets.govt.nz"],
-    ["South Africa eTenders", "REST", "none", 2, "OCDS", "https://ocds-api.etenders.gov.za"],
+    ["South Africa eTenders", "REST", "none", 2, "OCDS", "https://ocds-api.etenders.gov.za", "za_etenders"],
   ]),
   ...c("M Private capital & entities", [
     ["SEC EDGAR (filings, Form D)", "REST", "none", 1, "Public domain", "https://www.sec.gov/edgar", "edgar"],

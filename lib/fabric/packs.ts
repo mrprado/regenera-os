@@ -50,6 +50,35 @@ export const PACKS: Pack[] = [
     },
   },
   {
+    key: "za", label: "Southern Africa", countries: ["ZAF", "ZA", "South Africa", "NAM", "NA", "Namibia", "BWA", "BW", "Botswana", "MOZ", "MZ", "Mozambique", "ZMB", "ZM", "Zambia", "ZWE", "ZW", "Zimbabwe", "LSO", "Lesotho", "SWZ", "Eswatini", "MWI", "Malawi"],
+    domains: {
+      grid: [{ name: "Eskom / NTCSA grid connection capacity assessment (GCCA)", covers: "Transmission capacity by supply area", url: "https://www.ntcsa.co.za/" }, { name: "SAPP (Southern African Power Pool)", covers: "Regional market and interconnectors", url: "https://www.sapp.co.zw/" }, { name: "World Bank EnergyData.info", covers: "Country power plants, grid and planning datasets", url: "https://energydata.info/", integrationKey: "energydata" }],
+      regulation: [{ name: "NERSA", covers: "Generation licences and tariffs (South Africa)", url: "https://www.nersa.org.za/" }, { name: "DFFE environmental authorisation (SAHRIS / EIA)", covers: "EIA decisions and screening tool", url: "https://screening.environment.gov.za/" }, { name: "IPPPO (REIPPPP bid windows)", covers: "Procurement rounds and preferred bidders", url: "https://www.ipp-projects.co.za/" }],
+      land: [{ name: "Deeds Office (DeedsWeb)", covers: "Title and ownership (South Africa)", url: "https://deedsweb.dalrrd.gov.za/" }, { name: "Communal land and traditional authority records", covers: "Customary tenure: verify with the authority and community", url: "https://www.dalrrd.gov.za/" }],
+      ecology: [{ name: "SANBI BGIS", covers: "Critical biodiversity areas, ecosystem threat status", url: "https://bgis.sanbi.org/" }],
+      water: [{ name: "DWS water use licences", covers: "Licensing and catchment status", url: "https://www.dws.gov.za/" }],
+      funding: [{ name: "National Treasury eTenders (OCDS)", covers: "Tenders and awards", url: "https://www.etenders.gov.za/", integrationKey: "za_etenders" }],
+    },
+  },
+  {
+    key: "nz", label: "New Zealand", countries: ["NZL", "NZ", "New Zealand", "Aotearoa"],
+    domains: {
+      grid: [{ name: "Transpower connection queue and grid data", covers: "Transmission connections and capacity", url: "https://www.transpower.co.nz/" }, { name: "Electricity Authority EMI", covers: "Market data, generation, prices", url: "https://www.emi.ea.govt.nz/" }],
+      land: [{ name: "LINZ Data Service", covers: "Parcels, titles (with Landonline), topography", url: "https://data.linz.govt.nz/" }, { name: "Māori Land Court (Māori Land Online)", covers: "Māori freehold land and owners: engage through the trusts and hapū", url: "https://www.maorilandcourt.govt.nz/" }],
+      regulation: [{ name: "Fast-track Approvals / Environmental Protection Authority", covers: "Consents and decisions", url: "https://www.epa.govt.nz/" }, { name: "Regional council consents", covers: "Resource consents under the RMA", url: "https://www.lgnz.co.nz/" }],
+      ecology: [{ name: "DOC public conservation land", covers: "Protected areas", url: "https://www.doc.govt.nz/" }],
+    },
+  },
+  {
+    key: "in", label: "India", countries: ["IND", "IN", "India"],
+    domains: {
+      grid: [{ name: "CEA (Central Electricity Authority)", covers: "Installed capacity, transmission plans", url: "https://cea.nic.in/" }, { name: "CTUIL connectivity", covers: "ISTS connectivity applications and grants", url: "https://www.ctuil.in/" }, { name: "Grid-India", covers: "System operation and reports", url: "https://grid-india.in/" }],
+      regulation: [{ name: "CERC / state ERCs", covers: "Tariffs and regulations", url: "https://cercind.gov.in/" }, { name: "PARIVESH", covers: "Environment, forest and wildlife clearances", url: "https://parivesh.nic.in/" }],
+      land: [{ name: "State land records (Bhulekh / DILRMP)", covers: "Records of rights", url: "https://dilrmp.gov.in/" }],
+      funding: [{ name: "SECI / CPPP tenders", covers: "Renewable auctions and public procurement", url: "https://eprocure.gov.in/" }],
+    },
+  },
+  {
     key: "eu", label: "European Union", countries: ["AUT", "BEL", "BGR", "HRV", "CYP", "CZE", "DNK", "EST", "FIN", "FRA", "DEU", "GRC", "HUN", "IRL", "ITA", "LVA", "LTU", "LUX", "MLT", "NLD", "POL", "PRT", "ROU", "SVK", "SVN", "ESP", "SWE"],
     domains: {
       grid: [{ name: "ENTSO-E Transparency Platform", covers: "Load, generation, prices, cross-border flows", url: "https://transparency.entsoe.eu/", integrationKey: "entsoe" }],

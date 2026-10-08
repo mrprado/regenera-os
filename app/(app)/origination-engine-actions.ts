@@ -11,6 +11,7 @@ import { withOsUser } from "@/lib/auth";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { buildDossier, generateHypotheses, ORIGINATION_STAGES, proposeDiagnostic, syncOriginationQueue } from "@/lib/origination/engine";
 import { createProject } from "@/lib/projects/engine";
+import { assertProjectCleared, IntegrityBlocked } from "@/lib/integrity/gate";
 
 const back = (f: FormData, d: string) => z.string().startsWith("/").catch(d).parse(f.get("back"));
 const note = (to: string, msg: string) => `${to}${to.includes("?") ? "&" : "?"}notice=${encodeURIComponent(msg)}`;
@@ -35,8 +36,10 @@ export async function proposeDiagnosticAction(formData: FormData) {
   await withOsUser(async user => {
     const [p] = await appDb().select({ id: projects.id }).from(projects).where(and(eq(projects.id, projectId), mandateCondition(user.scope, projects.mandateId)));
     if (!p) { msg = "Project not found"; return; }
-    const r = await proposeDiagnostic(appDb(), projectId, user.email);
-    msg = `Draft engagement, proposal (${r.service}) and outreach text saved for your approval. Nothing was sent.`;
+    try {
+      const r = await proposeDiagnostic(appDb(), projectId, user.email);
+      msg = `Draft engagement, proposal (${r.service}) and outreach text saved for your approval. Nothing was sent.`;
+    } catch (e) { if (e instanceof IntegrityBlocked) { msg = e.message; return; } throw e; }
   }, { owner: true });
   redirect(note(to, msg));
 }
@@ -44,11 +47,17 @@ export async function proposeDiagnosticAction(formData: FormData) {
 export async function setOriginationStageAction(formData: FormData) {
   const id = z.string().uuid().parse(formData.get("id"));
   const stage = z.enum(Object.keys(ORIGINATION_STAGES) as [string, ...string[]]).parse(formData.get("stage"));
+  let msg = "";
   await withOsUser(async user => {
+    // Integrity gate: outreach and engagement stages need a cleared project.
+    if (!["discovered", "verified", "qualified", "lost", "deferred"].includes(stage)) {
+      const [it] = await appDb().select({ projectId: originationItems.projectId }).from(originationItems).where(and(eq(originationItems.id, id), mandateCondition(user.scope, originationItems.mandateId)));
+      try { await assertProjectCleared(appDb(), it?.projectId, "Advancing to outreach or engagement"); } catch (e) { if (e instanceof IntegrityBlocked) { msg = e.message; return; } throw e; }
+    }
     const r = await appDb().update(originationItems).set({ stage, owner: user.email, updatedAt: new Date().toISOString() }).where(and(eq(originationItems.id, id), mandateCondition(user.scope, originationItems.mandateId))).returning({ id: originationItems.id });
     if (r.length) await audit(appDb(), { actor: user.email, action: "origination.stage", entity: "origination_items", entityId: id, after: { stage } });
   });
-  redirect(back(formData, "/origination"));
+  redirect(msg ? note(back(formData, "/origination"), msg) : back(formData, "/origination"));
 }
 
 export async function refreshOriginationAction(formData: FormData) {

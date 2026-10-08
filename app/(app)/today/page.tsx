@@ -29,6 +29,7 @@ import { readiness, readinessLabel } from "@/lib/readiness";
 import { BUILT_IN_PRESETS } from "@/lib/scan/presets";
 import { DEAL_STAGES } from "@/lib/vocab";
 import { opsSummary } from "@/lib/command/ops";
+import { dailyBrief } from "@/lib/command/brief";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Command" };
@@ -56,7 +57,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const scanPreset = BUILT_IN_PRESETS[0];
   const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
   const deskContext = loadDeskContext(user, now);
-  const ops = await opsSummary(db, now);
+  const [ops, brief] = await Promise.all([opsSummary(db, now), dailyBrief(db, user.scope.mandateIds, now)]);
   return (
     <>
       <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
@@ -66,6 +67,10 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
           <h3>{x.title}</h3><p>{x.body}</p>
         </li>)}</ul>
       </section>
+      {brief.length > 0 && <section aria-label="Daily brief" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--line)", borderRadius: 6 }}>
+        <p style={{ margin: 0, fontSize: 13 }}><b>Daily brief</b> <span style={{ color: "var(--text-muted)" }}>· built from records; each line links to its source</span></p>
+        <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13 }}>{brief.map(b => <li key={b.heading}><b>{b.heading}:</b> {b.href ? <Link href={b.href}>{b.text}</Link> : b.text}</li>)}</ul>
+      </section>}
       <section aria-label="What the OS did in the last 24 hours" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--border, #D8D5CE)", borderRadius: 6 }}>
         <p style={{ margin: 0, fontSize: 13 }}><b>Last 24 h, done by the OS:</b> {ops.funding} funding opportunities found · {ops.matches} funding matches to projects · {ops.assessments} site assessments saved · {ops.triggers} triggers created · {ops.orgs} organizations added · {ops.placed} projects placed · {ops.sourceOk}/{ops.sourceCalls} source calls succeeded · AI this month ${ops.aiUsd.toFixed(2)}</p>
         <p style={{ margin: "6px 0 0", fontSize: 13 }}><b>Origination:</b> <Link href="/origination">{ops.queued} opportunities to review</Link> · <Link href="/origination?tab=hypotheses">{ops.hypotheses} hypotheses to validate</Link> · {ops.proposals} diagnostic proposals awaiting approval</p>

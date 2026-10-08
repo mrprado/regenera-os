@@ -11,7 +11,9 @@ import { autoPlaceProjects } from "@/lib/projects/auto-place";
 import { ingestGppd } from "@/lib/infrastructure/gppd";
 import { runWbLoop } from "@/lib/intel/wb-projects";
 import { matchFundingToProjects } from "@/lib/funding/project-match";
-import { generateHypotheses, syncOriginationQueue } from "@/lib/origination/engine";
+import { generateGapTheses, generateHypotheses, syncOriginationQueue } from "@/lib/origination/engine";
+import { screenDue } from "@/lib/integrity/engine";
+import { stewardshipDue } from "@/lib/integrity/stewardship";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -268,9 +270,17 @@ export const handlers: Record<string, JobHandler> = {
     await enqueue(db, "funding.place", {}, { dedupeKey: `funding-place:${now.toISOString().slice(0, 13)}`, now });
     await enqueue(db, "funding.project_match", {}, { dedupeKey: `funding-pmatch:${now.toISOString().slice(0, 13)}`, now });
   },
+  "integrity.screen": async ({ db, now }) => {
+    // Phase 23: unscreened or due projects through the Origination & Integrity Engine, a few per run.
+    await screenDue(db, 6, now);
+  },
+  "stewardship.due": async ({ db, now }) => {
+    await stewardshipDue(db, now);
+  },
   "origination.sync": async ({ db, now }) => {
     // Phase 22: market hypotheses from signals, then the unified origination queue (capital-, project-, market-first).
     await generateHypotheses(db, REGENERA_MANDATE_ID, now);
+    await generateGapTheses(db, REGENERA_MANDATE_ID, now);
     await syncOriginationQueue(db, REGENERA_MANDATE_ID, now);
   },
   "funding.project_match": async ({ db, now }) => {
@@ -443,6 +453,8 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "registry.gppd": "monthly:5:03:30",
   "intel.wb_projects": "every:6h",
   "origination.sync": "every:3h",
+  "integrity.screen": "every:2h",
+  "stewardship.due": "daily:06:40",
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",

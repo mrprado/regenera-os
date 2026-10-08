@@ -162,3 +162,4 @@ export * from "./casework";
 export * from "./infrastructure";
 export * from "./funding-match";
 export * from "./origination";
+export * from "./integrity";
