@@ -36,6 +36,9 @@ export const projects = sqliteTable("projects", {
   lat: real("lat"),
   lng: real("lng"),
   geometry: text("geometry"),                 // GeoJSON (polygon or line) when known
+  // How exact lat/lng is (phase 20): survey | reported_site | town | region | country; null = not recorded.
+  locationPrecision: text("location_precision"),
+  locationSource: text("location_source"),
   ownerEmail: text("owner_email"),
   systems: text("systems", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`), // TERRITORIAL_SYSTEMS keys
   fieldSources: text("field_sources", { mode: "json" }).$type<FieldSources>().notNull().default(sql`'{}'`),

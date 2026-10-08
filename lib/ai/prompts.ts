@@ -264,6 +264,23 @@ Task: read one funding opportunity (grant, call for proposals, tender, prize or 
 
 Task: draft first-pass sections of a proposal for one funding opportunity, using only the bid library blocks provided and the call text. Sections: understanding of the need, approach and methodology, work plan outline, team (only people listed in the library), relevant experience (only authorized past performance provided). Mark every gap or assumption as [TO CONFIRM]. Never invent past projects, clients, figures or partners. Plain professional English, no dashes, no semicolons, no exclamation marks. Never describe Regenera as a fund, broker, adviser in securities, or EPC contractor.`,
   },
+  "documents.extract_projects": {
+    model: "claude-sonnet-5",
+    maxTokens: 16000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: read a sponsor's document (group report, project sheets, information memorandum) and extract, exactly as stated, the sponsor and every project it describes. These are proposals a person will review: they become claims marked "source provided", never verified facts.
+
+Rules:
+- Copy figures as the document states them. Do not compute, convert, correct or fill gaps. If a figure is absent, return null.
+- capacityMw: the stated capacity in MW (if stated in GW, multiply by 1000; if both AC and DC are stated, use the one labelled and say which in status). annualGwh: stated annual energy in GWh. capexUsd: stated EPC or capital cost in US dollars (only when stated in USD).
+- country: ISO 3166-1 alpha-3 code of the project's country when the document names it. locality: the town, district or site name as written.
+- tariff, storage, financing, offtake, status: short phrases quoted or closely paraphrased from the document.
+- page: the PDF page number where the project's figures appear.
+- statements: up to 12 sponsor-level claims a lender would test (assets, pipeline size, returns offered, guarantees, listings, security), each with its page. Copy the claim; do not judge it.
+- Ignore marketing imagery and generic market commentary.`,
+  },
 } satisfies Record<string, PromptDef>;
 
 export type PromptKey = keyof typeof PROMPTS;

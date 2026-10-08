@@ -75,12 +75,13 @@ async function log(db: Db, row: typeof aiRuns.$inferInsert) {
  * Structured call: the model must return JSON matching `schema` (zod v4, as the SDK helper expects).
  * An invalid output retries once with the validation error attached.
  */
-export async function runStructured<T>(db: Db, cfg: AiConfig, key: PromptKey, input: string, schema: z4.ZodType<T>, meta: RunMeta = {}, client?: Anthropic): Promise<T> {
+export async function runStructured<T>(db: Db, cfg: AiConfig, key: PromptKey, input: string | Anthropic.Messages.ContentBlockParam[], schema: z4.ZodType<T>, meta: RunMeta = {}, client?: Anthropic): Promise<T> {
   const prompt = await activePrompt(db, key);
   await guardBudget(db, cfg, key, prompt.version, prompt.model, meta);
   const anthropic = client ?? new Anthropic({ apiKey: cfg.apiKey, maxRetries: 2 });
   const def: PromptDef = PROMPTS[key];
-  let userContent = input;
+  // Text, or content blocks (e.g. a PDF document block followed by instructions).
+  let userContent: string | Anthropic.Messages.ContentBlockParam[] = input;
   for (let attempt = 0; attempt < 2; attempt++) {
     const started = Date.now();
     const res = await anthropic.messages.parse({
@@ -110,7 +111,8 @@ export async function runStructured<T>(db: Db, cfg: AiConfig, key: PromptKey, in
       return res.parsed_output as T;
     }
     await log(db, { ...base, status: "invalid", error: "output did not match schema" });
-    userContent = `${input}\n\nYour previous answer did not match the required JSON schema. Return only valid JSON for the schema.`;
+    const retry = "Your previous answer did not match the required JSON schema. Return only valid JSON for the schema.";
+    userContent = typeof input === "string" ? `${input}\n\n${retry}` : [...input, { type: "text", text: retry }];
   }
   throw new AiOutputError(`${key} returned invalid output twice.`);
 }

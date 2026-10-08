@@ -26,6 +26,12 @@ const criteria = () => ({
 
 export const capitalProfiles = sqliteTable("capital_profiles", {
   id: id(),
+  // Capital routing tags (phase 20): lane, preference, ticket band, routing stage; programme key when imported.
+  lane: text("lane"),
+  preference: text("preference"),
+  ticketBand: text("ticket_band"),
+  routingStage: text("routing_stage"),
+  programmeKey: text("programme_key"),
   mandateId: text("mandate_id").notNull(),
   orgId: text("org_id"),
   contactId: text("contact_id"),
