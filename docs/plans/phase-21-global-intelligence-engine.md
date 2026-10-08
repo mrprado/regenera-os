@@ -3,7 +3,7 @@
 Source: the founder's "Global API & Data Integration Master Registry" and "From Connected Dashboard to Autonomous
 Operating System" briefs (2026-10-08). The briefs ask for Phase 0 (diagnose production) first, then the two critical
 workstreams (visible infrastructure in Atlas, verified global funding) and one complete vertical loop before widening.
-This plan follows that order. Status: **awaiting approval**.
+This plan follows that order. Status: **built and deployed 2026-10-08** (approved "YES"; build record, outstanding items and rollback below).
 
 ## Phase 0 — production diagnosis (done 2026-10-08, live D1 + job ledger, read-only)
 

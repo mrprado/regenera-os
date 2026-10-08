@@ -1,7 +1,7 @@
 # Phase 22 — Global origination, capital intelligence and project development engine
 
 Source: founder directive "Regenera OS — Global Origination, Capital Intelligence & Project Development Engine" plus the
-project-first addendum (2026-10-08). Extends phases 6–21; replaces nothing that works. Status: **awaiting approval**.
+project-first addendum (2026-10-08). Extends phases 6–21; replaces nothing that works. Status: **built and deployed 2026-10-08** (approved "finish and add"; status ledger below).
 
 Operating cycle: DISCOVER → VERIFY → MATCH → QUALIFY → ENGAGE → DIAGNOSE → STRUCTURE → EXECUTE → LEARN.
 Two equal entrances (capital-first, project-first) plus market-first, all writing to the same records.
