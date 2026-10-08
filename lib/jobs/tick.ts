@@ -67,7 +67,7 @@ export async function tick(db: Db, opts: {
   return result;
 }
 
-const REFERENCE_VERSION = "2026-10-08.3"; // bump whenever the integration registry, prompts or seeds change (2026-10-08: phase 19 sources)
+const REFERENCE_VERSION = "2026-10-08.4"; // bump whenever the integration registry, prompts or seeds change (2026-10-08: phase 19 sources)
 
 /** Seeds segments, prompts and trigger queries once per code version (cheap no-op afterwards). */
 export async function ensureReferenceData(db: Db): Promise<void> {

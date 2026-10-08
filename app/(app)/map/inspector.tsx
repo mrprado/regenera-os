@@ -81,6 +81,74 @@ function ScreenView({ screen }: { screen: Screen }) {
 
 type Tab = "overview" | "spatial" | "evidence" | "capital" | "actions" | "screen";
 
+// How far around the point the picture reaches (degrees), by what was clicked: a plant or a surveyed site close up,
+// an approximate project wide, a funding country very wide. Labels say what the picture is and is not.
+function imageSpan(layer: string, p: Record<string, unknown>): { d: number; label: string } {
+  const approx = Number(p.approx) === 1 || /country|region|town|approximate/i.test(String(p.locationBasis ?? ""));
+  if (layer === "registry_plants" || layer === "power") return { d: 0.008, label: "Satellite view of the asset's mapped location" };
+  if (layer === "projects") return approx ? { d: 0.35, label: "Approximate location only: the site is not mapped, so this is the surrounding area" } : { d: 0.012, label: "Satellite view of the recorded project location" };
+  if (layer === "organizations") return { d: 0.01, label: "Satellite view of the organization's recorded location (office or address, not a project site)" };
+  if (layer === "funding_region") return { d: 6, label: "Country-level eligibility: the area the funding records list" };
+  if (layer === "procurement") return { d: 3, label: "Eligible-country reference area, not a project site" };
+  if (layer === "triggers" || layer === "hazards" || layer === "quakes" || layer === "fires" || layer === "events") return { d: 0.25, label: "Area around the reported location" };
+  if (layer === "deals") return { d: 0.02, label: "Satellite view of the opportunity's organization location" };
+  return { d: 0.05, label: "Satellite view of the selected location" };
+}
+
+const ENTITY_KIND: Record<string, string> = { organizations: "org", deals: "deal", projects: "project", triggers: "trigger" };
+
+/** The entity's own picture: its website's share image and logo (organizations, deals, project sponsors, signal articles). */
+function EntityPicture({ selected }: { selected: NonNullable<Selected> }) {
+  const kind = ENTITY_KIND[selected.layer];
+  const id = String(selected.props.id ?? "");
+  const [img, setImg] = useState<{ site?: string; image?: string | null; logo?: string | null; title?: string | null; via?: string; none?: boolean; reason?: string } | null>(null);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    if (!kind || !id) return;
+    let live = true;
+    fetch(withBase(`/api/map/entity-image?kind=${kind}&id=${encodeURIComponent(id)}`)).then(r => r.json() as Promise<{ site?: string; image?: string | null; logo?: string | null; title?: string | null; via?: string; none?: boolean; reason?: string }>).then(d => { if (live) setImg(d); }).catch(() => { if (live) setImg({ none: true, reason: "Preview unavailable" }); });
+    return () => { live = false; };
+  }, [kind, id]);
+  if (!kind) return null;
+  if (!img) return <p className={styles.note}>Looking for a picture from the {kind === "trigger" ? "source article" : "organization's website"}…</p>;
+  if (img.none || (!img.image && !img.logo)) return <p className={styles.note}>{img.reason ?? "No picture published by this entity's website"}.</p>;
+  let host = ""; try { host = new URL(img.site ?? "").hostname.replace(/^www./, ""); } catch { host = ""; }
+  return (
+    <figure className={styles.entityImage}>
+      {img.image && !broken && <a href={img.site} target="_blank" rel="noreferrer">
+        {/* eslint-disable-next-line @next/next/no-img-element -- third-party preview image, hotlinked with its source */}
+        <img src={img.image} alt={`${img.title ?? host} preview`} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+      </a>}
+      <figcaption>
+        {img.logo && /* eslint-disable-next-line @next/next/no-img-element -- site icon */ <img className={styles.entityLogo} src={img.logo} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
+        <span><b>{img.title ?? host}</b><br />From the {img.via ?? "website"}: <a href={img.site} target="_blank" rel="noreferrer">{host}</a></span>
+      </figcaption>
+    </figure>
+  );
+}
+
+/** A real picture of the place: Esri World Imagery (the Atlas satellite basemap) for the area around the point. */
+function PlaceImage({ selected }: { selected: NonNullable<Selected> }) {
+  const [lng, lat] = selected.lngLat;
+  const { d, label } = imageSpan(selected.layer, selected.props);
+  const k = Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  const bbox = [lng - d / k, lat - d / 2, lng + d / k, lat + d / 2].map(n => n.toFixed(5)).join(",");
+  const src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=3857&size=720,360&format=jpg&f=image`;
+  const [failed, setFailed] = useState(false);
+  if (failed) return <p className={styles.note}>Imagery unavailable for this location right now.</p>;
+  return (
+    <figure className={styles.placeImage}>
+      <a href={src.replace("size=720,360", "size=1600,800")} target="_blank" rel="noreferrer" title="Open a larger image">
+        {/* eslint-disable-next-line @next/next/no-img-element -- external imagery service, not an optimizable asset */}
+        <img src={src} alt={`Satellite image around ${lat.toFixed(3)}, ${lng.toFixed(3)}`} loading="lazy" onError={() => setFailed(true)} />
+      </a>
+      <figcaption>{label} · Imagery © Esri, Maxar, Earthstar Geographics · capture date varies by area.
+        {" "}<a href={`https://www.google.com/maps/@${lat},${lng},${d < 0.05 ? 17 : d < 1 ? 11 : 6}z/data=!3m1!1e3`} target="_blank" rel="noreferrer">Open in Google Maps</a>
+        {" · "}<a href={`https://www.mapillary.com/app/?lat=${lat}&lng=${lng}&z=17`} target="_blank" rel="noreferrer">Street-level photos</a></figcaption>
+    </figure>
+  );
+}
+
 export function Inspector({ selected, onClose, tracked, onTrack, onChase, screen, onScreen, links, extra }: {
   selected: Selected; onClose: () => void; tracked: boolean; onTrack: () => void; onChase: () => void;
   screen: Screen | null; onScreen: (at: [number, number], projectId?: string) => void; links: [string, string][]; extra?: React.ReactNode;
@@ -101,7 +169,7 @@ export function Inspector({ selected, onClose, tracked, onTrack, onChase, screen
     <aside className={`${styles.glass} ${styles.detail} ${styles.inspector}`} aria-label="Intelligence inspector">
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close inspector">×</button>
       <div className={styles.inspectorTabs} role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>)}</div>
-      {tab === "overview" && selected && <><Detail selected={selected} tracked={tracked} onTrack={onTrack} onChase={onChase} />{extra}</>}
+      {tab === "overview" && selected && <><EntityPicture key={`e:${selected.layer}:${String(selected.props.id ?? "")}`} selected={selected} /><PlaceImage key={`${selected.layer}:${selected.lngLat.join(",")}`} selected={selected} /><Detail selected={selected} tracked={tracked} onTrack={onTrack} onChase={onChase} />{extra}</>}
       {tab === "spatial" && selected && (
         <dl className={styles.facts}>
           <div><dt>Coordinates</dt><dd>{selected.lngLat[1].toFixed(5)}, {selected.lngLat[0].toFixed(5)}</dd></div>
