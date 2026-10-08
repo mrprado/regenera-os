@@ -19,6 +19,9 @@
     "APP_BASE_URL": "https://os.regenera.bio",
     "SITE_BASE_URL": "https://regenera.bio",
     "SEND_ALLOWED_DOMAINS": "regenera.bio",
-    "OS_ALLOWLIST": "alanprado@regenera.bio"
+    "OS_ALLOWLIST": "alanprado@regenera.bio",
+    "PORTAL_STAKEHOLDER": "on",
+    "RESEND_FROM": "Regenera <os@mail.regenera.bio>",
+    "NOTIFY_EMAIL": "alanprado@regenera.bio"
   }
 }

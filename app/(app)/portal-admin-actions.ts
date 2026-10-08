@@ -13,7 +13,10 @@ import { withOsUser } from "@/lib/auth";
 import { withBase } from "@/lib/base-path";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { grantAccess, revokeGrant } from "@/lib/portal/access";
-import { invitePortalUser, setPortalUserStatus } from "@/lib/portal/auth";
+import { INVITE_DAYS, invitePortalUser, setPortalUserStatus } from "@/lib/portal/auth";
+import { inviteEmail } from "@/lib/portal/invite-mail";
+import { sendViaResend } from "@/lib/outreach/digest";
+import { env } from "cloudflare:workers";
 import { approveCommission, recordCommission, reviewReferral } from "@/lib/portal/broker";
 import { convertIntake } from "@/lib/portal/intake";
 import {
@@ -38,7 +41,35 @@ async function scopedPortalUser(scope: Scope, id: string) {
 }
 
 /** Invites (or re-invites) a portal user. The link is shown once to the inviter; nothing is emailed. */
+/** Emails an invitation through Resend (system notifications). Returns a status sentence for the notice. */
+async function emailInvite(to: string, name: string, kind: keyof typeof PORTAL_KINDS, token: string, actor: string) {
+  const e = env as unknown as Record<string, string | undefined>;
+  if (!e.RESEND_API_KEY || !e.RESEND_FROM) return "Email not sent: RESEND_API_KEY is not set on the Worker. Copy the link below and send it yourself.";
+  const link = `${e.APP_BASE_URL ?? "https://os.regenera.bio"}/portal/invite/${token}`;
+  try {
+    await sendViaResend({ apiKey: e.RESEND_API_KEY, from: e.RESEND_FROM, to }, inviteEmail({ name, kind, link, invitedBy: actor, days: INVITE_DAYS }));
+    await audit(appDb(), { actor, action: "portal_invite_emailed", entity: "portal_users", after: { to, kind } });
+    return `Invitation emailed to ${to}.`;
+  } catch (err) {
+    return `Email failed (${(err as Error).message}). Copy the link below and send it yourself.`;
+  }
+}
+
+/** Re-sends an invitation: a fresh single-use link (older links stop mattering once one is used), emailed when ticked. */
+export async function resendInviteAction(formData: FormData) {
+  const id = zId.parse(formData.get("portalUserId"));
+  let msg = "";
+  await withOsUser(async user => {
+    const pu = await scopedPortalUser(user.scope, id);
+    const { token } = await invitePortalUser(appDb(), { mandateId: pu.mandateId, email: pu.email, name: pu.name, kind: pu.kind, orgId: pu.orgId }, user.email);
+    msg = await emailInvite(pu.email, pu.name, pu.kind, token, user.email);
+    (await cookies()).set(INVITE_FLASH, `${pu.email}|/portal/invite/${token}`, { httpOnly: true, sameSite: "lax", path: withBase("/portals"), maxAge: 1800, secure: true });
+  });
+  redirect(back("users", msg));
+}
+
 export async function invitePortalUserAction(formData: FormData) {
+  let mailNote = "";
   const kind = z.enum(keys(PORTAL_KINDS)).parse(formData.get("kind"));
   await withOsUser(async user => {
     const mandateId = str(formData, "mandateId") || user.scope.mandateIds[0];
@@ -49,9 +80,10 @@ export async function invitePortalUserAction(formData: FormData) {
       const [b] = await appDb().select({ id: brokerProfiles.id }).from(brokerProfiles).where(eq(brokerProfiles.portalUserId, pu.id));
       if (!b) await appDb().insert(brokerProfiles).values({ mandateId, portalUserId: pu.id, orgId, complianceStatus: "under_review" });
     }
-    (await cookies()).set(INVITE_FLASH, `${pu.email}|/portal/invite/${token}`, { httpOnly: true, sameSite: "lax", path: withBase("/portals"), maxAge: 300, secure: true });
+    if (formData.get("sendEmail") === "on") mailNote = await emailInvite(pu.email, pu.name, kind, token, user.email);
+    (await cookies()).set(INVITE_FLASH, `${pu.email}|/portal/invite/${token}`, { httpOnly: true, sameSite: "lax", path: withBase("/portals"), maxAge: 1800, secure: true });
   });
-  redirect(back("users", "Invitation created. Copy the link below and send it yourself; it works once and expires in 14 days."));
+  redirect(back("users", mailNote ? `Invitation created. ${mailNote}` : "Invitation created. Copy the link below and send it yourself; it works once and expires in 14 days."));
 }
 
 export async function portalUserStatusAction(formData: FormData) {

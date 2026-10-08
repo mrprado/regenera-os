@@ -20,7 +20,7 @@ import {
 } from "@/lib/portal/vocab";
 import {
   addAgreementAction, agreementStatusAction, commissionStatusAction, createDataRoomAction, createRequestAction, createUpdateAction, dataRoomAction, distributionAction, grantAction,
-  intakeAction, invitePortalUserAction, portalUserStatusAction, publishUpdateAction, recordCommissionAction, replyPortalAction, reviewBrokerAction, reviewReferralAction, reviewRequestAction, revokeGrantAction,
+  intakeAction, invitePortalUserAction, resendInviteAction, portalUserStatusAction, publishUpdateAction, recordCommissionAction, replyPortalAction, reviewBrokerAction, reviewReferralAction, reviewRequestAction, revokeGrantAction,
 } from "../portal-admin-actions";
 import styles from "../projects/projects.module.css";
 
@@ -69,6 +69,7 @@ export default async function PortalsPage({ searchParams }: { searchParams: Prom
                       <select name="status" defaultValue={u.status === "invited" ? "active" : u.status} aria-label="Status"><option value="active">Active</option><option value="suspended">Suspended</option><option value="revoked">Revoked</option></select>
                       <button className={ui.miniBtn} type="submit">Set</button>
                     </form>
+                    {u.status === "invited" && <form action={resendInviteAction} className={styles.inline}><input type="hidden" name="portalUserId" value={u.id} /><button className={ui.miniBtn} type="submit">Resend invitation</button></form>}
                   </td>
                 </tr>
               ))}</tbody></table>
@@ -82,9 +83,10 @@ export default async function PortalsPage({ searchParams }: { searchParams: Prom
                 <label>Name<input name="name" /></label>
                 <label>Portal<select name="kind" required>{Object.entries(PORTAL_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                 <label>Organization<select name="orgId" defaultValue=""><option value="">None</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
-                <button className="btn btn--primary" type="submit">Create invitation link</button>
+                <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="sendEmail" defaultChecked /> Email the invitation</label>
+                <button className="btn btn--primary" type="submit">Create invitation</button>
               </form>
-              <p className={ui.sub}>Nothing is emailed. Send the link yourself. Re-inviting creates a fresh link.</p>
+              <p className={ui.sub}>The email comes from Regenera&apos;s notification address with a single-use link (14 days). The link is also shown here for 30 minutes. Re-sending creates a fresh link.</p>
             </section>
           </aside>
         </div>
