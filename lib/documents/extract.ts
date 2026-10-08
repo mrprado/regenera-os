@@ -57,7 +57,8 @@ const FIELDS: { key: keyof ExtractedProject; field: string; unit: string | null;
 
 /** Applies selected projects: matches existing projects by normalized name, else creates them (stage opportunity);
  *  links the sponsor as a party; writes every stated figure as a source_provided claim with document evidence. */
-export async function applyExtraction(db: Db, x: { extractionId: string; mandateId: string; selected: number[]; sponsorOrgId: string | null; actor: string }) {
+export async function applyExtraction(db: Db, x: { extractionId: string; mandateId: string; selected: number[]; sponsorOrgId: string | null; actor: string; sponsorRole?: "sponsor" | "operator" }) {
+  const role = x.sponsorRole ?? "sponsor";
   const [ex] = await db.select().from(docExtractions).where(and(eq(docExtractions.id, x.extractionId), eq(docExtractions.mandateId, x.mandateId)));
   if (!ex?.result) throw new Error("Extraction not found");
   const existing = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.mandateId, x.mandateId));
@@ -77,8 +78,8 @@ export async function applyExtraction(db: Db, x: { extractionId: string; mandate
       projectId = row.id; byName.set(normalizeAlias("name", p.name), row.id); created++;
     }
     if (x.sponsorOrgId) {
-      const [has] = await db.select({ id: projectParties.id }).from(projectParties).where(and(eq(projectParties.projectId, projectId), eq(projectParties.orgId, x.sponsorOrgId), eq(projectParties.role, "sponsor")));
-      if (!has) await db.insert(projectParties).values({ mandateId: x.mandateId, projectId, orgId: x.sponsorOrgId, role: "sponsor", confirmed: "proposed" });
+      const [has] = await db.select({ id: projectParties.id }).from(projectParties).where(and(eq(projectParties.projectId, projectId), eq(projectParties.orgId, x.sponsorOrgId), eq(projectParties.role, role)));
+      if (!has) await db.insert(projectParties).values({ mandateId: x.mandateId, projectId, orgId: x.sponsorOrgId, role, confirmed: "proposed" });
     }
     for (const f of FIELDS) {
       const v = p[f.key];

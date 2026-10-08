@@ -36,7 +36,8 @@ export default async function ExtractPage({ searchParams }: { searchParams: Prom
           {ex.result && <form action={applyExtractionAction}>
             <input type="hidden" name="id" value={ex.id} />
             {ex.result.sponsor && <p>Sponsor stated: <b>{ex.result.sponsor.name}</b>{ex.result.sponsor.country ? ` (${ex.result.sponsor.country})` : ""}. {sponsor ? <>Found in Network: <Link href={`/companies/${sponsor.id}`}>{sponsor.name}</Link>.</> : "Not in Network yet."}</p>}
-            <label className={ui.sub}>Link projects to sponsor <select name="sponsorOrgId" defaultValue={sponsor?.id ?? ""}><option value="">None</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
+            <label className={ui.sub}>Link projects to <select name="sponsorOrgId" defaultValue={sponsor?.id ?? ""}><option value="">None</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>{" "}
+            <label className={ui.sub}>as <select name="sponsorRole" defaultValue="operator"><option value="operator">Operator / platform (projects grouped under it)</option><option value="sponsor">Sponsor of each project</option></select></label>
             <table className={ui.table}><thead><tr><th></th><th>Project</th><th>Country · locality</th><th>MW</th><th>GWh/yr</th><th>CAPEX</th><th>Tariff · storage</th><th>Financing · offtake</th><th>Page</th></tr></thead><tbody>
               {ex.result.projects.map((p, i) => <tr key={i}><td><input type="checkbox" name="project" value={i} defaultChecked={ex.status !== "applied"} aria-label={`Apply ${p.name}`} /></td>
                 <td><b>{p.name}</b>{p.status ? <div className={ui.sub}>{p.status}</div> : null}</td><td>{p.country ?? "—"} · {p.locality ?? "—"}</td><td className={ui.num}>{p.capacityMw ?? "—"}</td><td className={ui.num}>{p.annualGwh ?? "—"}</td>

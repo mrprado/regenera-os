@@ -21,7 +21,8 @@ describe("project partner scans", () => {
     const dfi = projectScanConfig(project, "dfis");
     expect(dfi.geography).toEqual([]);
     expect(dfi.providers).not.toContain("apollo_orgs");
-    expect(dfi.signalCriteria).toMatch(/54 MW Solar PV \+ BESS at development stage in NAM/);
+    expect(dfi.signalCriteria).toMatch(/development-finance debt, equity or guarantees on a 54 MW Solar PV \+ BESS project at development stage in NAM/);
+    expect(dfi.providers).toEqual(["existing", "web", "gleif"]); // one-click scans never spend Apollo credits
     expect(projectScanConfig(project, "advisory").geography).toEqual(["NAM"]);
     expect(projectPresetKey("0123456789abcdef", "epc")).toBe("proj_01234567_epc");
   });

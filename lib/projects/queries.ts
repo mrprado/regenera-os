@@ -29,6 +29,9 @@ export async function listProjects(scope: Scope, f: ProjectFilters) {
     .from(capitalRequirements).where(and(inArray(capitalRequirements.projectId, ids), sql`${capitalRequirements.status} != 'cancelled'`)).groupBy(capitalRequirements.projectId, capitalRequirements.currency);
   const sponsors = await db.select({ projectId: projectParties.projectId, name: organizations.name }).from(projectParties)
     .innerJoin(organizations, eq(organizations.id, projectParties.orgId)).where(and(inArray(projectParties.projectId, ids), eq(projectParties.role, "sponsor")));
+  // Operator / platform: a group that holds a portfolio (e.g. RA-ESG and its group-report projects); the list groups by it.
+  const operators = await db.select({ projectId: projectParties.projectId, orgId: organizations.id, name: organizations.name }).from(projectParties)
+    .innerJoin(organizations, eq(organizations.id, projectParties.orgId)).where(and(inArray(projectParties.projectId, ids), eq(projectParties.role, "operator")));
   const out = rows.map(p => ({
     p,
     openConstraints: openCons.find(c => c.projectId === p.id)?.n ?? 0,
@@ -36,6 +39,7 @@ export async function listProjects(scope: Scope, f: ProjectFilters) {
     blocked: blockedDims.find(b => b.projectId === p.id)?.n ?? 0,
     capital: capital.filter(c => c.projectId === p.id),
     sponsor: sponsors.find(s => s.projectId === p.id)?.name ?? null,
+    operator: operators.find(o => o.projectId === p.id) ?? null,
   }));
   return out.filter(x => (f.blocked ? x.blocked > 0 || x.worstSeverity >= 3 : true) && (f.capital ? x.capital.some(c => c.target > c.secured) : true));
 }

@@ -22,6 +22,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const view = sp.view === "board" ? "board" : "table";
   const [rows, pickers] = await Promise.all([listProjects(user.scope, sp), projectPickers(user.scope)]);
+  // An operator / platform (e.g. RA-ESG) holds a portfolio: its projects show as one row unless ?group=none.
+  const grouped = sp.group !== "none";
+  const byOperator = new Map<string, { id: string; name: string; rows: typeof rows }>();
+  for (const x of rows) if (grouped && x.operator) { const g = byOperator.get(x.operator.orgId) ?? { id: x.operator.orgId, name: x.operator.name, rows: [] }; g.rows.push(x); byOperator.set(x.operator.orgId, g); }
+  const loose = rows.filter(x => !(grouped && x.operator));
 
   const capitalCell = (c: { currency: string; target: number; secured: number }[]) =>
     c.length === 0 ? <span className={ui.chipMuted}>Not set</span> : c.map(x => (
@@ -105,7 +110,17 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             <div className={ui.tableWrap}>
               <table className={ui.table}>
                 <thead><tr><th>Project</th><th>Stage</th><th>Sponsor</th><th>Blockers</th><th>Capital</th><th>Regenera role</th></tr></thead>
-                <tbody>{rows.map(({ p, openConstraints, worstSeverity, blocked, capital, sponsor }) => (
+                <tbody>{[...byOperator.values()].map(g => {
+                  const mw = g.rows.reduce((s, x) => s + (x.p.capacity && /^mw/i.test(x.p.capacityUnit ?? "") ? x.p.capacity : 0), 0);
+                  const countries = [...new Set(g.rows.map(x => x.p.country).filter(Boolean))];
+                  const stages = [...new Set(g.rows.map(x => stageLabel(x.p.stage)))];
+                  return <tr key={`op-${g.id}`}><td colSpan={6}>
+                    <details>
+                      <summary><b>{g.name}</b> <span className={ui.chip}>Operator · {g.rows.length} projects</span> <span className={ui.sub}>{countries.join(", ")}{mw ? ` · ${mw.toLocaleString("en-US")} MW stated` : ""} · {stages.join(", ")}</span>
+                        {" "}<Link className={ui.miniBtn} href={`/projects/portfolio?org=${g.id}`}>Portfolio screening</Link> <Link className={ui.miniBtn} href={`/companies/${g.id}`}>Organization</Link></summary>
+                      <table className={ui.table}><tbody>{g.rows.map(({ p, capital }) => <tr key={p.id}><td><Link href={`/projects/${p.id}`}>{p.name}</Link><span className={ui.sub}> {[p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}`.trim() : null, [p.municipality, p.country].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ")}</span></td><td><span className={ui.chip}>{stageLabel(p.stage)}</span></td><td>{capitalCell(capital)}</td></tr>)}</tbody></table>
+                    </details></td></tr>;
+                })}{loose.map(({ p, openConstraints, worstSeverity, blocked, capital, sponsor }) => (
                   <tr key={p.id}>
                     <td><Link className={ui.primary} href={`/projects/${p.id}`}>{p.name}</Link>
                       <span className={ui.sub}>{[p.assetClass ? ASSET_CLASSES[p.assetClass] : null, p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}`.trim() : null, [p.municipality, p.country].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ")}</span></td>

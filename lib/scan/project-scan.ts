@@ -37,17 +37,36 @@ export function reachOf(country: string | null, reach: "country" | "region" | "g
 
 const TECH_TERMS: [RegExp, string[]][] = [[/solar|pv|photovolt/i, ["solar"]], [/storage|bess|battery/i, ["storage", "BESS"]], [/wind/i, ["wind"]], [/hydro/i, ["hydro"]], [/waste|wte/i, ["waste-to-energy"]], [/water/i, ["water"]], [/grid|transmission/i, ["transmission"]]];
 
+/** What each partner type is asked to provide, for the scan brief. */
+const NEED: Record<PartnerType, string> = {
+  lenders: "senior or mezzanine project-finance debt", dfis: "development-finance debt, equity or guarantees", infra_equity: "development or construction equity",
+  funds: "equity or acquisition of the operating asset", family_offices: "equity or co-investment", impact: "catalytic, concessional or programme-related capital",
+  derisking: "political-risk insurance, credit guarantees or export credit", epc: "engineering, procurement and construction", oem: "supply of the main equipment",
+  developers: "co-development, partnership or acquisition", advisory: "legal, permitting and transaction advice", offtakers: "a long-term power or output purchase agreement",
+};
+const money = (n: number | null | undefined, cur: string | null | undefined) => (n ? `${cur ?? "USD"} ${n >= 1e6 ? `${Math.round(n / 1e6)}m` : Math.round(n).toLocaleString("en-US")}` : null);
+
+/** The scan brief: the project's details without its name (open-web search goes outside the OS). Pure. */
+export function projectBrief(p: Pick<Project, "country" | "technology" | "assetClass" | "capacity" | "capacityUnit" | "stage" | "capex" | "currency">, type: PartnerType) {
+  const size = p.capacity ? `${p.capacity} ${p.capacityUnit ?? ""}`.trim() : null;
+  const what = [size, p.technology ?? p.assetClass?.replace(/_/g, " ") ?? "infrastructure"].filter(Boolean).join(" ");
+  const capex = money(p.capex, p.currency);
+  return `Partner for ${NEED[type]} on a ${what} project at ${p.stage.replace(/_/g, " ")} stage${p.country ? ` in ${p.country}` : ""}${capex ? `, total capital cost about ${capex}` : ""}. Prefer organizations with current, evidenced activity on comparable projects in this country or region.`;
+}
+
 /** Scan configuration derived from a project. Pure. */
-export function projectScanConfig(p: Pick<Project, "country" | "technology" | "assetClass" | "capacity" | "capacityUnit" | "stage">, type: PartnerType): ScanConfig {
+export function projectScanConfig(p: Pick<Project, "country" | "technology" | "assetClass" | "capacity" | "capacityUnit" | "stage"> & Partial<Pick<Project, "capex" | "currency">>, type: PartnerType): ScanConfig {
   const t = PARTNER_TYPES[type];
   const text = `${p.technology ?? ""} ${p.assetClass ?? ""}`;
   const terms = [...new Set(TECH_TERMS.filter(([re]) => re.test(text)).flatMap(([, v]) => v))];
   const capital = t.group === "capital";
   return zScanConfig.parse({
     mode: "organizations", audience: t.audience, geography: reachOf(p.country, t.reach), terms: capital ? [...terms, "infrastructure"].slice(0, 4) : terms,
-    providers: type === "dfis" || type === "derisking" ? ["existing", "web", "gleif"] : ["existing", "web", "gleif", "apollo_orgs"],
-    maxOrganizations: 40, requireReview: true,
-    signalCriteria: `Fit for ${p.capacity ?? "?"} ${p.capacityUnit ?? ""} ${p.technology ?? p.assetClass ?? "project"} at ${p.stage.replace(/_/g, " ")} stage${p.country ? ` in ${p.country}` : ""}`.trim(),
+    // One-click project scans never spend Apollo credits: open web (capped by the research budget), the public register
+    // and existing records. Apollo can still be added from the scan launcher.
+    providers: ["existing", "web", "gleif"],
+    maxOrganizations: 25, requireReview: true,
+    signalCriteria: projectBrief({ capex: null, currency: null, ...p }, type),
     stages: [p.stage],
   });
 }

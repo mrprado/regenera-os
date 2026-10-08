@@ -11,7 +11,7 @@ import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { countryRisk, fmtReading } from "@/lib/fabric/country";
 import { portfolioCsv, PRECISION, screenPortfolio } from "@/lib/portfolio/screen";
 import { SANCTIONS_REVIEW } from "@/lib/ontology/taxonomies";
-import { checkRegistryAction, portfolioSiteChecksAction } from "../../casework-actions";
+import { checkRegistryAction, portfolioSiteChecksAction, recordOperatorAction } from "../../casework-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Portfolio screening" };
@@ -22,7 +22,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const user = await requireOsUser("/projects");
   const sp = await searchParams;
   const db = appDb();
-  const sponsorIds = [...new Set((await db.select({ orgId: projectParties.orgId }).from(projectParties).where(and(mandateCondition(user.scope, projectParties.mandateId), inArray(projectParties.role, ["sponsor", "developer"])))).map(x => x.orgId).filter(Boolean) as string[])];
+  const sponsorIds = [...new Set((await db.select({ orgId: projectParties.orgId }).from(projectParties).where(and(mandateCondition(user.scope, projectParties.mandateId), inArray(projectParties.role, ["operator", "sponsor", "developer"])))).map(x => x.orgId).filter(Boolean) as string[])];
   const sponsors = sponsorIds.length ? await db.select({ id: organizations.id, name: organizations.name }).from(organizations).where(inArray(organizations.id, sponsorIds.slice(0, 90))) : [];
   const named = sp.q ? await db.select({ id: organizations.id, name: organizations.name }).from(organizations).where(mandateCondition(user.scope, organizations.mandateId)).then(rows => rows.filter(o => o.name.toLowerCase().includes(sp.q!.toLowerCase())).slice(0, 10)) : [];
   const s = sp.org ? await screenPortfolio(db, user.scope.mandateIds, sp.org) : null;
@@ -58,6 +58,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <a className={ui.miniBtn} download={`portfolio-${s.org.name.replace(/\W+/g, "-")}.csv`} href={`data:text/csv;charset=utf-8,${encodeURIComponent(portfolioCsv(s.rows))}`}>Download CSV</a>
           <Link className={ui.miniBtn} href={`/projects/portfolio/memo?org=${s.org.id}`}>Portfolio memo</Link>
           <Link className={ui.miniBtn} href={`/documents/requests?org=${s.org.id}`}>Request documents</Link>
+          {s.rows.length > 0 && <form action={recordOperatorAction}><input type="hidden" name="orgId" value={s.org.id} /><button className={ui.miniBtn} type="submit" title="Groups these projects under this organization in the Projects list">Record as operator of these {s.rows.length} projects</button></form>}
         </div>
       </section>
       <div className={r.grid}>

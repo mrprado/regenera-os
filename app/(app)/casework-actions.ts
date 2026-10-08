@@ -7,7 +7,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
-  capitalProfiles, docExtractions, docRequestItems, docRequests, documents, organizations, placeFacts, projects, protectedParties, regulatedProducts,
+  capitalProfiles, docExtractions, docRequestItems, docRequests, documents, organizations, placeFacts, projectParties, projects, protectedParties, regulatedProducts,
 } from "@/db/schema";
 import { REQUEST_ITEM_STATES } from "@/db/casework";
 import { audit } from "@/lib/audit";
@@ -86,7 +86,7 @@ export async function applyExtractionAction(formData: FormData) {
     if (!ex) throw new Error("Not found");
     let sponsorOrgId = zId.safeParse(formData.get("sponsorOrgId")).data ?? null;
     if (!sponsorOrgId && formData.get("linkSponsor") === "on") sponsorOrgId = (await findSponsorOrg(appDb(), ex.mandateId, ex.result?.sponsor?.name))?.id ?? null;
-    const r = await applyExtraction(appDb(), { extractionId: id, mandateId: ex.mandateId, selected, sponsorOrgId, actor: user.email });
+    const r = await applyExtraction(appDb(), { extractionId: id, mandateId: ex.mandateId, selected, sponsorOrgId, actor: user.email, sponsorRole: formData.get("sponsorRole") === "operator" ? "operator" : "sponsor" });
     await audit(appDb(), { actor: user.email, action: "extraction_applied", entity: "doc_extractions", entityId: id, after: r });
     msg = `${r.created} project(s) created, ${r.matched} matched, ${r.claims} figure(s) recorded as source-provided claims.`;
   });
@@ -250,3 +250,25 @@ export async function portfolioSiteChecksAction(formData: FormData) {
   redirect(note(`/projects/portfolio?org=${orgId}`, msg));
 }
 
+
+// ---------- operator grouping ----------
+/** Records an organization as the operator / platform of every project it holds (linked parties, or projects whose
+ *  name or description names it), so the Projects list groups them under it. Additive; existing parties are kept. */
+export async function recordOperatorAction(formData: FormData) {
+  const orgId = zId.parse(formData.get("orgId"));
+  let msg = "";
+  await withOsUser(async user => {
+    const o = await scopedOrg(user.scope, orgId);
+    const list = await sponsorProjects(appDb(), user.scope.kind === "user" ? user.scope.mandateIds : [o.mandateId], o);
+    let added = 0;
+    for (const p of list) {
+      const [has] = await appDb().select({ id: projectParties.id }).from(projectParties).where(and(eq(projectParties.projectId, p.id), eq(projectParties.orgId, o.id), eq(projectParties.role, "operator")));
+      if (has) continue;
+      await appDb().insert(projectParties).values({ mandateId: p.mandateId, projectId: p.id, orgId: o.id, role: "operator", confirmed: "confirmed" });
+      added++;
+    }
+    await audit(appDb(), { actor: user.email, action: "operator_recorded", entity: "organizations", entityId: o.id, after: { projects: list.length, added } });
+    msg = `${o.name} recorded as operator of ${list.length} project(s) (${added} newly linked). The Projects list now groups them under ${o.name}.`;
+  });
+  redirect(note(`/projects/portfolio?org=${orgId}`, msg));
+}

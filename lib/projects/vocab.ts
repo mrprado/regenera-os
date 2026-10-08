@@ -55,7 +55,7 @@ export const SEVERITIES = { low: "Low", medium: "Medium", high: "High", critical
 export const CONSTRAINT_STATUSES = { open: "Open", in_progress: "In progress", resolved: "Resolved", accepted: "Accepted risk" } as const;
 
 export const PARTY_ROLES = {
-  sponsor: "Sponsor", developer: "Developer", projectco: "ProjectCo / SPV", issuer: "Issuer", landowner: "Landowner",
+  sponsor: "Sponsor", operator: "Operator / platform (holds the portfolio)", developer: "Developer", projectco: "ProjectCo / SPV", issuer: "Issuer", landowner: "Landowner",
   offtaker: "Offtaker", epc: "EPC", oem: "OEM / supplier", engineer: "Engineer", lender: "Lender", investor: "Investor",
   counsel: "Counsel", advisor: "Advisor", government: "Government / authority", community: "Community", other: "Other",
 } as const;
