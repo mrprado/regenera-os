@@ -7,6 +7,7 @@ import { AI_PAUSE_KEY, AiBudgetError, aiPausedUntil, isCreditError } from "@/lib
 import { notifications } from "@/db/schema";
 import { readFundingByRules } from "@/lib/funding/rules-read";
 import { classifyByRules } from "@/lib/triggers/rules";
+import { autoPlaceProjects } from "@/lib/projects/auto-place";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -270,6 +271,11 @@ export const handlers: Record<string, JobHandler> = {
   "place.profile": async ({ db, job }) => {
     await buildPlaceProfile(db, String(job.payload.projectId));
   },
+  "projects.autoplace": async ({ db, now }) => {
+    // Unlocated projects get an approximate point (town, region or country) so Atlas and site checks can run.
+    const r = await autoPlaceProjects(db, 6, now);
+    if (r.more) await enqueue(db, "projects.autoplace", {}, { runAfter: new Date(now.getTime() + 60_000), now, dedupeKey: `autoplace:${now.toISOString().slice(0, 16)}` });
+  },
   "place.refresh": async ({ db, now }) => {
     for (const id of await projectsNeedingPlace(db, now)) await enqueue(db, "place.profile", { projectId: id }, { dedupeKey: `place:${id}:${now.toISOString().slice(0, 10)}`, now });
   },
@@ -406,6 +412,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "portal.expire": "daily:05:40",
   "events.dispatch": "every:5m",
   "place.refresh": "daily:04:10",
+  "projects.autoplace": "every:1h",
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",

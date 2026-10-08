@@ -28,6 +28,7 @@ import { mailCommand } from "@/lib/mail-intel/queries";
 import { readiness, readinessLabel } from "@/lib/readiness";
 import { BUILT_IN_PRESETS } from "@/lib/scan/presets";
 import { DEAL_STAGES } from "@/lib/vocab";
+import { opsSummary } from "@/lib/command/ops";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Command" };
@@ -55,6 +56,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const scanPreset = BUILT_IN_PRESETS[0];
   const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
   const deskContext = loadDeskContext(user, now);
+  const ops = await opsSummary(db, now);
   return (
     <>
       <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
@@ -63,6 +65,14 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
         <ul className={t.pillars}>{LENS.map(x => <li key={x.title} className={t.pillar}>
           <h3>{x.title}</h3><p>{x.body}</p>
         </li>)}</ul>
+      </section>
+      <section aria-label="What the OS did in the last 24 hours" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--border, #D8D5CE)", borderRadius: 6 }}>
+        <p style={{ margin: 0, fontSize: 13 }}><b>Last 24 h, done by the OS:</b> {ops.funding} funding opportunities found · {ops.triggers} triggers created · {ops.orgs} organizations added · {ops.placed} projects placed · {ops.sourceOk}/{ops.sourceCalls} source calls succeeded · AI this month ${ops.aiUsd.toFixed(2)}</p>
+        {(ops.aiPaused || ops.degraded.length > 0 || ops.dead > 0) && <p style={{ margin: "6px 0 0", fontSize: 13 }}>
+          {ops.aiPaused && <><b>AI paused</b> (Anthropic credit) until {ops.aiPaused.slice(11, 16)} UTC: rules reads continue. </>}
+          {ops.degraded.length > 0 && <><b>Degraded sources:</b> {ops.degraded.join(", ")}. </>}
+          {ops.dead > 0 && <><Link href="/settings/jobs">{ops.dead} failed jobs</Link> need a look.</>}
+        </p>}
       </section>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>

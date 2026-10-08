@@ -147,7 +147,7 @@ export function Detail({ selected, onTrack, onChase, tracked }: { selected: NonN
         <p className={styles.kicker}>Power infrastructure · OpenStreetMap</p>
         <h3>{p.name ?? "Unnamed"}</h3>
         <Facts rows={Object.entries(p).filter(([k, v]) => v != null && v !== "" && !/^name/.test(k) && k.length < 24).slice(0, 8).map(([k, v]) => [k.replace(/_/g, " "), String(v)])} />
-        <p className={styles.note}>Community-mapped via Open Infrastructure Map; verify before relying on it.</p>
+        <p className={styles.note}><b>Evidence class: OSM-mapped.</b> Not registry-listed, not a modeled corridor and not utility-confirmed: an OSM line or substation does not establish available capacity or a connection point. Source: Open Infrastructure Map, © OpenStreetMap contributors (ODbL). Verify with the TSO/utility before relying on it.</p>
       </>
     );
     case "protected": return (

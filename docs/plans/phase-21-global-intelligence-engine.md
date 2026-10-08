@@ -142,3 +142,34 @@ screening model. Mexico-specific (INEGI, RAN, CONAGUA, CENACE) registered as Tie
 6. Unit + integration tests per connector (fixtures of real responses), browser checks, deploy version + rollback.
 Completion report lists: already working · repaired · newly integrated · verified in production · partial ·
 blocked by licence/authorization · still to build.
+
+## Addendum (2026-10-08) — Atlas rebuild, built together with the engine
+
+Founder brief: a map-first geospatial intelligence workbench (OpenGridWorks / Felt / ArcGIS / Foundry references,
+Regenera identity: Graphite Moss #252D27, warm white, moss interaction states, rust only semantic).
+Audit before replacing (done in part): the current Atlas already has globe + flat, satellite/hybrid/terrain/streets
+basemaps, ~30 layers, clickable OpenInfraMap vector power lines/substations/plants, saved views, drawing, measurement,
+buffer/nearest/constraints/developable-envelope analysis, site diligence and a detail panel. Keep the MapLibre engine.
+
+Stages (each deployed when verified, no disruption to records):
+1. Shell: collapsible nav rail; full-viewport map; left explorer with three modes (Explore · Layers · Analyze); right
+   inspector hidden until selection, tabs Overview · Technical · Spatial context · Development · Relationships ·
+   Evidence · Assessments · Capital · Actions (shown only when populated); grouped toolbar (navigation, layers,
+   selection, draw/measure, analysis, compare, save/export); CRT/NVG/Noir moved into Display settings; bottom status
+   bar (attribution, data freshness, coordinates, scale, layer errors).
+2. Layer catalog regrouped: Energy · Grid · Land · Water · Ecology · Climate · Infrastructure · Development · Capital &
+   opportunity · Regenera portfolio; each with legend, provenance, coverage, freshness, licence, opacity; failures
+   visible. Saved workspaces: Global Infrastructure, Energy Transition, Site Scout, Land & Ecology, Water Intelligence,
+   Hazard Watch, Project Portfolio, Capital Opportunities.
+3. Data: §3 connectors (GEM, WRI GPPD, EIA, HIFLD, ENTSO-E, solar/wind atlases, HydroBASINS, WDPA with licence flag).
+4. Site workflow: select/draw → site record → nearby grid (distance to line/substation, evidence class), constraints,
+   hazards, water, resource → programmes and funding calls (hard gates) → partners → saved site assessment with
+   evidence → optional project create/update. Proximity is never presented as interconnection capacity.
+5. Multi-criteria suitability and site comparison; readiness analysis.
+6. Responsive: desktop analysis, tablet, mobile explore/search/inspect/basic layers; keyboard + touch; browser E2E.
+
+## Progress log
+- 2026-10-08 a1dbbab: §1 pipeline unblock (credit pause, rules reads, re-run failed jobs, source cooldown, OFAC mirror).
+- 2026-10-08 next commit: automatic approximate project placement (hourly), Command "last 24 h done by the OS" strip
+  from persisted records, OSM evidence class on grid features. Correction to Phase 0 row 4: the power layer is vector
+  and clickable already; what is missing is registry-listed assets, evidence classes and distance analysis.
