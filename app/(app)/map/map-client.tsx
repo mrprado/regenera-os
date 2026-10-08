@@ -75,8 +75,8 @@ function addDataLayers(map: maplibregl.Map) {
   map.addLayer({ id: "projects-label", type: "symbol", source: "projects", minzoom: 3.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-letter-spacing": 0.04, "text-optional": true }, paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,.92)", "text-halo-width": 1.5 } });
   // Funding geography is drawn as country regions (Natural Earth admin-0, public domain), never as an invented point.
   map.addSource("funding-regions", { type: "geojson", data: empty });
-  map.addLayer({ id: "funding-regions-fill", type: "fill", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "fill-color": C.sky, "fill-opacity": ["interpolate", ["linear"], ["coalesce", ["get", "n"], 0], 1, 0.12, 10, 0.28, 60, 0.45] } });
-  map.addLayer({ id: "funding-regions-line", type: "line", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "line-color": "#4f8db5", "line-width": 0.8, "line-opacity": 0.7 } });
+  map.addLayer({ id: "funding-regions-fill", type: "fill", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "fill-color": "#2f6f9f", "fill-opacity": ["interpolate", ["linear"], ["coalesce", ["get", "n"], 0], 1, 0.22, 10, 0.38, 60, 0.55] } });
+  map.addLayer({ id: "funding-regions-line", type: "line", source: "funding-regions", filter: [">", ["coalesce", ["get", "n"], 0], 0], paint: { "line-color": "#2f6f9f", "line-width": 1.1, "line-opacity": 0.9 } });
   map.addLayer({ id: "procurement", type: "circle", source: "procurement", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "triggers-halo", type: "circle", source: "triggers", paint: { "circle-radius": 12, "circle-color": triggerColor, "circle-opacity": 0.18, "circle-blur": 0.6 } });
   map.addLayer({ id: "triggers", type: "circle", source: "triggers", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, ["+", 3, ["coalesce", ["get", "urgency"], 3]], 10, ["+", 6, ["coalesce", ["get", "urgency"], 3]]], "circle-color": triggerColor, "circle-stroke-color": "#141715", "circle-stroke-width": 1.2 } });
@@ -274,7 +274,7 @@ function MapClient() {
       else queueMicrotask(()=>setSearchNote('Device location is unavailable. Search a place to center Atlas.'));
     }
 
-    if (process.env.NODE_ENV !== "production") (window as unknown as { __atlas?: maplibregl.Map }).__atlas = map;
+    if (process.env.NODE_ENV !== "production" || new URLSearchParams(window.location.search).get("debug") === "atlas") (window as unknown as { __atlas?: maplibregl.Map }).__atlas = map;
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     // Every map error is reported (Settings → Jobs → Browser errors) so production-only failures are visible.
