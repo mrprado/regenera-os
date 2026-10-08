@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { screenProject } from "@/lib/integrity/engine";
 import {
   brokerProfiles, commissionEvents, commissionSchedules, dataRoomDocuments, dataRooms, distributionApprovals, documentRequests, documents, intakeSubmissions,
   portalGrants, portalMessages, portalUsers, projects, projectUpdates, referralAgreements, referralRegistrations,
@@ -307,7 +308,10 @@ export async function intakeAction(formData: FormData) {
     if (decision === "convert") {
       const r = await convertIntake(appDb(), id, user.scope.mandateIds[0], user.email);
       if (r.token) (await cookies()).set(INVITE_FLASH, `${x.email}|/portal/invite/${r.token}`, { httpOnly: true, sameSite: "lax", path: withBase("/portals"), maxAge: 300, secure: true });
-      msg = r.type === "project" ? "Converted into a project (sponsor proposed)." : r.token ? "Converted: introducer profile Applied, invitation link below." : "Converted.";
+      // Phase 24: a converted project is screened at once, so Qualify shows its integrity decision immediately.
+      let screened = "";
+      if (r.type === "project" && r.id) screened = await screenProject(appDb(), r.id, user.email).then(d => ` Integrity screening: ${d.state.replace(/_/g, " ")}.`).catch(() => " Integrity screening will run within two hours.");
+      msg = r.type === "project" ? `Converted into a project (sponsor proposed).${screened}` : r.token ? "Converted: introducer profile Applied, invitation link below." : "Converted.";
     } else await appDb().update(intakeSubmissions).set({ status: decision, reviewedBy: user.email, updatedAt: new Date().toISOString() }).where(eq(intakeSubmissions.id, id));
   });
   redirect(back("intake", msg));

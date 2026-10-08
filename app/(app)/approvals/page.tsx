@@ -9,6 +9,7 @@ import { day } from "@/lib/mandates/format";
 import { approvalsFor } from "@/lib/mandates/queries";
 import { APPROVAL_KINDS, APPROVAL_STATUSES } from "@/lib/mandates/vocab";
 import { decideApprovalAction } from "../origination-actions";
+import ApprovalsSwitch from "@/components/approvals-switch";
 import f from "../funding/funding.module.css";
 import s from "../mandates/mandates.module.css";
 
@@ -25,6 +26,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Approvals" count={rows.length} />
+      <ApprovalsSwitch scope={user.scope} current="decisions" />
       <Notice text={sp.notice} />
       <p className={ui.notice}>Material actions wait here for a named person: outreach, introductions, data sharing, NDAs, bids, investor access, diligence material, term sheets, offers, capital structures, community engagement and final submissions. Each decision records who, when, the rationale, conditions and the document version. AI is never the approver. Message drafts keep their own queue under Relationships → Approval queue.</p>
       <nav className={f.inline} style={{ marginBottom: 10 }}>{["pending", "approved", "approved_conditions", "rejected", "all"].map(x => <Link key={x} href={`/approvals?status=${x}`} className={s.reading} data-r={x === status ? "strong" : undefined}>{x === "all" ? "All" : APPROVAL_STATUSES[x as keyof typeof APPROVAL_STATUSES]}</Link>)}</nav>

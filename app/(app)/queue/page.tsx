@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { Notice } from "@/components/crm-bits";
 import { EmptyState, PageHeader } from "@/components/page";
+import ApprovalsSwitch from "@/components/approvals-switch";
 import ui from "@/components/ui.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
@@ -25,7 +26,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
 
   return (
     <>
-      <PageHeader title="Approval queue" count={all.length} />
+      <PageHeader title="Approvals: outreach drafts" count={all.length} />
+      <ApprovalsSwitch scope={user.scope} current="outreach" />
       {sp.undo && (
         <form action={undoAction} className={ui.notice} style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
           <span>Approved. It will not send for at least 60 seconds.</span>

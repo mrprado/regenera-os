@@ -99,6 +99,8 @@ export const ROUTE_MODULES: [string, ModuleKey][] = [
   // Landing pages (phase 15 §5): each needs its group's main module; Operations mixes modules and filters inside.
   ["/overview/mandates", "deals"], ["/overview/projects", "projects"], ["/overview/systems", "projects"], ["/overview/capital", "capital"],
   ["/overview/deals", "deals"], ["/overview/relationships", "network"], ["/overview/intelligence", "intelligence"], ["/overview/clients", "clients"],
+  // Phase 24 daily-loop landing pages.
+  ["/overview/find", "intelligence"], ["/overview/qualify", "projects"], ["/overview/reach", "network"], ["/overview/win", "deals"], ["/overview/deliver", "documents"], ["/overview/steward", "reporting"],
 ];
 
 export function moduleForPath(path: string): ModuleKey | null {

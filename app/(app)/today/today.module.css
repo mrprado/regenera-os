@@ -154,3 +154,14 @@
 .pillar h3{margin:0 0 8px;font-size:16px;font-weight:600;color:var(--accent-ink)}
 .pillar p{margin:0;max-width:30ch;font-size:14px;line-height:1.55;color:var(--text-2)}
 @media(max-width:720px){.pillars{grid-template-columns:1fr}.lens{padding:16px}.pillar{padding:20px 18px}}
+
+/* Phase 24: decisions first, then the brief and the top of the queue; telemetry is one line. */
+.todayCols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 24px; margin: 0 0 18px; }
+.todayPanel { padding: 12px 0; border-top: 1px solid var(--line); }
+.briefList { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14px; line-height: 1.45; }
+ol.briefList { list-style: decimal; padding-left: 20px; }
+.briefList li { display: grid; gap: 2px; }
+.briefList b { font-size: 13px; color: var(--text-3); font-weight: 600; }
+.briefList span { color: var(--text-2); font-size: 13px; }
+.systemLine { margin: 10px 0 14px; font-size: 13px; color: var(--text-2); }
+.systemLine span { color: var(--text-3); }

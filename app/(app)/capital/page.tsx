@@ -1,10 +1,11 @@
 import Link from "next/link";
+import ApprovalsSwitch from "@/components/approvals-switch";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
-import { capitalOpportunities, capitalProfiles, contacts, debtSecurities, introductions, organizations, privateCapitalProfiles, projects } from "@/db/schema";
+import { capitalOpportunities, capitalProfiles, contacts, debtSecurities, introductions, organizations, policyDecisions, privateCapitalProfiles, projects } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { CAPITAL_TYPES, GATE_STATES, INTRO_STATUSES, INVESTOR_JOURNEY, RELATIONSHIP_STRENGTH } from "@/lib/capital/vocab";
 import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
@@ -17,7 +18,7 @@ import CriteriaFields from "./criteria-fields";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Capital partners" };
 
-const TABS = [["partners", "Capital partners"], ["private", "Private investors"], ["opportunities", "Capital opportunities"], ["introductions", "Introductions"], ["bonds", "Bonds and notes"]] as const;
+const TABS = [["partners", "Capital partners"], ["private", "Private investors"], ["opportunities", "Capital needs"], ["introductions", "Introductions"], ["bonds", "Bonds and notes"]] as const;
 
 export default async function CapitalPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/capital");
@@ -140,10 +141,16 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
         );
       })()}
 
+      {tab === "introductions" && <ApprovalsSwitch scope={user.scope} current="intros" />}
       {tab === "introductions" && await (async () => {
         const rows = await db.select().from(introductions).where(mandateCondition(user.scope, introductions.mandateId)).orderBy(desc(introductions.createdAt)).limit(200);
         const names = new Map(people.map(p => [p.id, p.name]));
         const orgNames = new Map(orgs.map(o => [o.id, o.name]));
+        // Phase 24: the integrity gate is visible before the button: blocked projects are listed but cannot be chosen.
+        const projs = await db.select({ id: projects.id, name: projects.name, state: policyDecisions.state }).from(projects)
+          .leftJoin(policyDecisions, and(eq(policyDecisions.projectId, projects.id), eq(policyDecisions.current, true)))
+          .where(and(mandateCondition(user.scope, projects.mandateId), isNull(projects.archivedAt))).orderBy(asc(projects.name)).limit(400);
+        const isBlocked = (s: string | null) => s === "excluded" || s === "human_review";
         return (
           <div className={r.grid}>
             <div className={ui.tableWrap}>
@@ -175,6 +182,8 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
                   <label>Introducer<select name="fromContactId" required defaultValue=""><option value="" disabled>Choose</option>{people.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                   <label>To (person)<select name="toContactId" defaultValue=""><option value="">None</option>{people.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                   <label>To (organization)<select name="toOrgId" defaultValue=""><option value="">None</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
+                  <label>For project (optional)<select name="projectId" defaultValue=""><option value="">None</option>{projs.map(p => <option key={p.id} value={p.id} disabled={isBlocked(p.state)}>{p.name}{isBlocked(p.state) ? ` (blocked: ${p.state!.replace(/_/g, " ")})` : p.state ? "" : " (not screened)"}</option>)}</select></label>
+                  {projs.some(p => isBlocked(p.state)) && <p className={ui.sub}>Projects excluded or in human review by integrity screening cannot be introduced until an owner overrides with a reason.</p>}
                   <label>Date<input name="date" type="date" /></label>
                   <label>Context<input name="context" /></label>
                   <label>Status<select name="status" defaultValue="requested">{Object.entries(INTRO_STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>

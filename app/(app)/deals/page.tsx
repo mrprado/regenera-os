@@ -42,16 +42,16 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Opportunities" count={open.length} actions={
+      <PageHeader title={sp.stage === "lead" ? "New leads" : "Sales pipeline"} count={open.length} actions={
         <>
-          <Link className="btn btn--primary" href="/deals?new=1">Add opportunity</Link>
+          <Link className="btn btn--primary" href="/deals?new=1">Add a deal</Link>
           {isOwner(user.scope) && <form action={importTrackerAction}><button className="btn" type="submit">Import regenera.bio tracker</button></form>}
         </>
       } />
       <Notice text={sp.notice} />
       {sp.new && (
         <section className={ui.notice} aria-labelledby="new-opp-h" style={{ background: "transparent" }}>
-          <h2 id="new-opp-h" style={{ margin: "0 0 4px", fontSize: 15 }}>New opportunity</h2>
+          <h2 id="new-opp-h" style={{ margin: "0 0 4px", fontSize: 15 }}>New deal</h2>
           <p className={ui.sub} style={{ marginTop: 0 }}>A potential paid engagement for Regenera. Record where it came from (original source) and the next action; qualification evidence is recorded on the opportunity as you learn it.</p>
           <form action={createOpportunityAction} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, fontSize: 13 }}>
             <label style={{ display: "grid", gap: 3 }}>Name<input name="name" required minLength={3} placeholder="EMC Renewables: origination pilot" /></label>

@@ -19,9 +19,19 @@ import { createContractAction } from "../../contract-actions";
 import { createProjectFromDealAction } from "../../project-actions";
 import { GenerateMenu } from "@/components/generate-menu";
 import { DealFlowPanels } from "./panels";
+import lc from "./lifecycle.module.css";
+
+// Phase 24: the sales lifecycle as one strip, with the button that does the next step.
+const LIFE = [
+  { key: "qualify", label: "1 · Qualify", stages: ["lead", "contacted", "engaged", "nurture"] },
+  { key: "propose", label: "2 · Propose", stages: ["call_booked"] },
+  { key: "agree", label: "3 · Agree terms", stages: ["proposal"] },
+  { key: "deliver", label: "4 · Engagement & invoice", stages: ["signed", "active", "expansion"] },
+  { key: "close", label: "5 · Complete", stages: ["completed", "churned", "lost"] },
+] as const;
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Opportunity" };
+export const metadata = { title: "Deal" };
 
 const FLOW = ["lead", "contacted", "engaged", "call_booked", "proposal", "signed", "active", "expansion", "completed"] as const;
 
@@ -53,8 +63,25 @@ export default async function DealPage({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <PageHeader title={d.name} actions={<><GenerateMenu entity="deal" id={d.id} /><Link className="btn" href="/deals">All opportunities</Link></>} />
+      <PageHeader title={d.name} actions={<><GenerateMenu entity="deal" id={d.id} /><Link className="btn" href="/deals">Sales pipeline</Link></>} />
       <Notice text={sp.notice} />
+      {(() => {
+        const at = LIFE.findIndex(x => (x.stages as readonly string[]).includes(d.stage));
+        const move = (stage: string, label: string, primary = false) => <form action={moveDeal} key={stage}><input type="hidden" name="id" value={d.id} /><input type="hidden" name="stage" value={stage} /><input type="hidden" name="back" value={back} /><button className={primary ? "btn btn--primary" : "btn"} type="submit">{label}</button></form>;
+        const step = LIFE[at]?.key;
+        return (
+          <>
+            <ol className={lc.strip} aria-label="Sales lifecycle">{LIFE.map((x, i) => <li key={x.key} className={i === at ? lc.now : i < at ? lc.done : undefined} aria-current={i === at ? "step" : undefined}>{x.label}</li>)}</ol>
+            <div className={lc.next}>
+              {step === "qualify" && <><p>Qualify the need: book a call, or close it if it is not a fit.</p>{move("call_booked", "Call booked", true)}{move("lost", "Not a fit")}</>}
+              {step === "propose" && <><p>{project ? "Draft the diagnostic proposal on the project's Capital tab (integrity-checked; nothing is sent), then mark the deal at Proposal." : "Link or create the project this concerns, so it is screened before you propose."}</p>{project ? <Link className="btn btn--primary" href={`/projects/${project.id}?tab=capital#readiness-rubric`}>Draft proposal</Link> : <a className="btn btn--primary" href="#project">Link a project</a>}{move("proposal", "Proposal sent")}</>}
+              {step === "agree" && <><p>Agree terms and record the engagement agreement; mark Signed once countersigned.</p>{agreements[0] ? <Link className="btn btn--primary" href={`/contracts/${agreements[0].id}`}>Open agreement</Link> : <a className="btn btn--primary" href="#agreements">Create agreement</a>}{move("signed", "Signed")}{move("lost", "Lost")}</>}
+              {step === "deliver" && <><p>Run the engagement and invoice on its milestones.</p><Link className="btn btn--primary" href="/commercial?tab=engagements">Engagements</Link><Link className="btn" href="/commercial?tab=billing">Billing</Link></>}
+              {step === "close" && <p>This deal is closed ({DEAL_STAGES[d.stage]}).</p>}
+            </div>
+          </>
+        );
+      })()}
       {sp.gate && gates.find(g => g.stage === sp.gate && !g.gate.passed) && (
         <p className={ui.notice} role="alert">Not moved to {DEAL_STAGES[sp.gate as keyof typeof DEAL_STAGES]}: the stage conditions below are not met yet.{owner ? " An owner can override with a reason; the override is audited." : ""}</p>
       )}
@@ -112,7 +139,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
         </div>
 
         <aside>
-          <section className={r.panel}>
+          <section className={r.panel} id="project">
             <p className={r.panelTitle}>Participants</p>
             <dl className={r.kv}>
               <dt>Organization</dt><dd>{org ? <Link href={`/companies/${org.id}`}>{org.name}</Link> : "Not linked"}</dd>
@@ -131,7 +158,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
             </section>
           )}
 
-          <section className={r.panel}>
+          <section className={r.panel} id="agreements">
             <p className={r.panelTitle}>Agreements</p>
             {agreements.length === 0 ? <><p className={r.empty}>No engagement agreement yet.</p><form action={createContractAction}><input type="hidden" name="kind" value="engagement_letter" /><input type="hidden" name="source" value={`deal:${d.id}`} /><button className={ui.miniBtn} type="submit">Draft engagement letter</button></form><p className={ui.sub}>Drafts come from the counsel template with [TO CONFIRM] placeholders; nothing is sent.</p></> : <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>{agreements.map(c => <li key={c.id}><Link href={`/contracts/${c.id}`}>{c.title}</Link> · {c.lifecycle.replace(/_/g, " ")}</li>)}</ul>}
           </section>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
@@ -14,12 +14,14 @@ import { ORIGINATION_STAGES } from "@/lib/origination/engine";
 import { READING_LABEL, TEMPLATES, WORK_PACKAGE } from "@/lib/origination/readiness";
 import { CAPITAL_STAGES, ELIGIBILITY } from "@/lib/origination/eligibility";
 import { READINESS_DIMENSIONS } from "@/lib/projects/vocab";
-import { decideHypothesisAction, refreshOriginationAction, setOriginationStageAction } from "../origination-engine-actions";
+import { decideHypothesisAction, proposeDiagnosticAction, refreshOriginationAction, setOriginationStageAction } from "../origination-engine-actions";
+import { serviceName } from "@/lib/origination/labels";
+import { isOwner } from "@/lib/db/scoped";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Origination" };
+export const metadata = { title: "Opportunity queue" };
 
-const ENTRANCES = { all: "All", capital_first: "Capital first", project_first: "Project first", market_first: "Market first" } as const;
+const ENTRANCES = { all: "All", capital_first: "From a funding call", project_first: "From a project", market_first: "From a market thesis" } as const;
 const STRATEGY = { existing_project: "Existing project", site_asset: "Site & asset", needs_based: "Market need", funding_match: "Funding match", client_need: "Client need" } as const;
 const money = (n: number | null) => (n == null ? "—" : `$${Math.round(n).toLocaleString("en-US")}`);
 
@@ -30,9 +32,9 @@ export default async function OriginationPage({ searchParams }: { searchParams: 
   const entrance = (sp.entrance && sp.entrance in ENTRANCES ? sp.entrance : "all") as keyof typeof ENTRANCES;
   return (
     <>
-      <PageHeader title="Origination" />
+      <PageHeader title={tab === "screening" ? "Integrity screening" : tab === "stewardship" ? "Stewardship & impact" : "Opportunity queue"} />
       <Notice text={sp.notice} />
-      <p className={ui.notice}>One engine, three entrances: capital first (funding to eligible projects), project first (projects, sites and client needs to capital and partners) and market first (signals to hypotheses). Value figures are prioritization aids from service bands and evidence, never revenue. Nothing here contacts anyone.</p>
+      <p className={ui.notice}>Everything the OS found that could become work for Regenera, ranked: projects that fit an open funding call, projects that need help, market theses and client needs. Expected fees are prioritisation aids from service price bands, never revenue. Nothing here contacts anyone.</p>
       <nav className={ui.tabs} aria-label="Origination views">
         {[["queue", "Queue"], ["hypotheses", "Hypotheses"], ["rubric", "Readiness rubric"], ["engines", "Revenue engines"], ["screening", "Integrity screening"], ["stewardship", "Stewardship"]].map(([k, v]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/origination?tab=${k}`}>{v}</Link>)}
       </nav>
@@ -47,35 +49,62 @@ export default async function OriginationPage({ searchParams }: { searchParams: 
 }
 
 async function Queue({ scope, entrance }: { scope: Scope; entrance: keyof typeof ENTRANCES }) {
-  const rows = await appDb().select().from(originationItems).where(and(mandateCondition(scope, originationItems.mandateId), entrance === "all" ? undefined : eq(originationItems.entrance, entrance)))
+  const db = appDb();
+  const rows = await db.select().from(originationItems).where(and(mandateCondition(scope, originationItems.mandateId), entrance === "all" ? undefined : eq(originationItems.entrance, entrance)))
     .orderBy(desc(originationItems.priority), asc(originationItems.createdAt)).limit(150);
+  const pids = [...new Set(rows.map(x => x.projectId).filter((x): x is string => !!x))];
+  const decisions = new Map(pids.length ? (await db.select({ pid: policyDecisions.projectId, state: policyDecisions.state }).from(policyDecisions).where(and(inArray(policyDecisions.projectId, pids.slice(0, 90)), eq(policyDecisions.current, true)))).map(d => [d.pid, d.state]) : []);
+  const owner = isOwner(scope as Parameters<typeof isOwner>[0]);
+  const back = `/origination${entrance === "all" ? "" : `?entrance=${entrance}`}`;
+  // Phase 24: each row carries the one link that does its next action, plus Qualify / Dismiss / Draft proposal.
+  const nextHref = (x: typeof rows[number]) => {
+    if (!x.projectId) return x.orgId ? `/companies/${x.orgId}` : x.hypothesisId ? "/origination?tab=hypotheses" : null;
+    if (x.matchId) return `/projects/${x.projectId}?tab=capital#funding-matches`;
+    if (/sponsor|contact/i.test(x.nextAction ?? "")) return `/projects/${x.projectId}?tab=stakeholders`;
+    if (/Integrity/.test(x.nextAction ?? "")) return `/projects/${x.projectId}?tab=capital#integrity`;
+    return `/projects/${x.projectId}?tab=capital`;
+  };
+  const stageForm = (id: string, stage: string, label: string, primary = false) => (
+    <form action={setOriginationStageAction}><input type="hidden" name="id" value={id} /><input type="hidden" name="back" value={back} /><input type="hidden" name="stage" value={stage} /><button className={primary ? "btn btn--primary" : ui.miniBtn} type="submit">{label}</button></form>
+  );
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0 12px", flexWrap: "wrap" }}>
         {Object.entries(ENTRANCES).map(([k, v]) => <Link key={k} className={ui.chip} style={k === entrance ? { fontWeight: 700 } : undefined} href={`/origination?entrance=${k}`}>{v}</Link>)}
-        <form action={refreshOriginationAction}><input type="hidden" name="back" value="/origination" /><button className={ui.miniBtn} type="submit">Refresh queue</button></form>
+        <form action={refreshOriginationAction}><input type="hidden" name="back" value={back} /><button className={ui.miniBtn} type="submit">Refresh queue</button></form>
       </div>
+      <p className={ui.sub}>How to use: open the top items, then <b>Qualify</b> (worth pursuing: it moves to Reach) or <b>Dismiss</b>. Projects blocked by integrity screening show why and offer no service.</p>
       {rows.length === 0 ? <p className={r.empty}>Nothing queued yet. The queue rebuilds every 3 hours from funding matches, projects, site screens, hypotheses and open deals; or refresh now.</p> : (
         <div className={ui.tableWrap}><table className={ui.table}>
-          <thead><tr><th>Opportunity</th><th>Entrance</th><th>Recommended service</th><th className={ui.num}>Expected value</th><th>Next action</th><th>Stage</th></tr></thead>
-          <tbody>{rows.map(x => (
-            <tr key={x.id}>
-              <td className={ui.wrap}>{x.projectId ? <Link href={`/projects/${x.projectId}?tab=capital`}>{x.title}</Link> : x.orgId ? <Link href={`/companies/${x.orgId}`}>{x.title}</Link> : x.title}
-                <span className={ui.sub}>{STRATEGY[x.strategy as keyof typeof STRATEGY]}</span></td>
-              <td>{ENTRANCES[x.entrance as keyof typeof ENTRANCES]}</td>
-              <td className={ui.wrap}>{x.recommendedService ?? "—"}<span className={ui.sub}>{x.serviceReason}</span></td>
-              <td className={ui.num} title={x.valueBasis ?? ""}>{money(x.expectedValueUsd)}</td>
-              <td className={ui.wrap}>{x.nextAction}{x.proposalId && <span className={ui.sub}><a href={`/api/documents/generated/${x.proposalId}`}>Proposal draft</a></span>}</td>
-              <td><form action={setOriginationStageAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="back" value="/origination" />
-                <select name="stage" defaultValue={x.stage} aria-label="Stage">{Object.entries(ORIGINATION_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><button className={ui.miniBtn} type="submit">Set</button></form></td>
-            </tr>
-          ))}</tbody>
+          <thead><tr><th>Opportunity</th><th>What to offer</th><th className={ui.num}>Expected fee</th><th>Next action</th><th>Decide</th></tr></thead>
+          <tbody>{rows.map(x => {
+            const state = x.projectId ? decisions.get(x.projectId) : undefined;
+            const href = nextHref(x);
+            const blocked = state === "excluded" || state === "human_review";
+            return (
+              <tr key={x.id}>
+                <td className={ui.wrap}>{x.projectId ? <Link href={`/projects/${x.projectId}?tab=capital`}>{x.title}</Link> : x.orgId ? <Link href={`/companies/${x.orgId}`}>{x.title}</Link> : x.title}
+                  <span className={ui.sub}>{ENTRANCES[x.entrance as keyof typeof ENTRANCES]} · {STRATEGY[x.strategy as keyof typeof STRATEGY]} · {ORIGINATION_STAGES[x.stage as keyof typeof ORIGINATION_STAGES] ?? x.stage}{x.projectId ? ` · integrity: ${state ? state.replace(/_/g, " ") : "not screened"}` : ""}</span></td>
+                <td className={ui.wrap}>{x.recommendedService ? serviceName(x.recommendedService) : "—"}<span className={ui.sub}>{x.serviceReason}</span></td>
+                <td className={ui.num} title={x.valueBasis ?? ""}>{money(x.expectedValueUsd)}</td>
+                <td className={ui.wrap}>{href ? <Link href={href}>{x.nextAction ?? "Open"}</Link> : x.nextAction}{x.proposalId && <span className={ui.sub}><a href={`/api/documents/generated/${x.proposalId}`}>Proposal draft</a></span>}</td>
+                <td><div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                  {x.stage === "discovered" || x.stage === "verified" ? stageForm(x.id, "qualified", "Qualify", true) : null}
+                  {!["lost", "won", "deferred"].includes(x.stage) && stageForm(x.id, "lost", "Dismiss")}
+                  {owner && x.projectId && !blocked && !x.proposalId && <form action={proposeDiagnosticAction}><input type="hidden" name="projectId" value={x.projectId} /><input type="hidden" name="back" value={back} /><button className={ui.miniBtn} type="submit">Draft proposal</button></form>}
+                  <details><summary className={ui.sub}>Stage</summary>
+                    <form action={setOriginationStageAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="back" value={back} />
+                      <select name="stage" defaultValue={x.stage} aria-label="Stage">{Object.entries(ORIGINATION_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><button className={ui.miniBtn} type="submit">Set</button></form>
+                  </details>
+                </div></td>
+              </tr>
+            );
+          })}</tbody>
         </table></div>
       )}
     </>
   );
 }
-
 async function Hypotheses({ scope }: { scope: Scope }) {
   const rows = await appDb().select().from(originationHypotheses).where(mandateCondition(scope, originationHypotheses.mandateId)).orderBy(desc(originationHypotheses.createdAt)).limit(60);
   return rows.length === 0 ? <p className={r.empty}>No hypotheses yet. One forms when three or more relevant signals cluster in a country and sector within 60 days.</p> : (

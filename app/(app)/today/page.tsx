@@ -30,6 +30,10 @@ import { BUILT_IN_PRESETS } from "@/lib/scan/presets";
 import { DEAL_STAGES } from "@/lib/vocab";
 import { opsSummary } from "@/lib/command/ops";
 import { dailyBrief } from "@/lib/command/brief";
+import { notInArray } from "drizzle-orm";
+import { originationItems } from "@/db/schema";
+import { serviceName } from "@/lib/origination/labels";
+import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Command" };
@@ -57,31 +61,45 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const scanPreset = BUILT_IN_PRESETS[0];
   const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
   const deskContext = loadDeskContext(user, now);
-  const [ops, brief] = await Promise.all([opsSummary(db, now), dailyBrief(db, user.scope.mandateIds, now)]);
+  const [ops, brief, queue] = await Promise.all([
+    opsSummary(db, now), dailyBrief(db, user.scope.mandateIds, now),
+    db.select().from(originationItems).where(and(mandateCondition(user.scope, originationItems.mandateId), notInArray(originationItems.stage, ["won", "lost", "deferred"]), sql`${originationItems.priority} >= 0`)).orderBy(desc(originationItems.priority)).limit(5),
+  ]);
+  const health = ops.aiPaused || ops.degraded.length || ops.dead;
+  // Phase 24: after decisions, the brief and the top of the queue, each with its one action.
+  const today = (
+    <div className={t.todayCols}>
+      <section className={t.todayPanel} aria-labelledby="brief-h">
+        <p className={r.panelTitle}><span id="brief-h">Daily brief</span><span className={ui.sub} style={{ display: "inline" }}>built from records</span></p>
+        <ul className={t.briefList}>{brief.map(b => <li key={b.heading}><b>{b.heading}</b>{b.href ? <Link href={b.href}>{b.text}</Link> : <span>{b.text}</span>}</li>)}</ul>
+      </section>
+      <section className={t.todayPanel} aria-labelledby="queue-h">
+        <p className={r.panelTitle}><span id="queue-h">Top of the opportunity queue</span><Link href="/origination">All {ops.queued}</Link></p>
+        {queue.length === 0 ? <p className={r.empty}>The queue is empty; it rebuilds every 3 hours.</p> : (
+          <ol className={t.briefList}>{queue.map(q => <li key={q.id}><Link href={q.projectId ? `/projects/${q.projectId}?tab=capital` : q.orgId ? `/companies/${q.orgId}` : "/origination"}>{q.title}</Link><span>{q.nextAction ?? "Review"}{q.recommendedService ? ` · offer: ${serviceName(q.recommendedService)}` : ""}</span></li>)}</ol>
+        )}
+      </section>
+    </div>
+  );
   return (
     <>
-      <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`}>Scan</Link><Link className="btn" href="/queue">Review outreach</Link><Link className="btn" href="/deals?new=1">Add opportunity</Link></nav></header>
-      <section className={t.lens} aria-labelledby="lens-h">
-        <div className={t.lensLintel}><h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2><p className={t.lensSub}>Three pillars every project, partner and decision is weighed against.</p></div>
-        <ul className={t.pillars}>{LENS.map(x => <li key={x.title} className={t.pillar}>
-          <h3>{x.title}</h3><p>{x.body}</p>
-        </li>)}</ul>
-      </section>
-      {brief.length > 0 && <section aria-label="Daily brief" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--line)", borderRadius: 6 }}>
-        <p style={{ margin: 0, fontSize: 13 }}><b>Daily brief</b> <span style={{ color: "var(--text-muted)" }}>· built from records; each line links to its source</span></p>
-        <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 13 }}>{brief.map(b => <li key={b.heading}><b>{b.heading}:</b> {b.href ? <Link href={b.href}>{b.text}</Link> : b.text}</li>)}</ul>
-      </section>}
-      <section aria-label="What the OS did in the last 24 hours" style={{ margin: "12px 0", padding: "10px 14px", border: "1px solid var(--border, #D8D5CE)", borderRadius: 6 }}>
-        <p style={{ margin: 0, fontSize: 13 }}><b>Last 24 h, done by the OS:</b> {ops.funding} funding opportunities found · {ops.matches} funding matches to projects · {ops.assessments} site assessments saved · {ops.triggers} triggers created · {ops.orgs} organizations added · {ops.placed} projects placed · {ops.sourceOk}/{ops.sourceCalls} source calls succeeded · AI this month ${ops.aiUsd.toFixed(2)}</p>
-        <p style={{ margin: "6px 0 0", fontSize: 13 }}><b>Origination:</b> <Link href="/origination">{ops.queued} opportunities to review</Link> · <Link href="/origination?tab=hypotheses">{ops.hypotheses} hypotheses to validate</Link> · {ops.proposals} diagnostic proposals awaiting approval</p>
-        {(ops.aiPaused || ops.degraded.length > 0 || ops.dead > 0) && <p style={{ margin: "6px 0 0", fontSize: 13 }}>
-          {ops.aiPaused && <><b>AI paused</b> (Anthropic credit) until {ops.aiPaused.slice(11, 16)} UTC: rules reads continue. </>}
-          {ops.degraded.length > 0 && <><b>Degraded sources:</b> {ops.degraded.join(", ")}. </>}
-          {ops.dead > 0 && <><Link href="/settings/jobs">{ops.dead} failed jobs</Link> need a look.</>}
-        </p>}
-      </section>
+      <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
+      <Notice text={sp.notice} />
+      <IntegratedCommand scope={user.scope} selectedProjectId={sp.project}/>
+      <Suspense fallback={<Loading />}>
+        <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} afterDecisions={today} />
+      </Suspense>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
+      <p className={t.systemLine} aria-label="System status">
+        <b>System:</b> {health ? <>{ops.aiPaused ? `AI paused until ${ops.aiPaused.slice(11, 16)} UTC (rules reads continue) · ` : ""}{ops.degraded.length ? `${ops.degraded.length} source${ops.degraded.length === 1 ? "" : "s"} degraded · ` : ""}{ops.dead ? `${ops.dead} failed jobs · ` : ""}<Link href="/settings/jobs">details</Link></> : "healthy"}
+        <span> · last 24 h: {ops.funding} funding calls, {ops.matches} matches, {ops.assessments} site assessments, {ops.orgs} organizations</span>
+      </p>
       <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>
+        <section className={t.lens} aria-labelledby="lens-h">
+          <div className={t.lensLintel}><h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2><p className={t.lensSub}>Three pillars every project, partner and decision is weighed against.</p></div>
+          <ul className={t.pillars}>{LENS.map(x => <li key={x.title} className={t.pillar}><h3>{x.title}</h3><p>{x.body}</p></li>)}</ul>
+        </section>
+
         <p className={t.brandLine}>REGENERA OS · ADVANCING A REGENERATIVE ECONOMY</p>
         <h2 className={t.heroTitle}>Your workspace for projects, capital, and execution.</h2>
         <span className={t.heroRule} aria-hidden="true" />
@@ -92,7 +110,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
           <nav className={t.actions} aria-label="Command actions">
             <Link className="btn btn--primary" href={`/scans?preset=${scanPreset.key}`} title={`Opens the scan launcher with "${scanPreset.name}" selected; you confirm scope before anything runs.`}>Scan</Link>
             <Link className="btn" href="/queue">Review outreach</Link>
-            <Link className="btn" href="/deals?new=1">Add opportunity</Link>
+            <Link className="btn" href="/deals?new=1">Add a deal</Link>
           </nav>
         </div>
         <div className={t.statement}>
@@ -100,20 +118,20 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
           <p className={t.statementText}>Align projects, capital, and daily action with healthier ecosystems, stronger communities, and resilient livelihoods.</p>
         </div>
 </div></details>
-      <Notice text={sp.notice} />
-      <IntegratedCommand scope={user.scope} selectedProjectId={sp.project}/>
-      <Suspense fallback={<Loading />}>
-        <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} />
-      </Suspense>
+
     </>
   );
 }
 
+// The daily loop (phase 24): each shortcut opens the step's landing page with what to do next.
 const SHORTCUTS = [
-  { label: "Explore opportunities", body: "Scans, objectives and sourced signals to review.", href: "/scans" },
-  { label: "Review projects", body: "Readiness, blockers, evidence and next actions by stage.", href: "/projects" },
-  { label: "Structure engagements", body: "Services, prices, pilots and agreed terms.", href: "/commercial" },
-  { label: "Coordinate delivery", body: "Owners, tasks, milestones and client inputs.", href: "/tasks" },
+  { label: "1 · Find", body: "New projects, funding calls and needs, ranked.", href: "/overview/find" },
+  { label: "2 · Qualify", body: "Integrity, readiness and scope before contact.", href: "/overview/qualify" },
+  { label: "3 · Reach", body: "Decision makers, outreach drafts, replies.", href: "/overview/reach" },
+  { label: "4 · Win", body: "Proposals, terms and contracts.", href: "/overview/win" },
+  { label: "5 · Deliver", body: "Tasks, applications and documents.", href: "/overview/deliver" },
+  { label: "6 · Capital", body: "Capital needs, partners and introductions.", href: "/overview/capital" },
+  { label: "7 · Steward", body: "Obligations and impact records.", href: "/overview/steward" },
 ];
 // Decision dimensions, not measured results: no scores or totals are shown or implied.
 const LENS = [
@@ -170,7 +188,7 @@ async function CommandActivityMap({context, mapMode}: {context: ReturnType<typeo
       )}</>;
 }
 
-async function Desk({user, now, fullOpen, context}: {user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; fullOpen: boolean; context: ReturnType<typeof loadDeskContext>}) {
+async function Desk({user, now, fullOpen, context, afterDecisions}: {user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; fullOpen: boolean; context: ReturnType<typeof loadDeskContext>; afterDecisions?: ReactNode}) {
   const {del, obl, changes, ready, mc, mail, pending, desk, s, notReady, deliveryItems, maxStage, totalPriorities, decisions, today, ev} = await context;
 
   return (
@@ -192,6 +210,7 @@ async function Desk({user, now, fullOpen, context}: {user: Awaited<ReturnType<ty
         )}
       </section>
 
+      {afterDecisions}
       <nav className={t.shortcuts} aria-label="Move work forward">
         {SHORTCUTS.map(x => <Link key={x.href} href={x.href} className={t.shortcut}><b>{x.label}</b><span>{x.body}</span></Link>)}
       </nav>

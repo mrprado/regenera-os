@@ -36,12 +36,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title={sp.origin === "market" ? "Market pipeline" : "Projects"} count={rows.length} />
+      <PageHeader title={sp.origin === "market" ? "Market pipeline" : sp.origin === "sites" ? "Atlas site screens" : "Projects"} count={rows.length} />
       <Notice text={sp.notice} />
       <nav className={ui.tabs} aria-label="Project views">
         <Link className={`${ui.tab} ${view === "table" ? ui.tabActive : ""}`} href={withParams("/projects", sp, { view: undefined, notice: undefined })}>Table</Link>
         <Link className={`${ui.tab} ${view === "board" ? ui.tabActive : ""}`} href={withParams("/projects", sp, { view: "board", notice: undefined })}>Pipeline</Link>
         <Link className={`${ui.tab} ${sp.origin === "market" ? ui.tabActive : ""}`} href={withParams("/projects", sp, { origin: sp.origin === "market" ? undefined : "market", notice: undefined })} title="Public projects found automatically (World Bank). Not Regenera mandates.">{sp.origin === "market" ? "Back to Regenera projects" : "Market pipeline"}</Link>
+        <Link className={`${ui.tab} ${sp.origin === "sites" ? ui.tabActive : ""}`} href={withParams("/projects", sp, { origin: sp.origin === "sites" ? undefined : "sites", notice: undefined })} title="Places screened from Atlas. Promote one to a project by giving it a sponsor and stage.">{sp.origin === "sites" ? "Back to Regenera projects" : "Atlas site screens"}</Link>
       </nav>
       <div className={ui.workspace}>
         <div>

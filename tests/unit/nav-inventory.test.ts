@@ -3,7 +3,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
-import { flatNav, NAV, navFor, SETTINGS_NAV } from "@/lib/nav";
+import { activeNavGroup, flatNav, NAV, navFor, SETTINGS_NAV, UNPLACED } from "@/lib/nav";
 
 const APP = join(__dirname, "..", "..", "app", "(app)");
 const walk = (d: string): string[] => readdirSync(d).flatMap(n => { const f = join(d, n); return statSync(f).isDirectory() ? walk(f) : [f]; });
@@ -40,14 +40,22 @@ describe("navigation inventory", () => {
   });
 
   it("the authorized redesign preserves work areas and task-focused primary ordering", () => {
-    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Mandates", "Deals", "Network", "Capital", "Projects", "Delivery", "Intelligence"]);
-    expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual(["", "Pipeline", "Workspace"]);
+    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Find", "Qualify", "Reach", "Win", "Deliver", "Capital", "Steward", "Intelligence", "Systems", "Clients"]);
+    expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual(["", "Daily loop", "Workspaces"]);
+    // Phase 24: every legacy destination is placed in a group; administration lives in Settings.
+    expect(UNPLACED).toEqual([]);
+    for (const h of ["/settings/jobs", "/settings/claude", "/connect/mcp"]) expect(SETTINGS_NAV.some(i => i.href === h)).toBe(true);
+    const staff = navFor({ modules: "all", internal: true, owner: true });
+    const owner = (href: string) => { const [p, q] = href.split("?"); return activeNavGroup(staff, p, new URLSearchParams(q))?.key; };
+    expect([owner("/origination"), owner("/origination?tab=screening"), owner("/origination?tab=stewardship"), owner("/funding?tab=bids"), owner("/funding?tab=funders"), owner("/deals/x"), owner("/approvals"), owner("/start")])
+      .toEqual(["find", "qualify", "steward", "deliver", "capital", "win", "command", "command"]);
   });
 
   it("clients see only entitled modules and never Regenera-internal groups", () => {
     const client = navFor({ modules: ["command", "atlas", "projects", "documents", "reporting", "automations"], internal: false });
-    expect(client.map(g => g.key)).toEqual(["command", "atlas", "projects", "operations", "intelligence"]);
-    expect(client.find(g => g.key === "intelligence")!.sections[0].items.map(i => i.href)).toEqual(["/reports", "/reports?tab=cases"]);
+    expect(client.map(g => g.key)).toEqual(["command", "atlas", "qualify", "deliver", "capital", "steward", "systems"]);
+    expect(client.find(g => g.key === "steward")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/projects?stage=operations", "/reports", "/reports?tab=cases"]);
+    expect(client.flatMap(g => g.sections.flatMap(s => s.items.map(i => i.href)))).not.toContain("/origination");
     const hrefs = flatNav({ modules: ["command"], internal: false }).map(f => f.href);
     expect(hrefs).not.toContain("/commercial");
     expect(hrefs).not.toContain("/settings/jobs");

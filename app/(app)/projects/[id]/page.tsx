@@ -51,9 +51,11 @@ import { DiligenceTab, EquipmentTab, LandTab, MatchesTab, QuestionsTab, Stakehol
 import PartnerScanPanel from "../partner-scan";
 import FundingMatches from "../funding-matches";
 import ReadinessPanel from "../readiness-panel";
+import { currentDecision } from "@/lib/integrity/engine";
+import { DECISION_STATE_LABEL } from "@/lib/integrity/policy";
 import IntegrityPanel from "../integrity-panel";
 import { archiveProjectAction } from "../../casework-actions";
-import { isOwner } from "@/lib/db/scoped";
+import { appDb, isOwner } from "@/lib/db/scoped";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +80,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const { id } = await params;
   const sp = await searchParams;
   const data = await getProject(user.scope, id);
+  const integrity = data ? await currentDecision(appDb(), id) : null;
   if (!data) notFound();
   const { p } = data;
   const tab: TabKey = TABS.some(([k]) => k === sp.tab) ? (sp.tab as TabKey) : "overview";
@@ -105,6 +108,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <div><dt>Capital requirement</dt><dd>{data.capital.byCurrency.length ? data.capital.byCurrency.map(c => compactMoney(c.target, c.currency)).join(" + ") : <span className={ph.unknown}>Not recorded</span>}</dd></div>
           <div><dt>Still to raise</dt><dd>{data.capital.byCurrency.length ? data.capital.byCurrency.map(c => compactMoney(Math.max(0, c.target - c.secured), c.currency)).join(" + ") : "—"}</dd></div>
           <div><dt>Readiness recorded</dt><dd>{knownDims} / 14{blockedDims.length ? <span className={ph.bad}> · {blockedDims.length} blocked</span> : null}</dd></div>
+          <div><dt>Integrity</dt><dd className={integrity && (integrity.state === "excluded" || integrity.state === "human_review") ? ph.badValue : undefined}><Link href={`/projects/${id}?tab=capital#integrity`}>{integrity ? DECISION_STATE_LABEL[integrity.state] : "Not screened"}</Link></dd></div>
           <div><dt>Open constraints</dt><dd className={openCons.some(c => c.severity === "critical" || c.severity === "high") ? ph.badValue : undefined}>{openCons.length}</dd></div>
         </dl>
         <p className={ph.meta}>{PROJECT_STATUSES[p.status]}{sponsor ? ` · Sponsor: ${sponsor.orgName ?? sponsor.contactName ?? "recorded"}` : " · Sponsor: unknown"}{p.regeneraRole ? ` · Regenera: ${REGENERA_ROLES[p.regeneraRole]}` : ""}</p>

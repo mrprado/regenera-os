@@ -7,6 +7,7 @@ import { requireOsUser } from "@/lib/auth";
 import { COMMAND_TZ } from "@/lib/command/desk";
 import { openTasks } from "@/lib/outreach/queries";
 import { completeTaskAction } from "../outreach-actions";
+import ApprovalsSwitch from "@/components/approvals-switch";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tasks" };
@@ -19,15 +20,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const user = await requireOsUser("/tasks");
   const sp = await searchParams;
   const view = sp.view === "done" ? "done" : "open";
-  const rows = await openTasks(user.scope, view);
+  const approvalsView = sp.view === "approvals";
+  const rows = (await openTasks(user.scope, view)).filter(r => !approvalsView || r.t.title.startsWith("Approve "));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: COMMAND_TZ }).format(new Date());
   const back = `/tasks${view === "done" ? "?view=done" : ""}`;
   return (
     <>
-      <PageHeader title="Tasks" count={view === "open" ? rows.length : undefined} />
+      <PageHeader title={approvalsView ? "Approvals: proposals" : "Tasks"} count={view === "open" ? rows.length : undefined} />
+      {approvalsView && <ApprovalsSwitch scope={user.scope} current="proposals" />}
       <Notice text={sp.notice} />
       <nav className={ui.tabs} aria-label="Task views">
-        <Link className={`${ui.tab} ${view === "open" ? ui.tabActive : ""}`} href="/tasks">Open</Link>
+        <Link className={`${ui.tab} ${view === "open" && !approvalsView ? ui.tabActive : ""}`} href="/tasks">Open</Link>
+        <Link className={`${ui.tab} ${approvalsView ? ui.tabActive : ""}`} href="/tasks?view=approvals">Approvals</Link>
         <Link className={`${ui.tab} ${view === "done" ? ui.tabActive : ""}`} href="/tasks?view=done">Done and skipped</Link>
       </nav>
       {rows.length === 0 ? (
