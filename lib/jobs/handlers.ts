@@ -39,6 +39,7 @@ import { getState, setState } from "@/lib/state";
 import { classifyNewSignals, expireStaleSignals, readSignal, scanDueQueries } from "@/lib/triggers/engine";
 import { enqueue, type Job } from "./queue";
 import { LIST_KEYS, refreshList, type ListKey } from "@/lib/sanctions/engine";
+import { checkCompaniesHouse, dueRegistryChecks } from "@/lib/registry/companies-house";
 import { runScanJob } from "@/lib/scan/engine";
 import { expireQualifications, runMatches } from "@/lib/capital/engine";
 import { expirePermissions } from "@/lib/community/engine";
@@ -343,6 +344,15 @@ export const handlers: Record<string, JobHandler> = {
     const list = LIST_KEYS.includes(job.payload.list as ListKey) ? (job.payload.list as ListKey) : "ofac";
     await refreshList(db, list, now);
   },
+  // Phase 20: weekly Companies House re-check for sponsors with a company number; changes raise a notification.
+  "registry.check": async ({ db, now }) => {
+    const key = (env as unknown as Record<string, string | undefined>).COMPANIES_HOUSE_API_KEY;
+    if (!key) return;
+    for (const a of await dueRegistryChecks(db, now)) {
+      const [o] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, a.orgId));
+      if (o) await checkCompaniesHouse(db, key, { mandateId: a.mandateId, orgId: a.orgId, orgName: o.name, companyNumber: a.value.replace(/\s+/g, "").toUpperCase() }).catch(() => undefined);
+    }
+  },
   "digest.daily": async ({ db, now }) => {
     const cfg = outreachConfig();
     const digest = await buildDigest(db, now);
@@ -381,4 +391,5 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",
   "sanctions.refresh": "weekly:sun:03:20",
+  "registry.check": "weekly:mon:04:40",
 };

@@ -62,11 +62,14 @@ export async function mapFeatures(scope: Scope, now = new Date(), db: Db = appDb
   }));
 
   // Projects: their own coordinates (the physical site), not the sponsor's office.
-  const projectRows = await db.select({ id: projects.id, name: projects.name, stage: projects.stage, assetClass: projects.assetClass, country: projects.country, capacity: projects.capacity, capacityUnit: projects.capacityUnit, lat: projects.lat, lng: projects.lng, technology: projects.technology, regeneraRole: projects.regeneraRole,
+  const projectRows = await db.select({ id: projects.id, name: projects.name, stage: projects.stage, assetClass: projects.assetClass, country: projects.country, capacity: projects.capacity, capacityUnit: projects.capacityUnit, lat: projects.lat, lng: projects.lng, technology: projects.technology, regeneraRole: projects.regeneraRole, locationPrecision: projects.locationPrecision, locationSource: projects.locationSource,
     description: projects.description, sector: projects.sector, municipality: projects.municipality, subdivision: projects.subdivision, systems: projects.systems, updatedAt: projects.updatedAt })
     .from(projects).where(and(mandateCondition(scope, projects.mandateId), isNull(projects.archivedAt)));
   const projectPoints = projectRows.filter(p => validCoordinates(p.lng, p.lat)).map(p => point(p.lng!, p.lat!, { id: p.id, name: p.name, stage: p.stage, assetClass: p.assetClass, technology: p.technology, regeneraRole: p.regeneraRole, region: p.subdivision, country: p.country, capacity: p.capacity, capacityUnit: p.capacityUnit,
-    description: p.description, sector: p.sector, location: [p.municipality, p.subdivision].filter(Boolean).join(", "), topics: p.systems.join("|"), updatedAt: p.updatedAt, locationBasis: "Recorded project coordinates; see Place for evidence" }));
+    description: p.description, sector: p.sector, location: [p.municipality, p.subdivision].filter(Boolean).join(", "), topics: p.systems.join("|"), updatedAt: p.updatedAt,
+    // Approximate placements (town, region, country) are drawn faded and say so in the inspector.
+    approx: ["town", "region", "country"].includes(p.locationPrecision ?? "") ? 1 : 0,
+    locationBasis: p.locationSource ? `${p.locationSource}` : "Recorded project coordinates (precision not recorded); see Place for evidence" }));
 
   return {
     generatedAt: now.toISOString(),

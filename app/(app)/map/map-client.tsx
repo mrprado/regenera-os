@@ -32,6 +32,7 @@ import { Detection, Hud, MODES, SensorFilters, type Mode, type Target } from "./
 import { IntelPanel, MISSIONS, type FeedStatus } from "./intel-panel";
 import { Detail, type Selected } from "./detail";
 import { buildSats, groundTrack, position, satFeatures, type Sat } from "./satellites";
+import { reportClientError } from "@/components/error-reporter";
 
 // Street-level view is loaded only when opened.
 const StreetView = lazy(() => import("./street-view"));
@@ -69,7 +70,7 @@ function addDataLayers(map: maplibregl.Map) {
   map.addLayer({ id: "organizations", type: "circle", source: "organizations", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 3.5, 10, 7], "circle-color": sectorColor, "circle-stroke-color": "rgba(16,32,28,0.9)", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "deals", type: "circle", source: "deals", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 7, 10, 13], "circle-color": "rgba(217,166,28,0.12)", "circle-stroke-color": C.pollen, "circle-stroke-width": 2.4 } });
   map.addLayer({ id: "projects-glow", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 14, 10, 26], "circle-color": C.pollen, "circle-opacity": 0.16, "circle-blur": 0.8 } });
-  map.addLayer({ id: "projects", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 6, 10, 12], "circle-color": C.wax, "circle-stroke-color": "#173b2a", "circle-stroke-width": 3 } });
+  map.addLayer({ id: "projects", type: "circle", source: "projects", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 6, 10, 12], "circle-color": C.wax, "circle-stroke-color": "#173b2a", "circle-stroke-width": 3, "circle-opacity": ["case", ["==", ["get", "approx"], 1], 0.5, 1], "circle-stroke-opacity": ["case", ["==", ["get", "approx"], 1], 0.5, 1] } });
   map.addLayer({ id: "projects-label", type: "symbol", source: "projects", minzoom: 3.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.3], "text-anchor": "top", "text-letter-spacing": 0.04, "text-optional": true }, paint: { "text-color": "#f2f0e9", "text-halo-color": "rgba(3,6,8,.92)", "text-halo-width": 1.5 } });
   map.addLayer({ id: "procurement", type: "circle", source: "procurement", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 4, 10, 8], "circle-color": C.sky, "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "triggers-halo", type: "circle", source: "triggers", paint: { "circle-radius": 12, "circle-color": triggerColor, "circle-opacity": 0.18, "circle-blur": 0.6 } });
@@ -234,7 +235,8 @@ function MapClient() {
         center: v.lat != null ? [v.lng!, v.lat] : [-30, 20], zoom: v.zoom ?? 2.6, bearing: v.bearing ?? 0, pitch: v.pitch ?? 0,
         minZoom: 0.6, maxPitch: 85, attributionControl: false, renderWorldCopies: false,
       });
-    } catch {
+    } catch (e) {
+      reportClientError("map", `Map renderer unavailable: ${(e as Error)?.message ?? e}`, (e as Error)?.stack ?? "");
       queueMicrotask(() => setMapError("The map renderer is unavailable. You can still browse records in the directory."));
       return;
     }
@@ -257,7 +259,9 @@ function MapClient() {
     if (process.env.NODE_ENV !== "production") (window as unknown as { __atlas?: maplibregl.Map }).__atlas = map;
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
-    map.on("error", e => { if (!String(e.error?.message ?? "").includes("tile")) setMapError("Some imagery or layers could not load. Records and the directory remain available."); });
+    // Every map error is reported (Settings → Jobs → Browser errors) so production-only failures are visible.
+    map.on("error", e => { const m = String(e.error?.message ?? e.error ?? "map error"); reportClientError("map", m.slice(0, 400), (e.error as { stack?: string } | undefined)?.stack ?? ""); if (!m.includes("tile")) setMapError("Some imagery or layers could not load. Records and the directory remain available."); });
+    map.on("webglcontextlost", () => reportClientError("map", "WebGL context lost"));
     // Wire layers as soon as the style is parsed (not after every initial tile): the globe becomes interactive sooner.
     let wired = false;
     map.on("style.load", () => {

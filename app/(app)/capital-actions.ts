@@ -9,6 +9,7 @@ import {
   introductions, investorQualifications, organizations, privateCapitalProfiles, projects,
 } from "@/db/schema";
 import { screenBeforeAction } from "@/lib/sanctions/engine";
+import { activeProtections } from "@/lib/compliance/guardrails";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { runMatches, setCommitment, setGate } from "@/lib/capital/engine";
@@ -279,6 +280,9 @@ export async function addIntroductionAction(formData: FormData) {
     if (toOrg) { const [o] = await appDb().select({ name: organizations.name }).from(organizations).where(and(eq(organizations.id, toOrg), mandateCondition(user.scope, organizations.mandateId))); if (o) parties.push({ entityType: "organization", entityId: toOrg, name: o.name }); }
     if (toPerson) { const [p] = await appDb().select({ name: contacts.fullName }).from(contacts).where(and(eq(contacts.id, toPerson), mandateCondition(user.scope, contacts.mandateId))); if (p) parties.push({ entityType: "person", entityId: toPerson, name: p.name }); }
     for (const party of parties) {
+      // Non-circumvention (phase 20): an active protection blocks the introduction.
+      const prot = await activeProtections(appDb(), c.mandateId, { orgId: party.entityType === "organization" ? party.entityId : null, name: party.name });
+      if (prot.length) { blocked = `${party.name} is protected for ${prot[0].protectedFor}${prot[0].until ? ` until ${prot[0].until}` : ""} (Network → Guardrails). The introduction was not recorded.`; return; }
       const g = await screenBeforeAction(appDb(), { mandateId: c.mandateId, ...party, actor: user.email });
       if (!g.proceed) { blocked = `${party.name}: sanctions screening shows a ${g.state === "confirmed" ? "confirmed" : "possible"} match. Review it in Network → Sanctions screening before introducing.`; return; }
       if (g.warning) warning = ` Sanctions screening not run: ${g.warning}`;

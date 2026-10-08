@@ -9,6 +9,9 @@ import {
   queueProjects, sanctionsChecks, stakeholders, type projects,
 } from "@/db/schema";
 import { COUNTRY_NOTES, LANES, matchProgrammes, programmesCsv } from "@/lib/capital/programmes";
+import { countryRisk, fmtReading } from "@/lib/fabric/country";
+import { PRECISION } from "@/lib/portfolio/screen";
+import { placeApproximatelyAction } from "../casework-actions";
 import { toGwh, yieldCheck } from "@/lib/diligence/yield";
 import type { UserScope } from "@/lib/db/scoped";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
@@ -60,7 +63,15 @@ export async function QuestionsTab({ project }: { project: Project }) {
         </details>
       </article>)}
     </section>
-    <aside><section className={r.panel}><p className={r.panelTitle}>Country pack</p>
+    <aside><section className={r.panel} id="place"><p className={r.panelTitle}>Location</p>
+      <p className={ui.sub}>{project.lat !== null ? <>{project.lat.toFixed(4)}, {project.lng?.toFixed(4)} · {project.locationPrecision ? PRECISION[project.locationPrecision as keyof typeof PRECISION] ?? project.locationPrecision : "precision not recorded"}{project.locationSource ? <><br />{project.locationSource}</> : null}</> : "Not located: site checks, Atlas and yield checks cannot run."}</p>
+      <form action={placeApproximatelyAction} className={r.form}><input type="hidden" name="projectId" value={project.id} />
+        <label>Town or locality<input name="locality" defaultValue={[project.municipality, project.subdivision, project.country].filter(Boolean).join(", ")} /></label>
+        <div className={r.formRow}><label>or latitude<input name="lat" inputMode="decimal" /></label><label>longitude<input name="lng" inputMode="decimal" /></label></div>
+        <label>Precision<select name="precision" defaultValue={project.locationPrecision ?? "town"}>{Object.entries(PRECISION).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <button className={ui.miniBtn} type="submit">{project.lat !== null ? "Update location" : "Place approximately"}</button></form>
+      <p className={ui.sub}>Approximate placements are labelled on Atlas and in every check. Replace with surveyed coordinates when the sponsor shares them.</p></section>
+    <section className={r.panel}><p className={r.panelTitle}>Country pack</p>
       {pack ? <><p>{pack.label}</p><p className={ui.sub}>{Object.values(pack.domains).flat().length} official sources across {Object.keys(pack.domains).length} domains. See <Link href="/intelligence/ontology?tab=packs">all packs</Link>.</p></>
         : <p className={r.empty}>{project.country ? `No pack for ${project.country} yet.` : "Set the project's country."} Packs exist for the US, Mexico, the UK and the EU.</p>}
     </section></aside>
@@ -178,7 +189,7 @@ export async function StakeholdersTab({ project, scope }: { project: Project; sc
 export async function DiligenceTab({ project, scope }: { project: Project; scope: UserScope }) {
   const db = appDb();
   const gate = gateOf(project.stage);
-  const [room, fields, parties, permitRows, deps, pv] = await Promise.all([
+  const [room, fields, parties, permitRows, deps, pv, risk] = await Promise.all([
     dataRoom(db, scope.mandateIds, project.id),
     valuesBySource(db, scope.mandateIds, "project", project.id),
     db.select({ role: projectParties.role, orgId: projectParties.orgId, contactId: projectParties.contactId, orgName: organizations.name, contactName: contacts.fullName }).from(projectParties)
@@ -187,6 +198,7 @@ export async function DiligenceTab({ project, scope }: { project: Project; scope
     db.select().from(permits).where(and(eq(permits.projectId, project.id), mandateCondition(scope, permits.mandateId))),
     db.select().from(permitDependencies).where(and(eq(permitDependencies.projectId, project.id), mandateCondition(scope, permitDependencies.mandateId))),
     db.select({ key: placeFacts.key, numeric: placeFacts.numeric }).from(placeFacts).where(and(eq(placeFacts.projectId, project.id), inArray(placeFacts.key, ["pv_specific_yield", "pv_specific_yield_tracking"]))),
+    countryRisk(db, project.country).catch(() => null),
   ]);
   const energy = fields.find(f => f.field === "annual_energy")?.canonical;
   const capMw = project.capacity && /^mw/i.test(project.capacityUnit ?? "") ? project.capacity : null;
@@ -246,6 +258,12 @@ export async function DiligenceTab({ project, scope }: { project: Project; scope
         </div>;
       })}
       <p className={ui.sub}>OFAC, UK, EU and UN lists. A possible match is a flag for a person: <Link href="/network/sanctions">review it here</Link>.</p>
+    </section>
+    <section className={r.panel}><p className={r.panelTitle}>Country risk{risk ? `: ${risk.iso3}` : ""}</p>
+      {!risk ? <p className={r.empty}>Set the project&apos;s country.</p> : <>
+        {risk.note && <p className={ui.sub}>{risk.note}</p>}
+        <table className={ui.table}><tbody>{risk.readings.map(x => <tr key={x.code}><td className={ui.sub}>{x.label}</td><td className={ui.num}>{fmtReading(x)}</td></tr>)}</tbody></table>
+        <p className={ui.sub}>{risk.source}. Readings, not a rating.</p></>}
     </section></aside>
   </div>;
 }

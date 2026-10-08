@@ -17,6 +17,7 @@ const CONTEXTUAL: Record<string, string> = {
   "/documents/generator/[id]": "Document generator → document",
   "/map/briefs": "Atlas → Site briefs (project page and Projects landing)",
   "/settings": "Sidebar footer → Settings (redirects to its first section)",
+  "/projects/portfolio/memo": "Projects → Portfolio screening → Portfolio memo (needs a sponsor)",
 };
 
 describe("navigation inventory", () => {

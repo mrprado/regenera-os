@@ -6,6 +6,7 @@ import { activities, contacts, mandates, messages, oauthAccounts } from "@/db/sc
 import { buildRawMessage, gmailGetMessage, gmailSend, header } from "@/lib/google/gmail";
 import { validateMessage, type StyleIssue } from "@/lib/style/validate";
 import { gateCheck, recordDeliveryForMessage } from "@/lib/capital/engine";
+import { messageGuardrails } from "@/lib/compliance/guardrails";
 
 export type SendPolicy = {
   production: boolean;
@@ -78,8 +79,11 @@ export async function sendClaimedMessage(db: Db, messageId: string, getToken: ()
   // Compliance gate (phase 6 M2): investment communications never leave without an approved opportunity,
   // an approved recipient and eligibility on record. A held message goes back to the approval queue.
   const gate = await gateCheck(db, msg);
-  if (!gate.ok) {
-    await db.update(messages).set({ status: "pending_approval", error: `Held by the compliance gate: ${gate.reasons.join("; ")}`.slice(0, 500), updatedAt: new Date().toISOString() }).where(eq(messages.id, msg.id));
+  // Guardrails (phase 20): a draft naming a regulated product (a sponsor's bonds, shares, fund units) is held for counsel.
+  const guard = await messageGuardrails(db, msg.mandateId, `${msg.subject}\n${msg.body}`);
+  const held = [...gate.reasons, ...guard.reasons];
+  if (!gate.ok || !guard.ok) {
+    await db.update(messages).set({ status: "pending_approval", error: `Held by the compliance gate: ${held.join("; ")}`.slice(0, 500), updatedAt: new Date().toISOString() }).where(eq(messages.id, msg.id));
     return { sent: false as const, reason: "compliance_gate" };
   }
   const [thread] = await db.select({ threadId: messages.gmailThreadId }).from(messages)

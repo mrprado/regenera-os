@@ -13,6 +13,8 @@ import MandateSwitcher from "./mandate-switcher";
 import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
 import WorkspaceTrail from './workspace-trail';
+import ErrorReporter from "@/components/error-reporter";
+import { currentEmail } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,9 @@ function initials(name: string): string {
 // White header like regenera.bio, fern sidebar for navigation (Apollo layout, Regenera brand).
 // Pages also call requireOsUser themselves: a layout guard alone does not cover every request path.
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Signed out: render the page alone, so its own guard redirects with the right return path (not always /today).
+  // Every page calls requireOsUser itself (tests/unit/route-guard.test.ts), so nothing renders unauthenticated.
+  if (!(await currentEmail())) return <>{children}</>;
   const user = await requireOsUser("/today");
   const { lastTick, stale: schedulerStale } = await schedulerStatus();
   const open = await openNotifications(appDb(), user.scope.mandateIds, user.email, new Date(), 200);
@@ -49,7 +54,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         <div className={styles.headerSlot}>
           <WorkspaceTrail user={navUser}/>
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
-          <CommandBar nav={navUser} />
+          <CommandBar nav={navUser} /><ErrorReporter />
         </div>
         <div className={styles.account}>
           <Link href="/notifications" className={styles.accountName} aria-label={`Notifications: ${unread} unread`} title="Notifications" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Bell size={16} aria-hidden />{unread > 0 && <b style={{ color: open.some(n => n.priority === "critical" && !n.readAt) ? "#b0432f" : undefined }}>{unread}</b>}</Link>

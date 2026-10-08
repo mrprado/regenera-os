@@ -1,4 +1,6 @@
 import { Fragment } from "react";
+import { desc } from "drizzle-orm";
+import { clientErrors } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { isOwner } from "@/lib/db/scoped";
 import { jobsOverview } from "@/lib/settings";
@@ -28,6 +30,8 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   const backup = parse(await getState(appDb(), "last_backup"));
   const check = parse(await getState(appDb(), "last_backup_check"));
   const [q, sched] = await Promise.all([queueHealth(appDb()), scheduleHealth(appDb())]);
+  // Browser errors from signed-in sessions (phase 20): owners only, last 30.
+  const browserErrors = isOwner(user.scope) ? await appDb().select().from(clientErrors).orderBy(desc(clientErrors.createdAt)).limit(30) : [];
   const STATE_LABEL = { ok: "Completed", never: "Never completed", failing: "Failing", overdue: "Queued, not completed", paused: "Paused" } as const;
 
   return (
@@ -100,6 +104,13 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           </tbody>
         </table>
       </div>
+      {isOwner(user.scope) && <div>
+        <h3>Browser errors</h3>
+        {browserErrors.length === 0 ? <p>None reported. Errors in signed-in sessions (including Atlas map errors) appear here.</p> :
+          <table><thead><tr><th>When</th><th>Where</th><th>Kind</th><th>Message</th><th>Who</th></tr></thead><tbody>
+            {browserErrors.map(x => <tr key={x.id}><td>{ago(x.createdAt)}</td><td>{x.path}</td><td>{x.kind}</td><td title={x.stack}>{x.message}</td><td>{x.email ?? ""}</td></tr>)}
+          </tbody></table>}
+      </div>}
     </>
   );
 }

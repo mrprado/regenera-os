@@ -268,7 +268,7 @@ describe("backup and privacy", () => {
     files.set("backups/2026-09-24/contacts.jsonl", "{broken");
     expect((await verifyLatestBackup(t.db, store)).ok).toBe(false);
     void schema;
-  });
+  }, 120_000); // every table is exported and restored; grows with the schema
 
   it("exports a person, and erasure leaves only a hashed suppression that blocks re-import", async () => {
     const c = await person(R, "Erin Erase", "erin@test.regenera.bio");
