@@ -9,6 +9,7 @@ import { parseAllowlist, resolveMembership } from "./membership";
 import { SESSION_COOKIE, sessionEmail } from "./session";
 
 export const MANDATE_COOKIE = "os_mandate";
+const PORTAL_SESSION_COOKIE = "portal_session"; // lib/portal/auth.ts PORTAL_COOKIE (not imported, to keep this module light)
 
 /** visitor: an anonymous visitor let in by OS_OPEN_ACCESS. They see the owner's view and change nothing. */
 export type OsUser = { userId: string; email: string; displayName: string; scope: UserScope; visitor?: boolean };
@@ -45,6 +46,9 @@ export function openAccessEmail(): string | null {
 export const currentOsUser = cache(async (): Promise<OsUser | null> => {
   const email = await currentEmail();
   if (email) return fromEmail(email);
+  // External portal users (sponsors, capital partners, introducers, partners, stakeholders) never get open access to
+  // the OS: they see only what their grants name, in their own portal.
+  try { if ((await cookies()).get(PORTAL_SESSION_COOKIE)?.value) return null; } catch { return null; }
   const open = openAccessEmail();
   const os = open ? await fromEmail(open) : null;
   return os ? { ...os, visitor: true } : null;

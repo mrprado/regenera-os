@@ -9,7 +9,8 @@ import { canOpenDocument, grantAccess, visibleOpportunities } from "@/lib/portal
 import { acceptInvite, invitePortalUser, portalSessionUser, portalSignIn, setPortalUserStatus } from "@/lib/portal/auth";
 import { approveCommission, estimateCommission, expireBrokerRecords, recordCommission, registerReferral, reviewReferral } from "@/lib/portal/broker";
 import { convertIntake, submitIntake } from "@/lib/portal/intake";
-import { brokerView, capitalView, partnerView, sponsorView } from "@/lib/portal/views";
+import { brokerView, capitalView, partnerView, portalDocuments, sponsorView, stakeholderUpdates } from "@/lib/portal/views";
+import { grantedIds } from "@/lib/portal/access";
 import { createProject } from "@/lib/projects/engine";
 import { createTestDb } from "../helpers/d1";
 
@@ -27,7 +28,7 @@ beforeEach(async () => {
   await t.db.insert(mandates).values({ id: M, slug: "regenera", name: "Regenera", type: "advisory", rules: { massAllowed: true, approvalRequired: true } });
 });
 
-async function activeUser(email: string, kind: "sponsor" | "capital" | "broker" | "partner", orgId: string | null = null) {
+async function activeUser(email: string, kind: "sponsor" | "capital" | "broker" | "partner" | "stakeholder", orgId: string | null = null) {
   const { token } = await invitePortalUser(t.db, { mandateId: M, email, name: email, kind, orgId }, "alan", NOW);
   const r = await acceptInvite(t.db, token, PW, NOW);
   if (!r.ok) throw new Error(r.reason);
@@ -204,6 +205,25 @@ describe("portal isolation (§94)", () => {
     const pv = await partnerView(t.db, partner, NOW);
     expect(pv.packages[0]).toMatchObject({ open: true, bid: { status: "invited" } });
     expect(JSON.stringify(pv)).not.toContain("9999");
+  });
+
+  it("stakeholder sees only published stakeholder updates of granted projects and only granted documents", async () => {
+    const st = await activeUser("st@x.com", "stakeholder");
+    const a = await createProject(t.db, { mandateId: M, name: "Granted project" }, "alan");
+    const b = await createProject(t.db, { mandateId: M, name: "Other project" }, "alan");
+    const upd = (projectId: string, title: string, audiences: string[], published: boolean) => t.db.insert(projectUpdates).values({ mandateId: M, projectId, title, body: "x", audiences, publishedAt: published ? NOW.toISOString() : null, approvedBy: published ? "alan" : null, createdBy: "alan" });
+    await upd(a.id, "A for stakeholders", ["stakeholder"], true);
+    await upd(a.id, "A sponsors only", ["sponsor"], true);
+    await upd(a.id, "A draft", ["stakeholder"], false);
+    await upd(b.id, "B for stakeholders", ["stakeholder"], true);
+    await grantAccess(t.db, { portalUserId: st.id, entityType: "project", entityId: a.id }, "alan");
+    const titles = (await stakeholderUpdates(t.db, await grantedIds(t.db, st, "project", NOW))).map(u => u.title);
+    expect(titles).toEqual(["A for stakeholders"]);
+    const shared = await doc("Shared brief"), hidden = await doc("Internal model");
+    await grantAccess(t.db, { portalUserId: st.id, entityType: "document", entityId: shared.id }, "alan");
+    expect((await portalDocuments(t.db, st, NOW)).direct.map(d => d.title)).toEqual(["Shared brief"]);
+    expect((await canOpenDocument(t.db, st, hidden.id, NOW)).allowed).toBe(false);
+    expect((await canOpenDocument(t.db, st, shared.id, NOW)).allowed).toBe(true);
   });
 
   it("expired and revoked grants stop access", async () => {
