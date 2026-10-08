@@ -281,6 +281,17 @@ function MapClient() {
     // Every map error is reported (Settings → Jobs → Browser errors) so production-only failures are visible.
     map.on("error", e => { const m = String(e.error?.message ?? e.error ?? "map error"); reportClientError("map", m.slice(0, 400), (e.error as { stack?: string } | undefined)?.stack ?? ""); if (!m.includes("tile")) setMapError("Some imagery or layers could not load. Records and the directory remain available."); });
     map.on("webglcontextlost", () => reportClientError("map", "WebGL context lost"));
+    // Stall diagnostic: if the style has not loaded 15 s after start (and the tab is visible), report what is pending so
+    // a blank globe is never silent. Sent to Settings → Jobs → Browser errors.
+    const started = Date.now();
+    const stallCheck = window.setTimeout(() => {
+      if (document.hidden || map.isStyleLoaded()) return;
+      const s = (map as unknown as { style?: { _loaded?: boolean; sourceCaches?: Record<string, { loaded(): boolean }> } }).style;
+      const pending = s?.sourceCaches ? Object.entries(s.sourceCaches).filter(([, c]) => !c.loaded()).map(([k]) => k) : [];
+      const gl = (map as unknown as { painter?: { context?: { gl?: WebGL2RenderingContext } } }).painter?.context?.gl;
+      reportClientError("map", `diagnostic: style not loaded after ${Math.round((Date.now() - started) / 1000)} s · styleObject=${!!s} styleLoaded=${!!s?._loaded} pendingSources=${pending.join(",") || "none"} glLost=${gl ? gl.isContextLost() : "no gl"} renderer=${gl ? String(gl.getParameter(gl.RENDERER)).slice(0, 60) : "-"} size=${container.current?.clientWidth}x${container.current?.clientHeight}`);
+    }, 15_000);
+    map.once("load", () => window.clearTimeout(stallCheck));
     // Wire layers as soon as the style is parsed (not after every initial tile): the globe becomes interactive sooner.
     let wired = false;
     map.on("style.load", () => {
