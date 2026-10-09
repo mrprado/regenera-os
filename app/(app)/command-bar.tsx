@@ -36,7 +36,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_person: "Opening a record", pipeline_metrics: "Computing metrics", list_replies: "Reading replies", search_funding: "Searching funding", search_projects: "Reading projects",
 };
 
-export default function CommandBar({ nav }: { nav: NavUser }) {
+export default function CommandBar({ nav, sidebar = false }: { nav: NavUser; sidebar?: boolean }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -62,8 +62,11 @@ export default function CommandBar({ nav }: { nav: NavUser }) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setOpen(o => !o); }
     };
+    // The mobile navigation's "Ask the OS" button opens the same panel.
+    const reveal = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("regenera:ask", reveal);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("regenera:ask", reveal); };
   }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [turns, busy]);
   // Record search across projects, capital, companies, people, contracts, funding and documents (scoped server-side).
@@ -124,7 +127,7 @@ export default function CommandBar({ nav }: { nav: NavUser }) {
 
   return (
     <>
-      <button type="button" className={styles.trigger} onClick={() => setOpen(true)} aria-label="Ask the OS">
+      <button type="button" className={`${styles.trigger} ${sidebar ? styles.sidebarTrigger : ""}`} onClick={() => setOpen(true)} aria-label="Ask the OS">
         <span>Ask the OS</span> <kbd>Ctrl K</kbd>
       </button>
       <Command.Dialog open={open} onOpenChange={setOpen} label="Ask the OS" className={styles.dialog} overlayClassName={styles.overlay} shouldFilter={false}>

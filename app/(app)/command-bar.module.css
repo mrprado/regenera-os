@@ -29,3 +29,4 @@
 /* Reviewed actions use the common palette */
 .confirm{background:var(--action);border-color:var(--action);color:var(--action-text)}.reject{background:var(--chalk);border-color:var(--ash);color:var(--text-1)}
 .proposal{background:var(--secondary-surface);border-color:var(--ash)}.item[data-selected="true"]{background:var(--surface-selected)}
+.sidebarTrigger{width:100%;min-height:44px;justify-content:space-between;margin:0 0 10px;padding:10px 12px;font-size:14px;border-color:var(--line);background:var(--surface);color:var(--accent-ink)}

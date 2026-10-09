@@ -101,6 +101,8 @@ export const ROUTE_MODULES: [string, ModuleKey][] = [
   ["/overview/deals", "deals"], ["/overview/relationships", "network"], ["/overview/intelligence", "intelligence"], ["/overview/clients", "clients"],
   // Phase 24 daily-loop landing pages.
   ["/overview/find", "intelligence"], ["/overview/qualify", "projects"], ["/overview/reach", "network"], ["/overview/win", "deals"], ["/overview/deliver", "documents"], ["/overview/steward", "reporting"],
+  // October 2026 redesign work areas.
+  ["/overview/discover", "intelligence"], ["/overview/network", "network"], ["/overview/engage", "deals"], ["/overview/workflows", "automations"],
 ];
 
 export function moduleForPath(path: string): ModuleKey | null {

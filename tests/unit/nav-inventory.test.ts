@@ -40,21 +40,27 @@ describe("navigation inventory", () => {
   });
 
   it("the authorized redesign preserves work areas and task-focused primary ordering", () => {
-    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Find", "Qualify", "Reach", "Win", "Deliver", "Capital", "Steward", "Intelligence", "Systems", "Clients"]);
-    expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual(["", "Daily loop", "Workspaces"]);
+    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Discover", "Projects", "Capital", "Network", "Intelligence", "Engage", "Workflows", "Steward"]);
+    // October 2026 redesign: ten work areas (plus Settings, with your profile in it); no section headings.
+    expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual([""]);
+    expect(SETTINGS_NAV.some(i => i.href === "/profile")).toBe(true);
     // Phase 24: every legacy destination is placed in a group; administration lives in Settings.
     expect(UNPLACED).toEqual([]);
     for (const h of ["/settings/jobs", "/settings/claude", "/connect/mcp"]) expect(SETTINGS_NAV.some(i => i.href === h)).toBe(true);
     const staff = navFor({ modules: "all", internal: true, owner: true });
     const owner = (href: string) => { const [p, q] = href.split("?"); return activeNavGroup(staff, p, new URLSearchParams(q))?.key; };
-    expect([owner("/origination"), owner("/origination?tab=screening"), owner("/origination?tab=stewardship"), owner("/funding?tab=bids"), owner("/funding?tab=funders"), owner("/deals/x"), owner("/approvals"), owner("/start")])
-      .toEqual(["find", "qualify", "steward", "deliver", "capital", "win", "command", "command"]);
+    expect([owner("/origination"), owner("/origination?tab=screening"), owner("/origination?tab=stewardship"), owner("/funding?tab=bids"), owner("/funding?tab=funders"), owner("/deals/x"), owner("/approvals"), owner("/start"), owner("/contracts?tab=obligations"), owner("/power"), owner("/reports")])
+      .toEqual(["discover", "projects", "steward", "capital", "capital", "engage", "command", "command", "steward", "projects", "intelligence"]);
+    // Former group overviews and phase 24 loop steps keep their URLs and highlight the area that owns them.
+    expect(["mandates", "find", "systems", "qualify", "relationships", "reach", "deals", "clients", "win", "operations", "deliver", "steward"].map(k => owner(`/overview/${k}`)))
+      .toEqual(["discover", "discover", "projects", "projects", "network", "network", "engage", "engage", "engage", "workflows", "workflows", "steward"]);
   });
 
   it("clients see only entitled modules and never Regenera-internal groups", () => {
     const client = navFor({ modules: ["command", "atlas", "projects", "documents", "reporting", "automations"], internal: false });
-    expect(client.map(g => g.key)).toEqual(["command", "atlas", "qualify", "deliver", "capital", "steward", "systems"]);
-    expect(client.find(g => g.key === "steward")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/projects?stage=operations", "/reports", "/reports?tab=cases"]);
+    expect(client.map(g => g.key)).toEqual(["command", "atlas", "projects", "capital", "intelligence", "workflows", "steward"]);
+    expect(client.find(g => g.key === "intelligence")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/reports", "/reports?tab=cases"]);
+    expect(client.find(g => g.key === "steward")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/projects?stage=operations"]);
     expect(client.flatMap(g => g.sections.flatMap(s => s.items.map(i => i.href)))).not.toContain("/origination");
     const hrefs = flatNav({ modules: ["command"], internal: false }).map(f => f.href);
     expect(hrefs).not.toContain("/commercial");

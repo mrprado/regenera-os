@@ -3,6 +3,9 @@ import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
 import { requireOsUser } from "@/lib/auth";
 import { LOOP_STEPS } from "@/lib/hubs-loop";
+import { LOOP_TO_AREA } from "@/lib/hubs-workspace";
+
+const AREA_LABEL: Record<string, string> = { discover: "Discover", projects: "Projects", network: "Network", engage: "Engage", workflows: "Workflows", capital: "Capital", steward: "Steward" };
 import s from "./start.module.css";
 
 export const metadata = { title: "Start here" };
@@ -56,17 +59,18 @@ export default async function StartPage() {
   return (
     <>
       <PageHeader title="Start here" actions={<Link className="btn btn--primary" href="/today">Go to Command</Link>} />
-      <p className={s.lede}>Regenera earns fees by finding regenerative projects that need help, proving they are sound, and getting them to capital. The OS runs that loop with you, in seven steps. The sidebar follows the same order.</p>
+      <p className={s.lede}>Regenera earns fees by finding regenerative projects that need help, proving they are sound, and getting them to capital. The OS runs that loop with you, in seven steps. Each step lives in one sidebar area, named under the step.</p>
       <ol className={s.loop}>
         {LOOP_STEPS.map((step, i) => {
           const d = STEPS[step.key];
           return (
             <li key={step.key} className={s.step}>
               <h2><span>{i + 1}</span> {step.label}</h2>
+              <p className={s.q}>In the sidebar: {AREA_LABEL[LOOP_TO_AREA[step.key] ?? step.key]}</p>
               <p className={s.q}>{step.question}</p>
               <p><b>The OS does:</b> {d.auto}</p>
               <p><b>You decide:</b> {d.you}</p>
-              <p className={s.links}>{d.where.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}<Link href={`/overview/${step.key}`}>Step overview →</Link></p>
+              <p className={s.links}>{d.where.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}<Link href={`/overview/${LOOP_TO_AREA[step.key] ?? step.key}`}>Open {AREA_LABEL[LOOP_TO_AREA[step.key] ?? step.key]} →</Link></p>
             </li>
           );
         })}

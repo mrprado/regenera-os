@@ -3,12 +3,14 @@ import {env} from "cloudflare:workers";
 import { Bell, Menu } from "lucide-react";
 import { withBase } from "@/lib/base-path";
 import { requireOsUser } from "@/lib/auth";
-import { eq, inArray } from "drizzle-orm";
-import { mandates, tenants } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
+import { mandates, tenants, tenantMembers } from "@/db/schema";
 import { appDb, isInternal, isOwner } from "@/lib/db/scoped";
 import { schedulerStatus } from "@/lib/settings";
 import { openNotifications } from "@/lib/events/engine";
-import CommandBar from "./command-bar";
+import AccountMenu from "./account-menu";
+import WorkspaceShell, { SidebarToggle } from "./workspace-shell";
+import { USER_TYPES } from "@/lib/tenancy/vocab";
 import MandateSwitcher from "./mandate-switcher";
 import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
@@ -17,11 +19,6 @@ import ErrorReporter from "@/components/error-reporter";
 import { currentOsUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-
-function initials(name: string): string {
-  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
-  return (parts[0]?.[0] ?? "?").concat(parts[1]?.[0] ?? "").toUpperCase();
-}
 
 // White header like regenera.bio, fern sidebar for navigation (Apollo layout, Regenera brand).
 // Pages also call requireOsUser themselves: a layout guard alone does not cover every request path.
@@ -40,31 +37,31 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     : [];
   const navUser = { modules: user.scope.modules ?? "all", internal: isInternal(user.scope), owner:isOwner(user.scope) };
   const sandboxFocus = user.scope.mandateIds.length === 1 ? (await appDb().select({ sandbox: mandates.sandbox }).from(mandates).where(eq(mandates.id, user.scope.mandateIds[0])))[0]?.sandbox : false;
+  const [profile] = await appDb().select({ name: tenantMembers.name }).from(tenantMembers).where(and(eq(tenantMembers.email, user.email), eq(tenantMembers.status, "active"))).limit(1);
   const focus = user.scope.mandateIds.length === 1 && memberOf.length > 1 ? user.scope.mandateIds[0] : "all";
 
   return (
-    <div className={styles.shell} data-ui="regenera"><a className="skip-link" href="#main-content">Skip to workspace content</a>
+    <WorkspaceShell><a className="skip-link" href="#main-content">Skip to workspace content</a>
       <header className={styles.header}>
         {/* Phone: the sidebar becomes a disclosure menu under the header, no client JS needed. */}
         <details className={styles.mobileMenu} data-mobile-navigation>
           <summary aria-label="Menu"><Menu size={20} aria-hidden /></summary>
           <div className={styles.mobilePanel}>{mandateOptions.length>1&&<MandateSwitcher options={mandateOptions} current={focus}/>}<SidebarNav user={navUser} variant="accordion" /></div>
         </details>
-        <Link href="/today" className={styles.brand}>REGENERA <b>OS</b></Link>
+        <div className={styles.brandArea}><SidebarToggle /><Link href="/today" className={styles.brand}>REGENERA <b>OS</b></Link></div>
         <div className={styles.headerSlot}>
           <WorkspaceTrail user={navUser}/>
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
-          <CommandBar nav={navUser} /><ErrorReporter />
+          <ErrorReporter />
         </div>
+        {/* Ask the OS lives in the sidebar above Settings; the header keeps the notification bell and the avatar menu. */}
         <div className={styles.account}>
-          <Link href="/notifications" className={styles.accountName} aria-label={`Notifications: ${unread} unread`} title="Notifications" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Bell size={16} aria-hidden />{unread > 0 && <b style={{ color: open.some(n => n.priority === "critical" && !n.readAt) ? "#b0432f" : undefined }}>{unread}</b>}</Link>
-          <span className={styles.accountName} title={user.email}>{user.displayName}</span>
-          <span className={styles.avatar} aria-hidden>{initials(user.displayName)}</span>
-          {user.visitor ? <a className={styles.signOut} href={withBase("/signin?return_to=/today")}>Sign in</a> : <form method="post" action={withBase("/api/auth/signout")}><button type="submit" className={styles.signOut}>Sign out</button></form>}
+          <Link className={styles.notificationsButton} href="/notifications" aria-label={`Notifications: ${unread} unread`} title="Notifications"><Bell size={20} aria-hidden />{unread > 0 && <span className={styles.notificationCount} style={open.some(n => n.priority === "critical" && !n.readAt) ? { background: "#b0432f" } : undefined}>{unread > 99 ? "99+" : unread}</span>}</Link>
+          <AccountMenu name={profile?.name || user.displayName} email={user.email} typeLabel={USER_TYPES[user.scope.userType ?? "regenera_internal"].label} canManage={(isInternal(user.scope) && isOwner(user.scope)) || !!user.scope.adminOf?.length} visitor={!!user.visitor} />
         </div>
       </header>
 
-      <aside className={styles.sidebar}>
+      <aside className={styles.sidebar} id="workspace-sidebar">
         <SidebarNav user={navUser} />
       </aside>
 
@@ -82,6 +79,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         </div></details>}
         <main className={styles.main} id="main-content">{children}</main>
       </div>
-    </div>
+    </WorkspaceShell>
   );
 }
