@@ -283,6 +283,15 @@ function MapClient({ sources }: { sources: AtlasSource[] }) {
       return;
     }
     mapRef.current = map;
+    // The stage can get its height after the map is created (stylesheets arrive in varying order in production).
+    // MapLibre's own tracking skips its first size change, so the canvas stayed at its 400×300 fallback and the globe
+    // never drew. Watch the container ourselves and resize whenever its size changes.
+    const sized = { w: 0, h: 0 };
+    const fit = () => { const el = container.current; if (!el) return; const { width, height } = el.getBoundingClientRect(); if (width && height && (Math.round(width) !== sized.w || Math.round(height) !== sized.h)) { sized.w = Math.round(width); sized.h = Math.round(height); map.resize(); } };
+    const resizeWatch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => fit());
+    resizeWatch?.observe(container.current);
+    map.once("style.load", fit);
+    window.setTimeout(fit, 0);
     let locationCancelled=false;
     let userMoved=false;
     const markUserMove=(event:{originalEvent?:unknown})=>{if(event.originalEvent)userMoved=true;};
@@ -356,7 +365,7 @@ function MapClient({ sources }: { sources: AtlasSource[] }) {
     map.on("click", e => { if (pickingRef.current) startScreenRef.current([e.lngLat.lng, e.lngLat.lat]); });
     let cursorRaf = 0;
     map.on("mousemove", e => { if (cursorRaf) return; cursorRaf = requestAnimationFrame(() => { cursorRaf = 0; setCursor([e.lngLat.lng, e.lngLat.lat]); }); });
-    return () => { locationCancelled=true;map.off("movestart",markUserMove);map.remove(); mapRef.current = null; setMapObj(null); };
+    return () => { locationCancelled=true;resizeWatch?.disconnect();map.off("movestart",markUserMove);map.remove(); mapRef.current = null; setMapObj(null); };
   }, [init]);
 
   // Animation: trigger pulse, cyclone spin, orbit.
