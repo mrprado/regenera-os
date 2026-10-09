@@ -12,6 +12,7 @@
     radial-gradient(ellipse at 50% 55%, #1b1f1c 0%, #181c1a 55%, #141715 100%);
 }
 .map { position: absolute; inset: 0; }
+.stage > .map, .stage > .map:global(.maplibregl-map) { position: absolute; inset: 0; width: 100%; height: 100%; }
 .map :global(.maplibregl-ctrl-attrib) { background: var(--atlas-panel); color: var(--atlas-text-2); font-size: 14px; }
 .map :global(.maplibregl-ctrl-attrib a) { color: var(--atlas-text-2); }
 .map :global(.maplibregl-ctrl-scale) { background: var(--atlas-panel); color: var(--atlas-text); border-color: var(--atlas-text-2); font-size: 14px; }

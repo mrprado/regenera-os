@@ -192,6 +192,7 @@ export function Inspector({ selected, onClose, tracked, onTrack, onChase, screen
   return (
     <aside className={`${styles.glass} ${styles.detail} ${styles.inspector}`} aria-label="Intelligence inspector">
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close inspector">×</button>
+      <p className={styles.note} style={{ padding: "12px 16px", borderBottom: "1px solid var(--line)" }}>Decision evidence: check observation date, geographic coverage, source authority and unresolved inputs. A recent retrieval alone does not establish current conditions.</p>
       <div className={styles.inspectorTabs} role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>)}</div>
       {tab === "overview" && selected && <><EntityPicture key={`e:${selected.layer}:${String(selected.props.id ?? "")}`} selected={selected} /><PlaceImage key={`${selected.layer}:${selected.lngLat.join(",")}`} selected={selected} /><IntegrityBlock key={`i:${String(selected.props.id ?? "")}`} selected={selected} /><Detail selected={selected} tracked={tracked} onTrack={onTrack} onChase={onChase} />{extra}</>}
       {tab === "spatial" && selected && (

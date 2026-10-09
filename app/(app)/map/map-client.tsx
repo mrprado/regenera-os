@@ -5,6 +5,7 @@
 // buildings), sensor looks, a tactical HUD, detection boxes, click-to-track, chase cam, missions, orbit and tour,
 // share links and keyboard control. The directory, layer library and drawing tools remain.
 import "maplibre-gl/dist/maplibre-gl.css";
+import { CoveragePanel, type AtlasSource } from "./coverage-panel";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, MapGeoJSONFeature, RasterTileSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry, Point as GeoPoint } from "geojson";
@@ -101,12 +102,12 @@ const TRACKABLE = new Set(["flights", "military", "sat_eo", "sat_weather", "sat_
 
 /** The Atlas depends on the URL hash, the clock and WebGL: render it on the client only (no hydration mismatch). */
 const noopSubscribe = () => () => {};
-export default function MapClientGate() {
+export default function MapClientGate({ sources = [] }: { sources?: AtlasSource[] }) {
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
-  return mounted ? <MapClient /> : <div className={styles.stage} data-fullbleed data-mode="normal" />;
+  return mounted ? <MapClient sources={sources} /> : <div className={styles.stage} data-fullbleed data-mode="normal" />;
 }
 
-function MapClient() {
+function MapClient({ sources }: { sources: AtlasSource[] }) {
   const container = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -170,7 +171,7 @@ function MapClient() {
     }, 1000);
     return () => window.clearInterval(t);
   }, [debugOn, rendererDown, mapError, mapReady, base, data]);
-  const [panel, setPanel] = useState<"intel" | "directory" | "workbench" | "none">("directory");
+  const [panel, setPanel] = useState<"intel" | "directory" | "workbench" | "coverage" | "none">("directory");
   const [wbMode, setWbMode] = useState<WbMode>("analysis");
   const [wbProject, setWbProject] = useState(() => new URLSearchParams(window.location.search).get("project") ?? "");
   const [showKeys, setShowKeys] = useState(false);
@@ -855,7 +856,8 @@ function MapClient() {
       {panel !== "none" && (
         <aside className={`${styles.glass} ${styles.layers}`} aria-label="Map explorer">
           <div className={styles.panelTabs} role="tablist" aria-label="Panel sections">
-            {(["directory", "intel", "workbench"] as const).map(p => <button key={p} type="button" role="tab" aria-selected={panel === p} onClick={() => setPanel(p)}>{p === "directory" ? "Explore" : p === "intel" ? `Layers${activeOverlays.length ? ` (${activeOverlays.length})` : ""}` : "Analyze"}</button>)}
+            {(["directory", "intel", "coverage", "workbench"] as const).map(p => <button key={p} type="button" role="tab" aria-selected={panel === p} onClick={() => setPanel(p)}>{p === "directory" ? "Explore" : p === "intel" ? `Layers${activeOverlays.length ? ` (${activeOverlays.length})` : ""}` : p === "coverage" ? "Coverage" : "Analyze"}</button>)}
+          {panel === "coverage" && <CoveragePanel sources={sources} />}
             <button type="button" className={styles.iconBtn} onClick={() => setPanel("none")} aria-label="Collapse panel"><X size={14} /></button>
           </div>
           {panel === "intel" && (
