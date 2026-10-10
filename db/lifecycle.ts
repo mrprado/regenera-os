@@ -4,7 +4,7 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import {
-  CHANGE_REQUEST_STATUS, CLIENT_REQUEST_STATUS, DELIVERABLE_STATUS, FEE_STRUCTURES, MILESTONE_STATUS, PAYMENT_KINDS, PAYMENT_METHODS, PIPELINES,
+  CHANGE_REQUEST_STATUS, CLIENT_REQUEST_STATUS, DELIVERABLE_STATUS, FEE_STRUCTURES, INTRO_OUTCOMES, MILESTONE_STATUS, PARTNERSHIP_KINDS, PARTNERSHIP_STAGES, PAYMENT_KINDS, PAYMENT_METHODS, PIPELINES,
   PROPOSAL_STATUS, PROPOSAL_VERSION_STATUS, RELATIONSHIP_ROLES, RELATIONSHIP_STAGES, TEMPLATE_STATUS,
 } from "../lib/lifecycle/vocab";
 
@@ -161,3 +161,34 @@ export const payments = sqliteTable("payments", {
   note: text("note").notNull().default(""),
   recordedBy: text("recorded_by").notNull(), recordedAt: text("recorded_at").notNull().default(now),
 }, t => [uniqueIndex("payments_provider_id").on(t.provider, t.providerPaymentId), index("payments_invoice").on(t.invoiceId)]);
+
+/** A partnership with an organization (phase 29B). Capability is verified with evidence; terms are only what was agreed. */
+export const partnerships = sqliteTable("partnerships", {
+  id: id(), mandateId: text("mandate_id").notNull(), orgId: text("org_id").notNull(),
+  kind: text("kind", { enum: keys(PARTNERSHIP_KINDS) }).notNull(),
+  stage: text("stage", { enum: keys(PARTNERSHIP_STAGES) }).notNull().default("potential"),
+  capabilities: arr<string>("capabilities"), geographies: arr<string>("geographies"), sectors: arr<string>("sectors"),
+  capabilityEvidence: text("capability_evidence").notNull().default(""), verifiedBy: text("verified_by"), verifiedAt: text("verified_at"),
+  capacity: text("capacity").notNull().default(""),
+  arrangement: text("arrangement").notNull().default(""),               // what is proposed or agreed, in plain words
+  commercialTerms: text("commercial_terms").notNull().default(""),       // only when explicitly agreed; never assumed (no default referral fee)
+  contractId: text("contract_id"), agreementEvidence: text("agreement_evidence"),
+  owner: text("owner"), nextAction: text("next_action").notNull().default(""), nextActionDue: text("next_action_due"), noActionReason: text("no_action_reason"),
+  stageChangedAt: text("stage_changed_at").notNull().default(now),
+  ...stamps,
+}, t => [uniqueIndex("partnerships_org_kind").on(t.mandateId, t.orgId, t.kind)]);
+
+/** An introduction Regenera makes or receives, with authorization to share and its outcome. One open per parties + purpose. */
+export const relationshipIntroductions = sqliteTable("relationship_introductions", {
+  id: id(), mandateId: text("mandate_id").notNull(),
+  fromOrgId: text("from_org_id"), fromContactId: text("from_contact_id"),   // the party being introduced (e.g. a partner)
+  toOrgId: text("to_org_id"), toContactId: text("to_contact_id"),           // the party they are introduced to
+  partnershipId: text("partnership_id"), projectId: text("project_id"), engagementId: text("engagement_id"),
+  purpose: text("purpose").notNull(),
+  authorization: text("authorization").notNull().default(""),               // who allowed what to be shared, and how
+  materialsShared: arr<string>("materials_shared"),
+  date: text("date"), owner: text("owner"), nextAction: text("next_action").notNull().default(""), nextActionDue: text("next_action_due"),
+  outcome: text("outcome", { enum: keys(INTRO_OUTCOMES) }).notNull().default("pending"), outcomeNote: text("outcome_note").notNull().default(""),
+  openKey: text("open_key"),                                                // set while open; unique, so an open duplicate is refused
+  ...stamps,
+}, t => [uniqueIndex("relationship_introductions_open").on(t.openKey), index("relationship_introductions_project").on(t.projectId)]);

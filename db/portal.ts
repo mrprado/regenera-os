@@ -272,5 +272,10 @@ export const intakeSubmissions = sqliteTable("intake_submissions", {
   convertedType: text("converted_type"),
   convertedId: text("converted_id"),
   reviewedBy: text("reviewed_by"),
+  // Phase 29B: where the submission came from, consent, duplicate protection and a kept error when conversion fails.
+  attribution: text("attribution", { mode: "json" }).$type<Record<string, string>>().notNull().default(sql`'{}'`),
+  consent: text("consent").notNull().default("respond"),
+  dedupeKey: text("dedupe_key"),
+  conversionError: text("conversion_error"),
   ...timestamps,
-}, t => [index("intake_submissions_status").on(t.status, t.createdAt), index("intake_submissions_ip").on(t.ipHash, t.createdAt)]);
+}, t => [index("intake_submissions_dedupe").on(t.dedupeKey, t.createdAt), index("intake_submissions_status").on(t.status, t.createdAt), index("intake_submissions_ip").on(t.ipHash, t.createdAt)]);

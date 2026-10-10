@@ -87,3 +87,40 @@ Plan: [phase-29-commercial-lifecycle.md](phase-29-commercial-lifecycle.md). Appr
 - No payment provider. Manual reconciliation with evidence is the supported path; a provider is a paid service and needs approval.
 - Readiness assessment, capital match and introduction steps of Scenario B run in their existing modules. They are linked through the project, and joining them to the engagement is part of 29E.
 - Intake, relationship pipeline and partner flows: 29B. Client workspace: 29C. Communications and next actions: 29D. Intelligence connections, export and restore: 29E.
+
+## 29B: intake, attribution, relationships and partners (done, 2026-10-10, not deployed)
+
+- **Intake.**
+  - New public forms: advisory (`/intake/advisory`), AI implementation (`/intake/ai_implementation`) and referral (`/intake/referral`).
+  - Every form records consent (respond only, or respond and send updates), "how did you hear", campaign tags (`utm_*`), the landing page and the page that sent the visitor. No visitor tracking.
+  - The same person sending the same content within 24 hours returns the same submission instead of a new one.
+  - Each new submission creates a review task.
+- **Conversion** matches the person by email and the organization by work domain, then by exact name. It never merges on fuzzy names. It then:
+  - records the original source with campaign, landing page and consent;
+  - sets the relationship role (sponsor, capital partner, technical or referral partner, or prospect);
+  - starts the relationship at Identified;
+  - for project, advisory and AI enquiries, creates an opportunity at Need identified with a qualification task;
+  - for partner enquiries, creates a potential partnership;
+  - for referrals, creates the referred person with the referrer as introducer and a task to confirm they agree to be contacted.
+
+  A failed conversion keeps the submission unconverted and shows the error on Portals → Intake.
+- **Record a contact** (Network → Relationships): for events, LinkedIn, personal network and informal introductions.
+  - Keeps the source and the referrer, and requires a next action, which also becomes a task.
+  - Matches an existing person by email.
+  - Never creates a client or a paid opportunity.
+- **Relationship panel** on person and organization pages: overlapping roles (client roles come from engagements), stage, next action or the reason there is none, source, and history.
+  - Closed and dormant need a reason; other stages need a next action or a reason.
+- **Partnerships** on organization pages.
+  - Capability verified needs evidence; a proposed arrangement must be described.
+  - Agreed needs a contract or agreement evidence; Active only after Agreed.
+  - No fee is assumed: terms are only what is recorded.
+- **Introductions** on organization pages.
+  - Sharing materials needs a recorded authorization.
+  - An open introduction between the same parties for the same purpose and project is refused.
+  - Recording an outcome closes it.
+- **Migration** `0065_superb_karnak.sql`, additive only: intake columns, `partnerships` and `relationship_introductions`.
+- **Validation.**
+  - `tests/integration/network.test.ts` passes: Scenario A, Scenario C, intake duplicates, attribution, domain matching and failure capture.
+  - The portal and site-intake tests, route guard and nav inventory pass.
+  - Typecheck is clean.
+  - Browser: the advisory form renders with campaign and landing captured, and the organization page shows the Relationship, Partnership and Introductions panels.

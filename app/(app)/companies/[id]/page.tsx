@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IntroductionsPanel, PartnershipPanel, RelationshipPanel } from "../../network-panels";
 import { notFound } from "next/navigation";
 import { EmailChip, Notice, ScoreChip } from "@/components/crm-bits";
 import DossierView from "@/components/dossier-view";
@@ -140,6 +141,9 @@ export default async function CompanyPage({ params, searchParams }: { params: Pr
         </div>
 
         <aside>
+          <RelationshipPanel db={appDb()} mandateId={org.mandateId} entityType="organization" entityId={org.id} />
+          <PartnershipPanel db={appDb()} mandateId={org.mandateId} orgId={org.id} />
+          <IntroductionsPanel db={appDb()} mandateId={org.mandateId} orgId={org.id} />
           <section className={r.panel}>
             <p className={r.panelTitle}>Identity</p>
             <dl className={r.kv}>

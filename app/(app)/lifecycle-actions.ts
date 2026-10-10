@@ -6,14 +6,16 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { changeRequests, clientRequests, deals, deliveryTemplates, engagementDeliverables, engagements, offerProposals, offerProposalVersions, services } from "@/db/schema";
+import { changeRequests, clientRequests, contacts, deals, deliveryTemplates, engagementDeliverables, engagements, offerProposals, offerProposalVersions, organizations, partnerships, relationshipIntroductions, services } from "@/db/schema";
+import { captureContact, createIntroduction, movePartnership, setIntroductionOutcome, setRelationshipStage, upsertPartnership } from "@/lib/lifecycle/network";
+import { addRole, removeRole } from "@/lib/lifecycle/relationships";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { appDb, isOwner, mandateCondition, type Scope } from "@/lib/db/scoped";
 import { decideChange, ensureTemplates, instantiateTemplate, moveDeliverable, proposeChange, reviewClientRequest, setTemplateStatus, submitClientRequest } from "@/lib/lifecycle/delivery";
 import { moveCommercialStage } from "@/lib/lifecycle/pipeline";
 import { createProposal, decideVersion, recordAgreement, saveVersion, sendVersion } from "@/lib/lifecycle/proposals";
-import { COMMERCIAL_STAGES, DELIVERABLE_STATUS, FEE_STRUCTURES } from "@/lib/lifecycle/vocab";
+import { CAPTURE_CHANNELS, COMMERCIAL_STAGES, DELIVERABLE_STATUS, FEE_STRUCTURES, PARTNERSHIP_KINDS, PARTNERSHIP_STAGES, RELATIONSHIP_ROLES, RELATIONSHIP_STAGES } from "@/lib/lifecycle/vocab";
 
 const zId = z.string().uuid();
 const zDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -196,4 +198,101 @@ export async function decideChangeAction(f: FormData) {
     await scopedEngagement(scope, c.engagementId);
     await decideChange(appDb(), id, decision, str(f, "evidence", 1000), email);
   }, decision === "approved" ? "Change approved: deliverables and fee updated; the accepted proposal is kept as agreed." : "Change rejected.");
+}
+
+// ---------- Phase 29B: relationships, contacts captured by hand, partnerships, introductions ----------
+const zEntity = z.enum(["contact", "organization"]);
+const entityUrl = (t: "contact" | "organization", id: string) => `${t === "contact" ? "/people" : "/companies"}/${id}#relationship`;
+async function scopedEntity(scope: Scope, t: "contact" | "organization", id: string) {
+  if (t === "contact") {
+    const [x] = await appDb().select({ id: contacts.id, mandateId: contacts.mandateId }).from(contacts).where(and(eq(contacts.id, id), mandateCondition(scope, contacts.mandateId)));
+    if (!x) throw new Error("Record not found");
+    return x;
+  }
+  const [x] = await appDb().select({ id: organizations.id, mandateId: organizations.mandateId }).from(organizations).where(and(eq(organizations.id, id), mandateCondition(scope, organizations.mandateId)));
+  if (!x) throw new Error("Record not found");
+  return x;
+}
+
+export async function addRoleAction(f: FormData) {
+  const t = zEntity.parse(f.get("entityType")), id = zId.parse(f.get("entityId"));
+  const role = z.enum(keys(RELATIONSHIP_ROLES)).parse(f.get("role"));
+  await run(entityUrl(t, id), await withOsUser(me), async ({ email, scope }) => {
+    const x = await scopedEntity(scope, t, id);
+    await addRole(appDb(), { mandateId: x.mandateId, entityType: t, entityId: id, role, basis: f.get("verified") === "on" ? "verified" : "stated", note: str(f, "note", 500) }, email);
+  }, `Added: ${RELATIONSHIP_ROLES[role]}.`);
+}
+
+export async function endRoleAction(f: FormData) {
+  const t = zEntity.parse(f.get("entityType")), id = zId.parse(f.get("entityId"));
+  const role = z.enum(keys(RELATIONSHIP_ROLES)).parse(f.get("role"));
+  await run(entityUrl(t, id), await withOsUser(me), async ({ email, scope }) => {
+    const x = await scopedEntity(scope, t, id);
+    await removeRole(appDb(), x.mandateId, t, id, role, email);
+  }, `Ended: ${RELATIONSHIP_ROLES[role]}.`);
+}
+
+export async function relationshipStageAction(f: FormData) {
+  const t = zEntity.parse(f.get("entityType")), id = zId.parse(f.get("entityId"));
+  const stage = z.enum(keys(RELATIONSHIP_STAGES)).parse(f.get("stage"));
+  await run(entityUrl(t, id), await withOsUser(me), async ({ email, scope }) => {
+    const x = await scopedEntity(scope, t, id);
+    await setRelationshipStage(appDb(), x.mandateId, t, id, stage, { reason: str(f, "reason", 500), nextAction: str(f, "nextAction", 300), nextActionDue: date(f, "nextActionDue"), noActionReason: str(f, "noActionReason", 300) }, email);
+  }, `Relationship: ${RELATIONSHIP_STAGES[stage]}.`);
+}
+
+export async function captureContactAction(f: FormData) {
+  await run("/relationships#capture", await withOsUser(me), async ({ email, scope }) => {
+    if (scope.kind !== "user" || !scope.mandateIds[0]) throw new Error("No workspace.");
+    const wanted = String(f.get("mandateId") ?? "");
+    const mandateId = scope.mandateIds.includes(wanted) ? wanted : scope.mandateIds[0];
+    const role = z.enum(keys(RELATIONSHIP_ROLES)).catch("acquaintance").parse(f.get("role"));
+    const r = await captureContact(appDb(), mandateId, {
+      name: str(f, "name", 120), email: str(f, "email", 254) || null, organization: str(f, "organization", 200) || null, title: str(f, "title", 200) || null,
+      channel: z.enum(keys(CAPTURE_CHANNELS)).catch("other").parse(f.get("channel")), referrerName: str(f, "referrerName", 120) || null, referrerEmail: str(f, "referrerEmail", 254) || null,
+      note: str(f, "note", 1000), role, nextAction: str(f, "nextAction", 300), nextActionDue: date(f, "nextActionDue"),
+    }, email);
+    return `/people/${r.contactId}#relationship`;
+  }, "Recorded with its source, referrer and next action. Not a client: that only follows an agreed engagement.");
+}
+
+export async function partnershipAction(f: FormData) {
+  const orgId = zId.parse(f.get("orgId"));
+  const kind = z.enum(keys(PARTNERSHIP_KINDS)).parse(f.get("kind"));
+  await run(`/companies/${orgId}#partnership`, await withOsUser(me), async ({ email, scope }) => {
+    const x = await scopedEntity(scope, "organization", orgId);
+    await upsertPartnership(appDb(), x.mandateId, orgId, kind, { capabilities: lines(str(f, "capabilities", 2000).replace(/,/g, "\n")), geographies: lines(str(f, "geographies", 500).replace(/,/g, "\n")), capacity: str(f, "capacity", 300) }, email);
+  }, "Partnership saved.");
+}
+
+export async function movePartnershipAction(f: FormData) {
+  const id = zId.parse(f.get("partnershipId"));
+  const to = z.enum(keys(PARTNERSHIP_STAGES)).parse(f.get("to"));
+  const back = zId.safeParse(f.get("orgId")).data;
+  await run(back ? `/companies/${back}#partnership` : "/partners", await withOsUser(me), async ({ email, scope }) => {
+    const [p] = await appDb().select().from(partnerships).where(and(eq(partnerships.id, id), mandateCondition(scope, partnerships.mandateId)));
+    if (!p) throw new Error("Partnership not found");
+    await movePartnership(appDb(), id, to, { evidence: str(f, "evidence", 1000), arrangement: str(f, "arrangement", 2000) || undefined, commercialTerms: str(f, "commercialTerms", 1000) || undefined, contractId: zId.safeParse(f.get("contractId")).data ?? null, reason: str(f, "reason", 500) }, email);
+  }, `Partnership: ${PARTNERSHIP_STAGES[to]}.`);
+}
+
+export async function introductionAction(f: FormData) {
+  const fromOrgId = zId.parse(f.get("fromOrgId"));
+  await run(`/companies/${fromOrgId}#introductions`, await withOsUser(me), async ({ email, scope }) => {
+    const x = await scopedEntity(scope, "organization", fromOrgId);
+    const toOrgId = zId.safeParse(f.get("toOrgId")).data ?? null;
+    if (toOrgId) await scopedEntity(scope, "organization", toOrgId);
+    await createIntroduction(appDb(), { mandateId: x.mandateId, fromOrgId, toOrgId, partnershipId: zId.safeParse(f.get("partnershipId")).data ?? null, projectId: zId.safeParse(f.get("projectId")).data ?? null, purpose: str(f, "purpose", 500), authorization: str(f, "authorization", 500), materialsShared: lines(str(f, "materials", 1000)), date: date(f, "date"), nextAction: str(f, "nextAction", 300) }, email);
+  }, "Introduction recorded. Nothing was sent: make the introduction yourself or through an approved message.");
+}
+
+export async function introductionOutcomeAction(f: FormData) {
+  const id = zId.parse(f.get("introductionId"));
+  const outcome = z.enum(["meeting_held", "engaged", "declined", "no_response", "withdrawn"]).parse(f.get("outcome"));
+  const back = zId.safeParse(f.get("orgId")).data;
+  await run(back ? `/companies/${back}#introductions` : "/relationships", await withOsUser(me), async ({ email, scope }) => {
+    const [i] = await appDb().select({ id: relationshipIntroductions.id }).from(relationshipIntroductions).where(and(eq(relationshipIntroductions.id, id), mandateCondition(scope, relationshipIntroductions.mandateId)));
+    if (!i) throw new Error("Introduction not found");
+    await setIntroductionOutcome(appDb(), id, outcome, str(f, "note", 500), email);
+  }, "Outcome recorded.");
 }

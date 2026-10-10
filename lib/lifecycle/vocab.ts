@@ -66,3 +66,16 @@ export const TEMPLATE_STATUS = { draft: "Draft", approved: "Approved", retired: 
 
 export const PAYMENT_KINDS = { payment: "Payment", refund: "Refund", credit: "Credit note" } as const;
 export const PAYMENT_METHODS = { bank_transfer: "Bank transfer", card: "Card", cheque: "Cheque", cash: "Cash", other: "Other" } as const;
+
+// ---- Phase 29B: intake, partnerships, introductions ----
+export const PARTNERSHIP_KINDS = { technical: "Technical partner", referral: "Referral partner", delivery: "Delivery partner", capital: "Capital partner" } as const;
+export const PARTNERSHIP_STAGES = {
+  potential: "Potential partner", capability_verified: "Capability verified", discussion: "Discussion", proposed_arrangement: "Proposed arrangement",
+  agreed: "Agreed", active: "Active", review: "Review", closed: "Closed",
+} as const;
+export type PartnershipStage = keyof typeof PARTNERSHIP_STAGES;
+export const PARTNERSHIP_FORWARD: PartnershipStage[] = ["potential", "capability_verified", "discussion", "proposed_arrangement", "agreed", "active", "review"];
+export const INTRO_OUTCOMES = { pending: "Pending", meeting_held: "Meeting held", engaged: "Working together", declined: "Declined", no_response: "No response", withdrawn: "Withdrawn" } as const;
+/** Channels for contacts recorded by hand: events, friendships, LinkedIn and informal introductions. */
+export const CAPTURE_CHANNELS = { informal_introduction: "Informal introduction", referral: "Referral", event: "Event", linkedin: "LinkedIn (manual)", friendship: "Personal network", email: "Email", other: "Other" } as const;
+export const CONSENT = { none: "Not given", respond: "Respond to this enquiry", updates: "Respond and send occasional updates" } as const;

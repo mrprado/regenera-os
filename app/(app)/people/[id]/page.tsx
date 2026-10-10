@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RelationshipPanel } from "../../network-panels";
 import { notFound } from "next/navigation";
 import { EmailChip, Notice, ScoreChip } from "@/components/crm-bits";
 import DossierView from "@/components/dossier-view";
@@ -144,6 +145,7 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
         </div>
 
         <aside>
+          <RelationshipPanel db={appDb()} mandateId={c.mandateId} entityType="contact" entityId={c.id} />
           <section className={r.panel}>
             <p className={r.panelTitle}>Contact</p>
             <dl className={r.kv}>

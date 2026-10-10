@@ -32,7 +32,7 @@ export const REFERRAL_DAYS = 365; // an approved registration protects the intro
 export const COMMISSION_TYPES = { fixed: "Fixed", percentage: "Percentage", bps: "Basis points", milestone: "Milestone", custom: "Custom" } as const;
 export const COMMISSION_STATUSES = { estimated: "Estimated / subject to agreement", approved: "Approved", invoiced: "Invoiced", paid: "Paid", void: "Void" } as const;
 
-export const INTAKE_KINDS = { project: "Project sponsor", capital: "Capital", broker: "Broker / introducer", partner: "Partner" } as const;
+export const INTAKE_KINDS = { project: "Project sponsor", capital: "Capital", broker: "Broker / introducer", partner: "Partner", advisory: "Advisory inquiry", ai_implementation: "AI implementation inquiry", referral: "Referral" } as const;
 export type IntakeKind = keyof typeof INTAKE_KINDS;
 export const INTAKE_STATUSES = { new: "New", reviewing: "Reviewing", converted: "Converted", rejected: "Rejected", spam: "Spam" } as const;
 

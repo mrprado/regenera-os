@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { CaptureContactForm } from "../network-panels";
+import { mandates } from "@/db/schema";
+import { inArray } from "drizzle-orm";
 import { Notice } from "@/components/crm-bits";
 import { PageHeader } from "@/components/page";
 import r from "@/components/record.module.css";
@@ -36,9 +39,11 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
   ring1.forEach((n, i) => pos.set(n, [300 + 125 * Math.cos((2 * Math.PI * i) / Math.max(1, ring1.length)), 210 + 125 * Math.sin((2 * Math.PI * i) / Math.max(1, ring1.length))]));
   ring2.forEach((n, i) => pos.set(n, [300 + 200 * Math.cos((2 * Math.PI * i) / Math.max(1, ring2.length) + 0.3), 210 + 185 * Math.sin((2 * Math.PI * i) / Math.max(1, ring2.length) + 0.3)]));
 
+  const ws = user.scope.mandateIds.length ? await appDb().select({ id: mandates.id, name: mandates.name }).from(mandates).where(inArray(mandates.id, user.scope.mandateIds)) : [];
+
   return (
     <>
-      <PageHeader title="Relationships" />
+      <PageHeader title="Relationships" actions={<a className="btn btn--primary" href="#capture">Record a contact</a>} />
       <Notice text={sp.notice} />
       <p className={ui.sub} style={{ marginTop: -4 }}>{counts.people} people, {counts.orgs} organizations, {counts.edges} connections from records (contacts, mailbox correspondence, introductions, project and contract parties, bids) and manual entries. Warm paths prefer strong connections; every hop shows why it exists. LinkedIn is never scraped.</p>
       <div className={r.grid}>
@@ -84,6 +89,7 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
           </section>
         </aside>
       </div>
+      <CaptureContactForm mandates={ws} />
     </>
   );
 }
