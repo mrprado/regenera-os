@@ -84,7 +84,14 @@ export const knowledgeRecords = sqliteTable("knowledge_records", {
   spatialSensitivity: text("spatial_sensitivity", { enum: ["none", "generalise", "hide"] }).notNull().default("hide"), generalizedArea: text("generalized_area").notNull().default(""),
   publicationStatus: text("publication_status", { enum: ["unpublished", "approved", "published", "prohibited"] }).notNull().default("unpublished"),
   withdrawn: integer("withdrawn", { mode: "boolean" }).notNull().default(false), provenanceComplete: integer("provenance_complete", { mode: "boolean" }).notNull().default(false),
-  localContexts: json<Record<string, unknown>>("local_contexts", "'{}'"), ...meta,
+  localContexts: json<Record<string, unknown>>("local_contexts", "'{}'"),
+  // Phase 28A: what kind of record, which tradition, and the terms of use beyond per-activity permissions.
+  recordKind: text("record_kind").notNull().default("community_held"), tradition: text("tradition").notNull().default("indigenous_local"),
+  placeId: text("place_id"), contributor: text("contributor").notNull().default(""), authorityEvidence: text("authority_evidence").notNull().default(""),
+  permittedPurpose: text("permitted_purpose").notNull().default(""), permittedUsers: json<string[]>("permitted_users"),
+  reviewDate: text("review_date"), compensation: text("compensation").notNull().default(""), benefitSharing: text("benefit_sharing").notNull().default(""),
+  translationProvenance: text("translation_provenance").notNull().default(""),
+  ...meta,
 }, t => [index("knowledge_records_project").on(t.projectId), index("knowledge_records_community").on(t.communityId)]);
 
 export const knowledgePermissions = sqliteTable("knowledge_permissions", {

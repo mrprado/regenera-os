@@ -84,7 +84,7 @@ export const ROUTE_MODULES: [string, ModuleKey][] = [
   ["/settings", "clients"],
   ["/today", "command"], ["/notifications", "command"],
   ["/map", "atlas"],
-  ["/projects", "projects"], ["/systems", "projects"], ["/community", "projects"],
+  ["/projects", "projects"], ["/systems", "projects"], ["/community", "projects"], ["/steward", "projects"],
   ["/land", "land"], ["/power", "energy"], ["/assets", "projects"],
   ["/capital", "capital"], ["/funding", "capital"],
   ["/benchmarks", "markets"],

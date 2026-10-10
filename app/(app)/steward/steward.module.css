@@ -1,0 +1,28 @@
+/* Steward (phase 28A). Tokens only; hairline sections. */
+.lede { max-width: 72ch; color: var(--text-2); font-size: 15px; line-height: 1.6; margin: 0 0 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px 18px; min-width: 0; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; color: var(--heading); display: flex; justify-content: space-between; gap: 8px; }
+.card h2 span { font-weight: 500; color: var(--text-3); font-size: 13px; }
+.card ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.card li { display: grid; gap: 2px; font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+.card li span { color: var(--text-2); font-size: 13px; }
+.empty { color: var(--text-3); font-size: 13px; margin: 6px 0 0; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; align-items: end; margin: 10px 0 0; }
+.form label { display: grid; gap: 4px; font-size: 13px; color: var(--text-2); }
+.form .wide { grid-column: 1 / -1; }
+.form textarea { min-height: 80px; font: 13px var(--font-mono); }
+.form input, .form select { min-height: 38px; }
+.check { display: flex !important; gap: 8px; align-items: center; }
+.state { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--text-2); white-space: nowrap; }
+.state[data-s="not_assessed"], .state[data-s="baseline_needed"], .state[data-s="unreviewed"] { color: var(--warning); border-color: var(--warning); }
+.state[data-s="action_required"], .state[data-s="blocked"], .state[data-s="overdue"] { color: var(--critical); border-color: var(--critical); }
+.state[data-s="verified_in_scope"], .state[data-s="done"], .state[data-s="reviewed"] { color: var(--positive); border-color: var(--positive); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.grid > div { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
+.grid b { font-size: 13px; color: var(--heading); }
+.grid p { margin: 0; font-size: 13px; color: var(--text-2); }
+.money { font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; color: var(--text-2); border-left: 3px solid var(--line); padding: 4px 10px; margin: 8px 0; }
+.card a:focus-visible, .form button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media print { .noPrint { display: none !important; } }

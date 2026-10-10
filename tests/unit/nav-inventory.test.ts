@@ -60,7 +60,7 @@ describe("navigation inventory", () => {
     const client = navFor({ modules: ["command", "atlas", "projects", "documents", "reporting", "automations"], internal: false });
     expect(client.map(g => g.key)).toEqual(["command", "atlas", "projects", "capital", "intelligence", "workflows", "steward"]);
     expect(client.find(g => g.key === "intelligence")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/reports", "/reports?tab=cases"]);
-    expect(client.find(g => g.key === "steward")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/projects?stage=operations"]);
+    expect(client.find(g => g.key === "steward")!.sections.flatMap(s => s.items.map(i => i.href))).toEqual(["/steward", "/steward?tab=places", "/steward?tab=knowledge", "/steward?tab=community", "/steward?tab=care", "/steward?tab=outcomes", "/overview/steward", "/projects?stage=operations"]);
     expect(client.flatMap(g => g.sections.flatMap(s => s.items.map(i => i.href)))).not.toContain("/origination");
     const hrefs = flatNav({ modules: ["command"], internal: false }).map(f => f.href);
     expect(hrefs).not.toContain("/commercial");
