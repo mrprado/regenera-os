@@ -222,3 +222,10 @@
 .brandArea{display:flex;align-items:center;gap:14px;min-width:0}.header{grid-template-columns:auto minmax(0,1fr) auto}.sidebarToggle{display:grid;place-items:center;flex:none;width:36px;height:38px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--text-2);cursor:pointer}.sidebarToggle:hover{background:var(--surface-selected);color:var(--accent-ink)}.content{grid-column:2;grid-row:2}.sidebar{grid-column:1;grid-row:2}.shell[data-sidebar=collapsed]{grid-template-columns:0 minmax(0,1fr)}.shell[data-sidebar=collapsed]>.sidebar{display:none}.notificationsButton{display:grid;place-items:center;position:relative;width:38px;height:38px;color:var(--text-2);border-radius:50%}.notificationsButton:hover{background:var(--surface-selected);color:var(--accent-ink)}.notificationCount{position:absolute;right:-3px;top:-3px;min-width:17px;height:17px;padding:0 3px;background:var(--copper-ink);color:var(--action-text);border-radius:9px;font:11px/17px var(--font);text-align:center}.sidebarToggle:focus-visible,.notificationsButton:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
 @media(max-width:900px){.sidebarToggle{display:none}.brandArea{gap:0}.header{grid-template-columns:auto auto minmax(0,1fr) auto}.account{gap:6px}}
 @media print{.sidebarToggle,.notificationsButton{display:none}}
+/* Header items line up with the page content below (the date on Command), not with the logo: the first column matches
+   the sidebar, and the breadcrumb takes the same left padding and centring as .main (max-width 1440px). */
+@media(min-width:901px){
+  .shell:not([data-sidebar=collapsed])>.header{container-type:inline-size;grid-template-columns:calc(var(--sidebar-w) - 24px) minmax(0,1fr) auto;column-gap:0}
+  .shell:not([data-sidebar=collapsed])>.header>.headerSlot{padding-left:max(clamp(20px,4vw,56px),calc((100cqw + 48px - var(--sidebar-w) - 1440px)/2 + clamp(20px,4vw,56px)))}
+  .shell:not([data-sidebar=collapsed])>.header>.account{padding-left:16px}
+}
