@@ -11,6 +11,7 @@ import { activeGrant, logAccess, visibleOpportunities } from "@/lib/portal/acces
 import { registerReferral } from "@/lib/portal/broker";
 import { currentPortalUser, requestIp, withPortalUser } from "@/lib/portal/guard";
 import { brokerIdFor } from "@/lib/portal/views";
+import { clientDecideChange, clientDecideDeliverable, clientRespondRequest } from "@/lib/portal/client";
 import { REFERRAL_TARGETS } from "@/lib/portal/vocab";
 
 const zId = z.string().uuid();
@@ -107,4 +108,37 @@ export async function expressInterestAction(formData: FormData) {
     await logAccess(appDb(), u, "interest", "capital_opportunity", o.id, true);
   });
   redirect(note("/portal/capital?tab=opportunities", "Thank you. Regenera will follow up; nothing is committed by expressing interest."));
+}
+
+// ---------- Phase 29C: client workspace. Each action re-checks the engagement grant (lib/portal/client.ts). ----------
+export async function clientDeliverableAction(formData: FormData) {
+  const deliverableId = zId.parse(formData.get("deliverableId"));
+  const decision = z.enum(["accept", "revise"]).parse(formData.get("decision"));
+  let msg = "";
+  await withPortalUser("client", async u => {
+    try { await clientDecideDeliverable(appDb(), u, deliverableId, decision, str(formData, "note", 2000)); msg = decision === "accept" ? "Thank you: recorded as accepted." : "Revision request sent to Regenera."; }
+    catch (e) { msg = (e as Error).message; }
+  });
+  redirect(note("/portal/client?tab=deliverables", msg));
+}
+
+export async function clientRequestResponseAction(formData: FormData) {
+  const requestId = zId.parse(formData.get("requestId"));
+  let msg = "";
+  await withPortalUser("client", async u => {
+    try { await clientRespondRequest(appDb(), u, requestId, str(formData, "response", 4000)); msg = "Thank you: sent to Regenera for review."; }
+    catch (e) { msg = (e as Error).message; }
+  });
+  redirect(note("/portal/client?tab=requests", msg));
+}
+
+export async function clientChangeAction(formData: FormData) {
+  const changeId = zId.parse(formData.get("changeId"));
+  const decision = z.enum(["approved", "rejected"]).parse(formData.get("decision"));
+  let msg = "";
+  await withPortalUser("client", async u => {
+    try { await clientDecideChange(appDb(), u, changeId, decision); msg = decision === "approved" ? "Change approved." : "Change declined."; }
+    catch (e) { msg = (e as Error).message; }
+  });
+  redirect(note("/portal/client", msg));
 }

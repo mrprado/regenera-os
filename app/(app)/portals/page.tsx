@@ -8,7 +8,7 @@ import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import {
   brokerProfiles, capitalOpportunities, commissionEvents, commissionSchedules, dataRoomDocuments, dataRooms, distributionApprovals, documentRequests, documents,
-  intakeSubmissions, organizations, portalAccessLog, portalGrants, portalMessages, portalUsers, procurementPackages, projects, projectUpdates, referralAgreements,
+  engagements, intakeSubmissions, organizations, portalAccessLog, portalGrants, portalMessages, portalUsers, procurementPackages, projects, projectUpdates, referralAgreements,
   referralRegistrations,
 } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
@@ -116,10 +116,11 @@ async function AccessTab({ scope, users, projectRows, docRows, nameOf }: { scope
     db.select({ id: procurementPackages.id, name: procurementPackages.name }).from(procurementPackages).where(mandateCondition(scope, procurementPackages.mandateId)),
     users.length ? db.select().from(portalAccessLog).where(inArray(portalAccessLog.portalUserId, users.map(u => u.id))).orderBy(desc(portalAccessLog.at)).limit(40) : [],
   ]);
-  const label = (type: string, id: string) => (type === "project" ? projectRows.find(x => x.id === id)?.name : type === "document" ? docRows.find(x => x.id === id)?.title : type === "capital_opportunity" ? opps.find(x => x.id === id)?.title : type === "data_room" ? rooms.find(x => x.id === id)?.name : type === "procurement_package" ? pkgs.find(x => x.id === id)?.name : id) ?? id;
+  const engs = await db.select({ id: engagements.id, name: engagements.name }).from(engagements).where(mandateCondition(scope, engagements.mandateId));
+  const label = (type: string, id: string) => (type === "project" ? projectRows.find(x => x.id === id)?.name : type === "document" ? docRows.find(x => x.id === id)?.title : type === "capital_opportunity" ? opps.find(x => x.id === id)?.title : type === "data_room" ? rooms.find(x => x.id === id)?.name : type === "procurement_package" ? pkgs.find(x => x.id === id)?.name : type === "engagement" ? engs.find(x => x.id === id)?.name : id) ?? id;
   const options: Record<string, { id: string; name: string }[]> = {
     project: projectRows, document: docRows.map(d => ({ id: d.id, name: d.title })), capital_opportunity: opps.map(o => ({ id: o.id, name: `${o.title} (gate ${o.gate.replace(/_/g, " ")})` })),
-    data_room: rooms, procurement_package: pkgs, deal: [],
+    data_room: rooms, procurement_package: pkgs, deal: [], engagement: engs.map(e => ({ id: e.id, name: e.name })),
   };
   return (
     <div className={r.grid}>

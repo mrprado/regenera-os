@@ -1,11 +1,11 @@
 // External surfaces vocabulary (master build instruction §02, §26, §31–38, §69).
 
-export const PORTAL_KINDS = { sponsor: "Project sponsor", capital: "Capital partner", broker: "Broker / introducer", partner: "Partner (EPC, consultant …)", stakeholder: "Stakeholder" } as const;
+export const PORTAL_KINDS = { sponsor: "Project sponsor", capital: "Capital partner", broker: "Broker / introducer", partner: "Partner (EPC, consultant …)", stakeholder: "Stakeholder", client: "Client" } as const;
 export type PortalKind = keyof typeof PORTAL_KINDS;
 export const PORTAL_USER_STATUSES = { invited: "Invited", active: "Active", suspended: "Suspended", revoked: "Revoked" } as const;
 
 // What a grant can point at. Visibility is explicit per entity.
-export const GRANT_ENTITIES = { project: "Project", capital_opportunity: "Capital opportunity", data_room: "Data room", document: "Document", procurement_package: "Procurement package", deal: "Opportunity / deal" } as const;
+export const GRANT_ENTITIES = { project: "Project", capital_opportunity: "Capital opportunity", data_room: "Data room", document: "Document", procurement_package: "Procurement package", deal: "Opportunity / deal", engagement: "Engagement (client workspace)" } as const;
 export type GrantEntity = keyof typeof GRANT_ENTITIES;
 
 export const DATA_ROOM_FOLDERS = {

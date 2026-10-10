@@ -124,3 +124,23 @@ Plan: [phase-29-commercial-lifecycle.md](phase-29-commercial-lifecycle.md). Appr
   - The portal and site-intake tests, route guard and nav inventory pass.
   - Typecheck is clean.
   - Browser: the advisory form renders with campaign and landing captured, and the organization page shows the Relationship, Partnership and Introductions panels.
+
+## 29C: client workspace (done, 2026-10-10, not deployed)
+
+- **New portal account type "Client"** and a grant type "Engagement".
+  - Invite a client under Portals → Users, then grant the engagement under Portals → Access.
+  - A grant is refused when the engagement belongs to another workspace.
+- **`/portal/client`**: an overview with the client's next steps, deliverables, what we need, invoices and messages.
+  - The overview covers the agreed scope (the accepted version), milestones and deliverable progress, and items waiting on the client.
+  - Proposed changes can be approved or declined there.
+- **Client-facing fields only.**
+  - Not shown: internal notes, cost rates, margins, conflict and price-override notes, partner costs, draft or scheduled invoices, other engagements.
+  - Internal blockers are shown only when they wait on the client.
+- **Client actions**: accept a deliverable or request a revision (only while it is with them for review), answer a request, and approve or decline a change.
+  - Each action re-checks the live grant and workspace on the server and is written to the portal access log, denials included.
+  - The client's name and the portal are recorded as the evidence.
+- **Branding**: the portal header names the client's organization. Tenant logo and accent (already in `tenants.branding`) are not applied yet.
+- **Validation.**
+  - `tests/integration/client-portal.test.ts` passes. It covers Scenario D and isolation: another client, a cross-workspace grant and a revoked grant are all refused, and internal fields are absent from the view.
+  - Portal tests and route guard pass. Typecheck is clean.
+  - The client page has not been opened in a browser: that needs a client portal session, which was not created locally.

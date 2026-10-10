@@ -4,7 +4,7 @@
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
-  brokerProfiles, capitalOpportunities, dataRoomDocuments, dataRooms, distributionApprovals, documents, investorQualifications, ndaAcceptances,
+  brokerProfiles, capitalOpportunities, engagements, dataRoomDocuments, dataRooms, distributionApprovals, documents, investorQualifications, ndaAcceptances,
   organizations, portalAccessLog, portalGrants, portalUsers,
 } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -21,6 +21,10 @@ export async function logAccess(db: Db, user: Pick<PortalUser, "id">, action: st
 export async function grantAccess(db: Db, input: { portalUserId: string; entityType: GrantEntity; entityId: string; canDownload?: boolean; expiresAt?: string | null; note?: string }, actor: string) {
   const [u] = await db.select().from(portalUsers).where(eq(portalUsers.id, input.portalUserId));
   if (!u) throw new Error("Portal user not found");
+  if (input.entityType === "engagement") {
+    const [e] = await db.select({ mandateId: engagements.mandateId }).from(engagements).where(eq(engagements.id, input.entityId));
+    if (!e || e.mandateId !== u.mandateId) throw new Error("That engagement is not in this portal user's workspace.");
+  }
   const [existing] = await db.select().from(portalGrants).where(and(eq(portalGrants.portalUserId, u.id), eq(portalGrants.entityType, input.entityType), eq(portalGrants.entityId, input.entityId), isNull(portalGrants.revokedAt)));
   if (existing) {
     await db.update(portalGrants).set({ canDownload: input.canDownload ?? existing.canDownload, expiresAt: input.expiresAt ?? existing.expiresAt }).where(eq(portalGrants.id, existing.id));

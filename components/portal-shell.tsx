@@ -9,14 +9,15 @@ export const PORTAL_NAV: Record<PortalKind, [string, string][]> = {
   broker: [["overview", "Overview"], ["referrals", "Referrals"], ["opportunities", "Opportunities"], ["fees", "Fees"], ["documents", "Documents"], ["messages", "Messages"], ["profile", "Profile"]],
   partner: [["overview", "Overview"], ["opportunities", "Opportunities"], ["requests", "Requests"], ["documents", "Documents"], ["messages", "Messages"]],
   stakeholder: [["overview", "Overview"], ["documents", "Documents"], ["updates", "Updates"], ["messages", "Messages"]],
+  client: [["overview", "Overview"], ["deliverables", "Deliverables"], ["requests", "What we need"], ["invoices", "Invoices"], ["messages", "Messages"]],
 };
 
 /** External portal chrome: simpler than the OS, no internal sidebar, one next action at a time. */
-export function PortalShell({ kind, tab, user, notice, children }: { kind: PortalKind; tab: string; user: { name: string; email: string }; notice?: string; children: React.ReactNode }) {
+export function PortalShell({ kind, tab, user, notice, brandNote, children }: { kind: PortalKind; tab: string; user: { name: string; email: string }; notice?: string; brandNote?: string | null; children: React.ReactNode }) {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <div className={styles.brand}>REGENERA<span>Capital aligned with living systems · {PORTAL_KINDS[kind]} portal</span></div>
+        <div className={styles.brand}>REGENERA<span>Capital aligned with living systems · {brandNote ? `${brandNote} · ` : ""}{PORTAL_KINDS[kind]} portal</span></div>
         <div className={styles.who}>
           <span>{user.name || user.email}</span>
           <form method="post" action={withBase("/api/portal/signout")}><button className="btn" type="submit">Sign out</button></form>
