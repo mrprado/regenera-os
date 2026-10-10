@@ -37,6 +37,11 @@ export const services = sqliteTable("services", {
   ownerEmail: text("owner_email"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   seeded: integer("seeded", { mode: "boolean" }).notNull().default(false),
+  // Phase 29: an offer is draft until an owner approves it; a draft cannot go on a proposal that is sent.
+  problem: text("problem").notNull().default(""),
+  qualificationCriteria: json<string[]>("qualification_criteria"), exclusions: json<string[]>("exclusions"), paymentOptions: json<string[]>("payment_options"),
+  offerStatus: text("offer_status", { enum: ["draft", "approved", "retired"] }).notNull().default("draft"),
+  offerVersion: integer("offer_version").notNull().default(1), approvedBy: text("approved_by"), approvedAt: text("approved_at"),
   ...timestamps,
 }, t => [uniqueIndex("services_key").on(t.mandateId, t.key, t.depth)]);
 
@@ -101,6 +106,8 @@ export const engagements = sqliteTable("engagements", {
   originOpportunityId: text("origin_opportunity_id"),                   // the funding call this relationship came from
   feeBasis: text("fee_basis"),                                          // FEE_BASES; contingent needs legal / program review
   budgetLines: json<{ role: string; person?: string; hours: number; rate: number }[]>("budget_lines"),
+  // Phase 29: the accepted proposal version is the agreed scope; the delivery template version used is kept.
+  proposalId: text("proposal_id"), acceptedVersionId: text("accepted_version_id"), templateId: text("template_id"), templateVersion: integer("template_version"),
   ...timestamps,
 }, t => [index("engagements_mandate_status").on(t.mandateId, t.status), index("engagements_org").on(t.orgId), index("engagements_project").on(t.projectId)]);
 

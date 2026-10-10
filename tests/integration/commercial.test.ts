@@ -61,12 +61,13 @@ describe("engagements", () => {
     const inv = await invoiceFromSchedule(t.db, e.id, e.paymentSchedule[0].id, "2026-09-01", 30, "alan");
     expect(inv.number).toBe("REG-2026-0001"); expect(inv.dueDate).toBe("2026-10-01");
     await expect(invoiceFromSchedule(t.db, e.id, e.paymentSchedule[0].id, "2026-09-01", 30, "alan")).rejects.toThrow(/Already/);
-    await expect(recordPayment(t.db, inv.id, 1000, "2026-09-10", "alan")).rejects.toThrow(/Send/);
+    await expect(recordPayment(t.db, inv.id, 1000, "2026-09-10", "alan", "TEST bank ref")).rejects.toThrow(/Issue the invoice/);
     await t.db.update(invoices).set({ status: "sent" }).where(eq(invoices.id, inv.id));
     expect(derivedInvoiceStatus({ status: "sent", dueDate: "2026-10-01", amount: 10_000, paidAmount: 0 }, "2026-09-27")).toBe("due");
     expect(derivedInvoiceStatus({ status: "sent", dueDate: "2026-10-01", amount: 10_000, paidAmount: 0 }, "2026-11-05")).toBe("overdue");
-    await recordPayment(t.db, inv.id, 4_000, "2026-09-20", "alan");
-    await expect(recordPayment(t.db, inv.id, 7_000, "2026-09-21", "alan")).rejects.toThrow(/exceeds/);
+    await expect(recordPayment(t.db, inv.id, 4_000, "2026-09-20", "alan", " ")).rejects.toThrow(/evidence/);
+    await recordPayment(t.db, inv.id, 4_000, "2026-09-20", "alan", "TEST bank ref 1");
+    await expect(recordPayment(t.db, inv.id, 7_000, "2026-09-21", "alan", "TEST bank ref 2")).rejects.toThrow(/exceed/);
 
     await t.db.update(engagements).set({ hourlyCost: 100 }).where(eq(engagements.id, e.id));
     await t.db.insert(timeEntries).values({ mandateId: M, engagementId: e.id, person: "alan", hours: 40, date: "2026-09-15" });
@@ -77,7 +78,7 @@ describe("engagements", () => {
     expect(econ.grossMargin).toBe(69_500 + 800 - 4_800);
 
     const overview = await commercialOverview(t.db, [M], "2026-11-05");
-    expect(overview!.mrr).toBe(16_500); expect(overview!.receivables).toBe(6_000);
+    expect(overview!.receivables).toEqual([{ currency: "USD", amount: 6_000 }]);
     const items = await commercialAttention(t.db, [M], "2026-11-05");
     expect(items.find(i => i.key === `inv:${inv.id}`)?.severity).toBe("critical"); // 35 days overdue
     expect(proposalMarkdown(fresh, "Costa Verde", "Valle Solar", svc.filter(s => fresh.workstreams.includes(s.key)))).toMatch(/Fixed fee: USD 20,000[\s\S]*Monthly fee: USD 16,500 for 3 months/);

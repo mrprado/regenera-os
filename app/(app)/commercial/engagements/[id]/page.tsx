@@ -15,6 +15,7 @@ import { approveEngagementAction, changeOrderAction, conflictCheckAction, confli
 import { createContractAction } from "../../../contract-actions";
 import styles from "../../commercial.module.css";
 import Lifecycle from "./lifecycle";
+import DeliveryPanel from "./delivery-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Engagement" };
@@ -93,8 +94,11 @@ export default async function EngagementPage({ params, searchParams }: { params:
             {e.priceOverrideReason && <p className={ui.sub}>Price below the floor approved by {e.priceOverrideBy} on {(e.priceOverrideAt ?? "").slice(0, 10)}: {e.priceOverrideReason}</p>}
           </section>
 
-          <section className={r.panel}>
-            <p className={r.panelTitle}>Deliverables</p>
+          <DeliveryPanel db={db} e={e} />
+
+          {e.deliverables.length > 0 && <section className={r.panel}>
+            <p className={r.panelTitle}>Earlier deliverables list</p>
+            <p className={ui.sub}>Recorded before delivery plans. New work goes in the delivery plan above.</p>
             <table className={ui.table}><thead><tr><th>Deliverable</th><th>Status</th><th>Due</th><th /></tr></thead><tbody>
               {e.deliverables.map(d => <tr key={d.id}><td>{d.label}{d.serviceKey ? <span className={ui.sub}>{svc.find(s => s.key === d.serviceKey)?.name}</span> : null}</td>
                 <td colSpan={3}><form action={deliverableAction} className={styles.inline}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="deliverableId" value={d.id} />
@@ -102,8 +106,7 @@ export default async function EngagementPage({ params, searchParams }: { params:
                   <input type="date" name="due" defaultValue={d.due ?? ""} style={{ color: d.due && d.due < today && !["delivered", "accepted"].includes(d.status) ? "var(--critical)" : undefined }} />
                   <button className={ui.miniBtn} type="submit">Update</button></form></td></tr>)}
             </tbody></table>
-            <form action={deliverableAction} className={styles.inline}><input type="hidden" name="id" value={e.id} /><input name="label" placeholder="Add deliverable" required /><input type="date" name="due" /><button className={ui.miniBtn} type="submit">Add</button></form>
-          </section>
+            </section>}
 
           <section className={r.panel}>
             <p className={r.panelTitle}>Payment schedule and invoices</p>
@@ -114,7 +117,7 @@ export default async function EngagementPage({ params, searchParams }: { params:
               {invs.map(i => { const st = derivedInvoiceStatus(i, today); return <tr key={i.id}><td>{i.number}<span className={ui.sub}>{i.milestone}</span></td><td className={ui.num}>{money(i.amount, i.currency)}</td><td className={ui.num}>{money(i.paidAmount, i.currency)}</td><td style={{ color: st === "overdue" ? "var(--critical)" : undefined }}>{i.dueDate}</td><td><span className={ui.chip}>{INVOICE_STATUSES[st as keyof typeof INVOICE_STATUSES]}</span></td>
                 <td><div className={styles.inline}>
                   {i.status === "draft" && <form action={invoiceAction}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="op" value="send" /><input type="hidden" name="invoiceId" value={i.id} /><button className={ui.miniBtn} type="submit">Mark sent</button></form>}
-                  {!["draft", "void", "paid"].includes(st) && <form action={invoiceAction} className={styles.inline}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="op" value="pay" /><input type="hidden" name="invoiceId" value={i.id} /><input className={styles.amt} name="amount" defaultValue={i.amount - i.paidAmount} aria-label="Amount received" /><input type="date" name="paidAt" defaultValue={today} aria-label="Date received" /><button className={ui.miniBtn} type="submit">Record payment</button></form>}
+                  {!["draft", "void", "paid"].includes(st) && <form action={invoiceAction} className={styles.inline}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="op" value="pay" /><input type="hidden" name="invoiceId" value={i.id} /><input className={styles.amt} name="amount" defaultValue={i.amount - i.paidAmount} aria-label="Amount received" /><input type="date" name="paidAt" defaultValue={today} aria-label="Date received" /><input name="evidence" required placeholder="Bank reference or remittance" aria-label="Payment evidence" /><button className={ui.miniBtn} type="submit">Record payment</button></form>}
                   {st !== "paid" && i.status !== "void" && <form action={invoiceAction}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="op" value="void" /><input type="hidden" name="invoiceId" value={i.id} /><button className={ui.miniBtn} type="submit">Void</button></form>}
                 </div></td></tr>; })}
             </tbody></table>}

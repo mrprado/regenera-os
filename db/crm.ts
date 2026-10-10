@@ -206,6 +206,7 @@ export const deals = sqliteTable("deals", {
   opportunityId: text("opportunity_id"),     // a bid on a funding opportunity (phase 5)
   projectId: text("project_id"),            // physical project this row is about (phase 6)
   monthlyValue: real("monthly_value"),       // retainers
+  commercialStage: text("commercial_stage"),                          // lib/lifecycle/vocab COMMERCIAL_STAGES; null = read from stage
   stageChangedAt: text("stage_changed_at").notNull().default(now),
   testRecord: integer("test_record", { mode: "boolean" }).notNull().default(false), // fixture/test data: kept, but out of metrics and work queues
   archivedAt: text("archived_at"),

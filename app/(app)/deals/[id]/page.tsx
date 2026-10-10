@@ -19,6 +19,7 @@ import { createContractAction } from "../../contract-actions";
 import { createProjectFromDealAction } from "../../project-actions";
 import { GenerateMenu } from "@/components/generate-menu";
 import { DealFlowPanels } from "./panels";
+import CommercialPanel from "./commercial-panel";
 import lc from "./lifecycle.module.css";
 
 // Phase 24: the sales lifecycle as one strip, with the button that does the next step.
@@ -74,8 +75,8 @@ export default async function DealPage({ params, searchParams }: { params: Promi
             <ol className={lc.strip} aria-label="Sales lifecycle">{LIFE.map((x, i) => <li key={x.key} className={i === at ? lc.now : i < at ? lc.done : undefined} aria-current={i === at ? "step" : undefined}>{x.label}</li>)}</ol>
             <div className={lc.next}>
               {step === "qualify" && <><p>Qualify the need: book a call, or close it if it is not a fit.</p>{move("call_booked", "Call booked", true)}{move("lost", "Not a fit")}</>}
-              {step === "propose" && <><p>{project ? "Draft the diagnostic proposal on the project's Capital tab (integrity-checked; nothing is sent), then mark the deal at Proposal." : "Link or create the project this concerns, so it is screened before you propose."}</p>{project ? <Link className="btn btn--primary" href={`/projects/${project.id}?tab=capital#readiness-rubric`}>Draft proposal</Link> : <a className="btn btn--primary" href="#project">Link a project</a>}{move("proposal", "Proposal sent")}</>}
-              {step === "agree" && <><p>Agree terms and record the engagement agreement; mark Signed once countersigned.</p>{agreements[0] ? <Link className="btn btn--primary" href={`/contracts/${agreements[0].id}`}>Open agreement</Link> : <a className="btn btn--primary" href="#agreements">Create agreement</a>}{move("signed", "Signed")}{move("lost", "Lost")}</>}
+              {step === "propose" && <><p>Draft a versioned proposal from approved services below; record it as sent when it leaves your mailbox.</p><a className="btn btn--primary" href="#proposals">Draft proposal</a>{!project && <a className="btn" href="#project">Link a project</a>}</>}
+              {step === "agree" && <><p>Record the client&apos;s acceptance on the sent version, then record the agreement: that creates the contract, the engagement and its delivery plan, and marks Signed.</p><a className="btn btn--primary" href="#proposals">Open proposals</a>{move("lost", "Lost")}</>}
               {step === "deliver" && <><p>Run the engagement and invoice on its milestones.</p><Link className="btn btn--primary" href="/commercial?tab=engagements">Engagements</Link><Link className="btn" href="/commercial?tab=billing">Billing</Link></>}
               {step === "close" && <p>This deal is closed ({DEAL_STAGES[d.stage]}).</p>}
             </div>
@@ -127,6 +128,8 @@ export default async function DealPage({ params, searchParams }: { params: Promi
               <button className={ui.miniBtn} type="submit">Close or park</button>
             </form>
           </section>
+
+          <CommercialPanel db={db} deal={d} owner={owner} />
 
           <DealFlowPanels db={db} d={{ id: d.id, mandateId: d.mandateId, name: d.name, orgId: d.orgId }} />
 

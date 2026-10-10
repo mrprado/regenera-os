@@ -48,3 +48,7 @@
 .timeline li{font-size:14px;padding:12px 0;line-height:1.55}.when{font-size:13px}.form label,.formRow label{font-size:14px;line-height:1.45}.form input,.form select,.form textarea{font-size:14px;min-height:40px;padding:10px 12px}.formRow{gap:16px}
 .read{border:1px solid var(--line);border-radius:7px;padding:14px 16px;background:var(--paper-2);font-size:15px}.empty{font-style:normal;line-height:1.65;color:var(--text-2)}
 @media(max-width:1050px){.grid{grid-template-columns:1fr}.panel{padding:20px}.fieldRow{grid-template-columns:1fr}.formRow{grid-template-columns:1fr}}
+
+/* A checkbox inside a record form: inline with its text (phase 29). */
+.form .check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.form .check input { width: auto; min-height: 0; padding: 0; }

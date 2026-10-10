@@ -6,6 +6,7 @@ import type { Db } from "@/db";
 import { engagements, expenses, invoices, organizations, projectParties, services, timeEntries } from "@/db/schema";
 import type { ChangeOrder, Deliverable, PaymentLine } from "@/db/commercial";
 import { audit } from "@/lib/audit";
+import { recordInvoicePayment } from "@/lib/lifecycle/payments";
 import { SERVICE_SEEDS } from "./catalog";
 import { STAGE_PROBABILITY, type ENGAGEMENT_STATUSES } from "./vocab";
 
@@ -165,14 +166,9 @@ export async function invoiceFromSchedule(db: Db, engagementId: string, lineId: 
   return inv;
 }
 
-export async function recordPayment(db: Db, invoiceId: string, amount: number, date: string, actor: string) {
-  const [inv] = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
-  if (!inv) throw new Error("Invoice not found");
-  if (inv.status === "void" || inv.status === "draft") throw new Error("Send the invoice before recording a payment");
-  const paid = r2(inv.paidAmount + amount);
-  if (paid > inv.amount + 0.005) throw new Error("Payment exceeds the invoice amount");
-  await db.update(invoices).set({ paidAmount: paid, paidAt: paid >= inv.amount - 0.005 ? date : inv.paidAt, status: paid >= inv.amount - 0.005 ? "paid" : "partially_paid", updatedAt: new Date().toISOString() }).where(eq(invoices.id, invoiceId));
-  await audit(db, { actor, action: "invoice_payment", entity: "invoices", entityId: invoiceId, after: { amount, date, paid } });
+/** Records money received with its evidence (phase 29: payments are rows; the invoice status is derived from them). */
+export async function recordPayment(db: Db, invoiceId: string, amount: number, date: string, actor: string, evidence: string) {
+  return recordInvoicePayment(db, { invoiceId, amount, receivedOn: date, evidence }, actor);
 }
 
 // ---------- economics ----------
@@ -217,24 +213,25 @@ export async function commercialOverview(db: Db, mandateIds: string[], today = n
   const open = rows.filter(r => ["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting", "renewal"].includes(r.e.status));
   const active = rows.filter(r => ["active", "waiting_on_client", "on_hold"].includes(r.e.status));
   const liveInv = invs.filter(i => i.status !== "void").map(i => ({ ...i, derived: derivedInvoiceStatus(i, today) }));
-  const byService = new Map<string, { contract: number; margin: number; revenue: number; count: number; known: boolean }>();
-  const byClient = new Map<string, { contract: number; collected: number; count: number }>();
+  // Keyed with the currency: amounts in different currencies are never added together.
+  const byService = new Map<string, { service: string; currency: string; contract: number; margin: number; revenue: number; count: number; known: boolean }>();
+  const byClient = new Map<string, { client: string; currency: string; contract: number; collected: number; count: number }>();
   for (const r of rows.filter(x => !["prospect", "lost"].includes(x.e.status))) {
     const k = r.e.workstreams[0] ?? "unassigned";
-    const s = byService.get(k) ?? { contract: 0, margin: 0, revenue: 0, count: 0, known: true };
-    s.contract += r.econ.contractValue; s.margin += r.econ.grossMargin ?? 0; s.known &&= r.econ.grossMargin !== null; s.revenue += r.econ.contractValue; s.count++; byService.set(k, s);
-    const c = byClient.get(r.client) ?? { contract: 0, collected: 0, count: 0 }; c.contract += r.econ.contractValue; c.collected += r.econ.collected; c.count++; byClient.set(r.client, c);
+    const cur = r.e.currency;
+    const s = byService.get(`${k}|${cur}`) ?? { service: k, currency: cur, contract: 0, margin: 0, revenue: 0, count: 0, known: true };
+    s.contract += r.econ.contractValue; s.margin += r.econ.grossMargin ?? 0; s.known &&= r.econ.grossMargin !== null; s.revenue += r.econ.contractValue; s.count++; byService.set(`${k}|${cur}`, s);
+    const c = byClient.get(`${r.client}|${cur}`) ?? { client: r.client, currency: cur, contract: 0, collected: 0, count: 0 }; c.contract += r.econ.contractValue; c.collected += r.econ.collected; c.count++; byClient.set(`${r.client}|${cur}`, c);
   }
-  const mrr = active.filter(r => r.e.monthlyFee > 0).reduce((a, r) => a + r.e.monthlyFee, 0);
   return {
     rows, invoices: liveInv,
-    pipelineValue: r2(open.reduce((a, r) => a + r.econ.contractValue, 0)), pipelineWeighted: r2(open.reduce((a, r) => a + r.econ.weighted, 0)),
-    activeValue: r2(active.reduce((a, r) => a + r.econ.contractValue, 0)), mrr: r2(mrr), arr: r2(mrr * 12),
-    receivables: r2(liveInv.reduce((a, i) => a + (i.derived === "paid" || i.derived === "draft" || i.derived === "scheduled" ? 0 : i.amount - i.paidAmount), 0)),
+    openCount: open.length, activeCount: active.length,
+    // Per currency: amounts in different currencies are never added together.
+    receivables: [...liveInv.reduce((m, i) => (i.derived === "paid" || i.derived === "draft" || i.derived === "scheduled" ? m : m.set(i.currency, r2((m.get(i.currency) ?? 0) + i.amount - i.paidAmount))), new Map<string, number>())].map(([currency, amount]) => ({ currency, amount })),
     overdue: liveInv.filter(i => i.derived === "overdue"), dueSoon: liveInv.filter(i => i.derived === "due" || i.derived === "partially_paid"),
     // A service whose engagements include an unknown margin (no internal cost rate) shows no margin, not a partial sum.
-    byService: [...byService.entries()].map(([k, v]) => ({ service: k, ...v, marginPct: v.revenue && v.known ? r2((v.margin / v.revenue) * 100) : null })).sort((a, b) => b.contract - a.contract),
-    byClient: [...byClient.entries()].map(([k, v]) => ({ client: k, ...v })).sort((a, b) => b.contract - a.contract),
+    byService: [...byService.values()].map(v => ({ ...v, marginPct: v.revenue && v.known ? r2((v.margin / v.revenue) * 100) : null })).sort((a, b) => a.currency.localeCompare(b.currency) || b.contract - a.contract),
+    byClient: [...byClient.values()].sort((a, b) => a.currency.localeCompare(b.currency) || b.contract - a.contract),
     winRate: (() => { const decided = rows.filter(r => r.e.status === "lost" || !["prospect", "qualified", "discovery", "scoping", "proposal", "negotiation", "contracting"].includes(r.e.status)); const won = decided.filter(r => r.e.status !== "lost"); return decided.length ? r2((won.length / decided.length) * 100) : null; })(),
   };
 }

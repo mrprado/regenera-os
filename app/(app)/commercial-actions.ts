@@ -169,7 +169,7 @@ export async function invoiceAction(formData: FormData) {
     try {
       if (op === "create") { const inv = await invoiceFromSchedule(appDb(), id, str(formData, "lineId", 40), date(formData, "issueDate") ?? new Date().toISOString().slice(0, 10), Math.round(num(formData, "termsDays") ?? 30), user.email); msg = `Invoice ${inv.number} drafted.`; }
       else if (op === "send" && invoiceId) { await appDb().update(invoices).set({ status: "sent", updatedAt: new Date().toISOString() }).where(and(eq(invoices.id, invoiceId), eq(invoices.engagementId, id))); await audit(appDb(), { actor: user.email, action: "invoice_sent", entity: "invoices", entityId: invoiceId }); msg = "Marked as sent (send it through your billing system; the OS does not email invoices)."; }
-      else if (op === "pay" && invoiceId) { await recordPayment(appDb(), invoiceId, num(formData, "amount") ?? 0, date(formData, "paidAt") ?? new Date().toISOString().slice(0, 10), user.email); msg = "Payment recorded."; }
+      else if (op === "pay" && invoiceId) { const r = await recordPayment(appDb(), invoiceId, num(formData, "amount") ?? 0, date(formData, "paidAt") ?? new Date().toISOString().slice(0, 10), user.email, str(formData, "evidence", 500)); msg = r.duplicate ? "That payment was already recorded." : "Payment recorded."; }
       else if (op === "void" && invoiceId) { await appDb().update(invoices).set({ status: "void", updatedAt: new Date().toISOString() }).where(and(eq(invoices.id, invoiceId), eq(invoices.engagementId, id))); await audit(appDb(), { actor: user.email, action: "invoice_void", entity: "invoices", entityId: invoiceId }); msg = "Invoice voided."; }
     } catch (e) { msg = `Not done: ${(e as Error).message}`; }
   });

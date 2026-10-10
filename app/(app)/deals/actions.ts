@@ -1,9 +1,11 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { activities, deals } from "@/db/schema";
+import { activities, deals, offerProposals } from "@/db/schema";
+import { commercialStageOf, recordStage } from "@/lib/lifecycle/pipeline";
+import { FROM_DEAL_STAGE } from "@/lib/lifecycle/vocab";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
@@ -34,7 +36,10 @@ export async function moveDeal(formData: FormData) {
       await audit(db, { actor: user.email, action: "deal_gate_override", entity: "deals", entityId: id, after: { toStage: stage, reason, failed } });
     }
     const now = new Date().toISOString();
-    await db.update(deals).set({ stage, stageChangedAt: now, updatedAt: now }).where(eq(deals.id, id));
+    // Phase 29: the commercial stage and its history follow the older board moves; Signed comes only from an agreement.
+    if (stage === "signed" && !(await db.select({ id: offerProposals.id }).from(offerProposals).where(and(eq(offerProposals.dealId, id), isNotNull(offerProposals.engagementId)))).length && !(formData.get("override") === "on" && isOwner(user.scope, d.mandateId))) { blocked = stage; return; }
+    await db.update(deals).set({ stage, commercialStage: FROM_DEAL_STAGE[stage], stageChangedAt: now, updatedAt: now }).where(eq(deals.id, id));
+    await recordStage(db, { mandateId: d.mandateId, pipeline: "commercial", entityType: "deal", entityId: id, from: commercialStageOf(d), to: FROM_DEAL_STAGE[stage], reason: String(formData.get("reason") ?? "").slice(0, 300) || "Moved on the pipeline board", by: user.email });
     await db.insert(activities).values({ mandateId: d.mandateId, dealId: id, orgId: d.orgId, contactId: d.contactId, type: "stage_change", detail: `${DEAL_STAGES[d.stage]} → ${DEAL_STAGES[stage]}`, source: "manual", actor: user.email });
     await audit(db, { actor: user.email, action: "deal_stage", entity: "deals", entityId: id, before: { stage: d.stage }, after: { stage } });
   });

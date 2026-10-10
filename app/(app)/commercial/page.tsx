@@ -12,11 +12,13 @@ import { commercialOverview, ensureServices, priceService } from "@/lib/commerci
 import { ACCOUNT_CATEGORIES, ACCOUNT_STATUSES, BILLING_TYPES, DEPTHS, ENGAGEMENT_STATUSES, ENTITY_KINDS, INVOICE_STATUSES, LIFECYCLE_PHASES, PARTNER_KINDS, SERVICE_FAMILIES, VENDOR_CAPABILITIES , REVENUE_CATEGORIES, COST_BASIS } from "@/lib/commercial/vocab";
 import { addAccountAction, addEntityAction, addPartnerAction, createEngagementAction, updateServiceAction } from "../commercial-actions";
 import styles from "./commercial.module.css";
+import { OfferStatus, OwnerEconomics, ProposalsTab, TemplatesTab } from "./lifecycle-tabs";
+import { isOwner } from "@/lib/db/scoped";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Commercial" };
 
-const TABS = [["overview", "Overview"], ["engagements", "Engagements"], ["services", "Services & pricing"], ["billing", "Billing"], ["partners", "Partners & vendors"], ["accounts", "Accounts"], ["entities", "Entities"]] as const;
+const TABS = [["overview", "Overview"], ["proposals", "Proposals"], ["engagements", "Engagements"], ["services", "Services & pricing"], ["templates", "Delivery templates"], ["billing", "Billing"], ["partners", "Partners & vendors"], ["accounts", "Accounts"], ["entities", "Entities"]] as const;
 const money = (n: number | null | undefined, cur = "USD") => (n === null || n === undefined ? "—" : `${cur} ${Math.round(n).toLocaleString("en-US")}`);
 
 export default async function CommercialPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -39,13 +41,14 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       <nav className={ui.tabs} aria-label="Commercial sections">{TABS.map(([k, l]) => <Link key={k} className={`${ui.tab} ${tab === k ? ui.tabActive : ""}`} href={`/commercial${k === "overview" ? "" : `?tab=${k}`}`}>{l}</Link>)}</nav>
 
       {tab === "overview" && o && <>
+        <OwnerEconomics scope={user.scope} />
         {metrics.byCurrency.map(m => (
           <dl key={m.currency} className={ui.stats} aria-label={`Commercial metrics in ${m.currency}`}>
             {([["Platform ARR", m.arr, metrics.definitions.arr], ["Advisory MRR", m.advisoryMrr, metrics.definitions.advisoryMrr], ["Other recurring / month", m.otherMrr, metrics.definitions.otherMrr],
-              ["Implementation backlog", m.backlog, metrics.definitions.backlog], ["Weighted pipeline", m.weighted, metrics.definitions.weighted], ["Renewing in 120 days", m.renewals, metrics.definitions.renewals]] as const).map(([label, v, def]) => (
+              ["Implementation backlog", m.backlog, metrics.definitions.backlog], ["Renewing in 120 days", m.renewals, metrics.definitions.renewals]] as const).map(([label, v, def]) => (
               <div key={label} className={ui.stat} title={def}><b>{money(v, m.currency)}</b><span>{label}</span></div>))}
           </dl>))}
-        <p className={ui.sub}>Receivables {money(o.receivables)} · {o.overdue.length} overdue invoice{o.overdue.length === 1 ? "" : "s"} · open pipeline {metrics.byCurrency.map(m => money(m.pipeline, m.currency)).join(" + ") || "—"}{o.winRate !== null ? ` · win rate ${o.winRate}%` : ""}. Hover a figure for its definition.{metrics.inferredCategories ? ` ${metrics.inferredCategories} engagement(s) have an inferred revenue category: confirm it on the engagement.` : ""}</p>
+        <p className={ui.sub}>Receivables {o.receivables.map(r => money(r.amount, r.currency)).join(" + ") || money(0)} · {o.overdue.length} overdue invoice{o.overdue.length === 1 ? "" : "s"} · open pipeline {metrics.byCurrency.map(m => money(m.pipeline, m.currency)).join(" + ") || "—"}{o.winRate !== null ? ` · win rate ${o.winRate}%` : ""}. Hover a figure for its definition.{metrics.inferredCategories ? ` ${metrics.inferredCategories} engagement(s) have an inferred revenue category: confirm it on the engagement.` : ""}</p>
         <div className={r.grid}>
           <section className={r.panel}><p className={r.panelTitle}>Revenue mix (won and active)</p>
             {metrics.mix.length === 0 ? <p className={r.empty}>No won engagements yet.</p> : <table className={ui.table}><thead><tr><th>Category</th><th>Recurring</th><th className={ui.num}>Engagements</th><th className={ui.num}>Contract value</th><th className={ui.num}>Gross margin</th></tr></thead><tbody>
@@ -56,14 +59,14 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
             {metrics.renewing.length === 0 ? <p className={r.empty}>None due.</p> : <table className={ui.table}><tbody>{metrics.renewing.map(x => <tr key={x.id}><td><Link href={`/commercial/engagements/${x.id}`}>{x.name}</Link><span className={ui.sub}>{x.date}</span></td><td className={ui.num}>{money(x.value, x.currency)}</td></tr>)}</tbody></table>}
           </section></aside>
         </div>
-        <p className={ui.sub}>Advisory economics of Regenera only: kept separate from project investment economics (project Financials). Pipeline weights are stage defaults unless set per engagement.</p>
+        <p className={ui.sub}>Advisory economics of Regenera only: kept separate from project investment economics (project Financials). No stage probabilities are applied.</p>
         <div className={r.grid}>
           <section className={r.panel}><p className={r.panelTitle}>By service line</p>
-            <table className={ui.table}><thead><tr><th>Service</th><th>Engagements</th><th>Contract value</th><th>Gross margin</th></tr></thead><tbody>{o.byService.map(s => <tr key={s.service}><td>{svcName.get(s.service) ?? s.service}</td><td className={ui.num}>{s.count}</td><td className={ui.num}>{money(s.contract)}</td><td className={ui.num}>{s.marginPct === null ? "—" : `${s.marginPct}%`}</td></tr>)}</tbody></table>
+            <table className={ui.table}><thead><tr><th>Service</th><th>Engagements</th><th>Contract value</th><th>Gross margin</th></tr></thead><tbody>{o.byService.map(s => <tr key={`${s.service}|${s.currency}`}><td>{svcName.get(s.service) ?? s.service}</td><td className={ui.num}>{s.count}</td><td className={ui.num}>{money(s.contract, s.currency)}</td><td className={ui.num}>{s.marginPct === null ? "—" : `${s.marginPct}%`}</td></tr>)}</tbody></table>
             <p className={ui.sub}>Margins exclude internal time where no cost rate is set on the engagement.</p>
           </section>
           <aside><section className={r.panel}><p className={r.panelTitle}>By client</p>
-            <table className={ui.table}><tbody>{o.byClient.slice(0, 12).map(c => <tr key={c.client}><td>{c.client}</td><td className={ui.num}>{money(c.contract)}</td><td className={ui.num}>{money(c.collected)} collected</td></tr>)}</tbody></table>
+            <table className={ui.table}><tbody>{o.byClient.slice(0, 12).map(c => <tr key={`${c.client}|${c.currency}`}><td>{c.client}</td><td className={ui.num}>{money(c.contract, c.currency)}</td><td className={ui.num}>{money(c.collected, c.currency)} collected</td></tr>)}</tbody></table>
           </section></aside>
         </div>
       </>}
@@ -85,7 +88,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       {tab === "services" && <section className={r.panel}>
         <p className={r.panelTitle}>Service catalogue and pricing</p>
         <p className={ui.sub}>Price bands are Regenera&apos;s internal defaults, not market facts. Suggested price = list × complexity (× urgency), raised to meet the target margin on known costs; set an internal hourly cost on an engagement to include time. Changes are audited.</p>
-        <div className={ui.tableWrap}><table className={ui.table}><thead><tr><th>Service</th><th>Phase</th><th>Billing</th><th>Band</th><th>List</th><th>Minimum</th><th>Hours</th><th>External cost</th><th>Target margin</th><th>Suggested (std, ${COST_BASIS.CATALOGUE.rate}/h)</th><th>Role · specialists</th><th /></tr></thead><tbody>
+        <div className={ui.tableWrap}><table className={ui.table}><thead><tr><th>Service</th><th>Phase</th><th>Billing</th><th>Band</th><th>List</th><th>Minimum</th><th>Hours</th><th>External cost</th><th>Target margin</th><th>Suggested (std, ${COST_BASIS.CATALOGUE.rate}/h)</th><th>Role · specialists</th><th>Offer</th></tr></thead><tbody>
           {svc.map(s => { const p = priceService(s, { complexity: "standard", urgency: false, travelCost: 0, specialistCost: 0, hourlyCost: COST_BASIS.CATALOGUE.rate }); return (
             <tr key={s.id} className={s.active ? undefined : styles.inactive}>
               <td className={ui.primary}>{s.name}{s.depth !== "standard" ? <span className={ui.chip}> {DEPTHS[s.depth]}</span> : null}<span className={ui.sub}>{SERVICE_FAMILIES[s.family]}{s.approvalRequired ? " · approval required" : ""}</span></td>
@@ -96,7 +99,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
                 <label className={ui.sub}><input type="checkbox" name="active" defaultChecked={s.active} /> active</label><button className={ui.miniBtn} type="submit">Save</button></form></td>
               <td className={ui.num}>{money(p.suggested)}{s.perMonth ? "/mo" : ""}<span className={ui.sub}>{p.expectedMarginPct === null ? "" : `${p.expectedMarginPct}% margin`}{p.lowMargin ? " · LOW MARGIN" : ""}</span></td>
               <td className={ui.sub}>{s.role.replace(/_/g, " ")}{s.specialistRequired.length ? ` · specialist: ${s.specialistRequired.join(", ")}` : ""}{s.legalNotes ? ` · ${s.legalNotes}` : ""}</td>
-              <td />
+              <td><OfferStatus s={s} owner={isOwner(user.scope, s.mandateId)} /></td>
             </tr>); })}
         </tbody></table></div>
       </section>}
@@ -111,6 +114,8 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
         <p className={ui.sub}>Today {today}.</p>
       </section>}
 
+      {tab === "proposals" && <ProposalsTab scope={user.scope} />}
+      {tab === "templates" && <TemplatesTab scope={user.scope} />}
       {tab === "partners" && <Partners scope={user.scope} />}
       {tab === "accounts" && <Accounts scope={user.scope} />}
       {tab === "entities" && <Entities scope={user.scope} />}
