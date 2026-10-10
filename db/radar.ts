@@ -23,6 +23,8 @@ export const savedSearches = sqliteTable("saved_searches", {
   lastRunAt: text("last_run_at"),
   lastNew: integer("last_new"),
   createdBy: text("created_by").notNull().default("system"),
+  // Phase 27: a search made for a record (project, capital need, bond, funding application, queue item) and why.
+  entityType: text("entity_type"), entityId: text("entity_id"), workflow: text("workflow"), sector: text("sector"),
   ...timestamps,
 }, t => [uniqueIndex("saved_searches_key").on(t.mandateId, t.key)]);
 

@@ -484,6 +484,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "land" && <LandTab project={p} scope={user.scope} />}
       {tab === "diligence" && <DiligenceTab project={p} scope={user.scope} />}
       {tab === "equipment" && <EquipmentTab project={p} scope={user.scope} />}
+      {tab === "stakeholders" && <p style={{ margin: "0 0 12px" }}><Link className="btn btn--primary" href={`/prospecting/find?type=project&id=${p.id}`}>Find contacts for this project</Link> <span className={ui.sub}>Sponsor, offtakers, EPC, lenders and more, by role, sector and country. Nothing is sent.</span></p>}
       {tab === "stakeholders" && <StakeholdersTab project={p} scope={user.scope} />}
       {tab === "matches" && <MatchesTab project={p} scope={user.scope} kind={sp.kind} />}
       {tab === "screening" && <ScreeningTab project={{ id: p.id, mandateId: p.mandateId, name: p.name, country: p.country }} />}

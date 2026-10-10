@@ -421,6 +421,13 @@
       "when": 1791611197076,
       "tag": "0059_married_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "6",
+      "when": 1791616078622,
+      "tag": "0060_bumpy_ozymandias",
+      "breakpoints": true
     }
   ]
 }

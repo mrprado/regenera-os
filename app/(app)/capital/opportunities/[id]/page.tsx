@@ -48,7 +48,7 @@ export default async function CapitalOpportunityPage({ params, searchParams }: {
 
   return (
     <>
-      <PageHeader title={o.title} actions={<Link className="btn" href={`/projects/${o.projectId}?tab=capital`}>Project: {row.projectName}</Link>} />
+      <PageHeader title={o.title} actions={<><Link className="btn btn--primary" href={`/prospecting/find?type=capital_need&id=${o.id}`}>Find capital providers</Link><Link className="btn" href={`/projects/${o.projectId}?tab=capital`}>Project: {row.projectName}</Link></>} />
       <Notice text={sp.notice} />
       <p className={ui.sub} style={{ marginTop: -6 }}>{INSTRUMENTS[o.instrument as keyof typeof INSTRUMENTS] ?? o.instrument} · target {compactMoney(o.target, o.currency)} · <span className={o.gateState === "approved" ? ui.chip : ui.chipMuted}>Gate: {GATE_STATES[o.gateState]}</span></p>
 

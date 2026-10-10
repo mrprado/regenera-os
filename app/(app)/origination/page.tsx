@@ -91,6 +91,7 @@ async function Queue({ scope, entrance }: { scope: Scope; entrance: keyof typeof
                 <td><div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                   {x.stage === "discovered" || x.stage === "verified" ? stageForm(x.id, "qualified", "Qualify") : null}
                   {!["lost", "won", "deferred"].includes(x.stage) && stageForm(x.id, "lost", "Dismiss")}
+                  {!blocked && <Link className={ui.miniBtn} href={`/prospecting/find?type=queue_item&id=${x.id}`}>Find contacts</Link>}
                   {owner && x.projectId && !blocked && !x.proposalId && <form action={proposeDiagnosticAction}><input type="hidden" name="projectId" value={x.projectId} /><input type="hidden" name="back" value={back} /><button className={ui.miniBtn} type="submit">Draft proposal</button></form>}
                   <details><summary className={ui.sub}>Stage</summary>
                     <form action={setOriginationStageAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="back" value={back} />

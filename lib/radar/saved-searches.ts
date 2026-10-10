@@ -6,6 +6,7 @@ import type { Db } from "@/db";
 import { contacts, savedSearches, searchResults, segments } from "@/db/schema";
 import { type ApolloConfig, type PeopleSearchParams, searchPeople } from "@/lib/sources/apollo";
 import { nextRun } from "@/lib/time/cadence";
+import { isCommunityBody } from "@/lib/leads/matrix";
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri"];
 
@@ -74,6 +75,8 @@ export async function runSavedSearch(db: Db, cfg: ApolloConfig, id: string, now 
   let added = 0;
   for (const p of res.people) {
     if (inCrm.has(p.id)) continue;
+    // Community and Indigenous bodies are never prospected (Steward governs those relationships).
+    if (isCommunityBody(p.organization?.name)) continue;
     const name = p.name || [p.first_name, p.last_name ?? p.last_name_obfuscated].filter(Boolean).join(" ") || "Unknown";
     const rows = await db.insert(searchResults).values({
       mandateId: s.mandateId, savedSearchId: s.id, kind: "person", externalId: p.id, name,

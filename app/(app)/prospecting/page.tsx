@@ -29,7 +29,7 @@ export default async function ProspectingPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="Prospecting" count={newTotal || undefined} actions={owner ? <form action={scanNowAction}><button className="btn btn--primary" type="submit">Scan now</button></form> : undefined} />
+      <PageHeader title="Prospecting" count={newTotal || undefined} actions={<><Link className="btn btn--primary" href="/prospecting/find">Find contacts by role</Link>{owner && <form action={scanNowAction}><button className="btn" type="submit">Scan now</button></form>}</>} />
       <Notice text={sp.notice} />
       <nav className={ui.tabs} aria-label="Prospecting views">
         <Link className={`${ui.tab} ${tab === "playbooks" ? ui.tabActive : ""}`} href="/prospecting">Playbooks</Link>

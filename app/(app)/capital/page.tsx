@@ -208,7 +208,7 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
                   <thead><tr><th>Program</th><th>Issuer</th><th>Size</th><th>Coupon / maturity</th><th>Jurisdictions and restrictions</th><th>Status</th></tr></thead>
                   <tbody>{rows.map(b => (
                     <tr key={b.id}>
-                      <td>{b.program}<span className={ui.sub}>{b.instrument}{b.isin ? ` · ${b.isin}` : ""}</span></td>
+                      <td>{b.program}<span className={ui.sub}>{b.instrument}{b.isin ? ` · ${b.isin}` : ""} · <Link href={`/prospecting/find?type=bond&id=${b.id}`}>Find arrangers, reviewers, issuers</Link></span></td>
                       <td>{b.issuerOrgId ? orgs.find(o => o.id === b.issuerOrgId)?.name : "—"}</td>
                       <td>{compactMoney(b.issueSize, b.currency)}<span className={ui.sub}>min {compactMoney(b.minDenomination, b.currency)}</span></td>
                       <td>{b.coupon} {b.couponType}<span className={ui.sub}>{b.maturity}</span></td>

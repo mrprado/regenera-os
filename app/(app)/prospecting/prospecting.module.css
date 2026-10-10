@@ -18,3 +18,11 @@
 .step textarea { min-height: 120px; resize: vertical; }
 .stepHead { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--eyebrow); margin-bottom: 6px; }
 .code { font-family: ui-monospace, monospace; font-size: 14px; background: var(--secondary-surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px; white-space: pre-wrap; word-break: break-word; }
+/* Phase 27: Find contacts. */
+.findForm { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; align-items: end; margin: 12px 0 18px; }
+.findForm label { display: grid; gap: 4px; font-size: 13px; color: var(--text-2); }
+.findForm select, .findForm input { min-height: 38px; }
+.findRun { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 10px 0 14px; }
+.findLabel { margin: 12px 0 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.findList { list-style: none; margin: 0; padding: 0; }
+.findList li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); }

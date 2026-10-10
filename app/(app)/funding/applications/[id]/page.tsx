@@ -47,7 +47,7 @@ export default async function ApplicationPage({ params, searchParams }: { params
   const flags = evidenceFlags({ deadlineDays: left, eligibilityConfirmed: d.members.some(m => m.m.role === "lead" && m.m.eligibility === "confirmed"), missingEvidence: a.narrative.filter(n => n.basis === "missing").length + a.scoring.filter(s => !s.evidence).length, consortiumGaps: gaps.filter(g => g.status === "missing").length, matchGap: !!(o.matchRequirement || o.cofinancingPct) && !a.matchAmount, registrationGaps: a.compliance.filter(c => c.status !== "done").length });
   return (
     <>
-      <PageHeader title={a.name} actions={<><Link className="btn" href={`/funding/${o.id}`}>Opportunity</Link><Link className="btn" href="/funding?tab=bids">All bids</Link></>} />
+      <PageHeader title={a.name} actions={<><Link className="btn btn--primary" href={`/prospecting/find?type=funding_application&id=${a.id}`}>Find consortium partners</Link><Link className="btn" href={`/funding/${o.id}`}>Opportunity</Link><Link className="btn" href="/funding?tab=bids">All bids</Link></>} />
       <p className={f.kicker}>{[o.funder, APPLICATION_STATES[a.state as keyof typeof APPLICATION_STATES], d.lead ? `Lead: ${d.lead.name}` : "Lead: Regenera", d.project?.name].filter(Boolean).join("  ·  ")}</p>
       <Notice text={sp.notice} />
       <dl className={f.strip}>

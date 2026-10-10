@@ -6,6 +6,8 @@ import * as z from "zod/v4";
 import type { Db } from "@/db";
 import { contacts, dossiers, enrollments, mandates, messages, organizations, scores, segments, sequences, tasks, triggers, type SequenceStep } from "@/db/schema";
 import { runStructured, type AiConfig } from "@/lib/ai/run";
+import { communities } from "@/db/schema";
+import { isCommunityBody } from "@/lib/leads/matrix";
 import { freshnessSince } from "@/lib/freshness";
 import { enqueue } from "@/lib/jobs/queue";
 import { validateMessage, type StyleIssue } from "@/lib/style/validate";
@@ -46,8 +48,16 @@ export async function enrollContacts(db: Db, input: { contactIds: string[]; sequ
   // Campaign compliance: an unapproved linked campaign blocks enrollment; provenance and preferences filter the audience.
   const gate = await campaignGate(db, seq.id, rows.map(r => r.id));
   if (gate.blocked) throw new Error(gate.blocked);
+  // Community and Indigenous bodies are never put into outreach; Steward governs those relationships (phases 27/28).
+  const orgIds = [...new Set(rows.map(r => r.orgId).filter((x): x is string => !!x))];
+  const orgRows = orgIds.length ? await db.select({ id: organizations.id, name: organizations.name, roles: organizations.roles }).from(organizations).where(inArray(organizations.id, orgIds)) : [];
+  const communityOrgs = new Set([
+    ...orgRows.filter(o => isCommunityBody(o.name, Array.isArray(o.roles) ? o.roles.join(" ") : String(o.roles ?? ""))).map(o => o.id),
+    ...(orgIds.length ? (await db.select({ id: communities.orgId }).from(communities).where(inArray(communities.orgId, orgIds))).map(r => r.id).filter((x): x is string => !!x) : []),
+  ]);
   for (const c of rows) {
     if (mandate?.type === "investment") { skip("investment_mandate"); continue; }
+    if (c.orgId && communityOrgs.has(c.orgId)) { skip("community_body"); continue; }
     const g = gate.skip.get(c.id);
     if (g) { skip(g); continue; }
     if (c.suppressed) { skip("suppressed"); continue; }
