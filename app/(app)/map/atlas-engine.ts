@@ -242,6 +242,14 @@ export function addOverlay(map: maplibregl.Map, l: OfferedLayer, date: string) {
     map.addLayer({ id: `${p}-label`, type: "symbol", source: p, minzoom: 2.5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.1], "text-anchor": "top", "text-optional": true }, paint: { "text-color": l.swatch, "text-halo-color": "rgba(3,6,8,.9)", "text-halo-width": 1.2 } }, A_FEED);
     return;
   }
+  if (l.id === "steward_places") {
+    // Phase 28D: boundaries as outlines, points as rings; generalised places are drawn as dashed rings.
+    map.addLayer({ id: `${p}-fill`, type: "fill", source: p, filter: ["!=", ["geometry-type"], "Point"], paint: { "fill-color": "#7fb069", "fill-opacity": 0.12 } }, A_FEED);
+    map.addLayer({ id: `${p}-line`, type: "line", source: p, filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#7fb069", "line-width": 1.8 } }, A_FEED);
+    map.addLayer({ id: `${p}-pt`, type: "circle", source: p, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": ["case", ["==", ["get", "generalised"], 1], 12, 6], "circle-color": "rgba(127,176,105,0.18)", "circle-stroke-color": "#7fb069", "circle-stroke-width": 1.6 } }, A_FEED);
+    map.addLayer({ id: `${p}-label`, type: "symbol", source: p, minzoom: 5, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-optional": true }, paint: { "text-color": "#e8f0e3", "text-halo-color": "#18221E", "text-halo-width": 1.2 } }, A_FEED);
+    return;
+  }
   if (l.id === "quakes") {
     const age: ExpressionSpecification = ["step", ["get", "ageH"], "#ff3b30", 24, "#ff9f40", 72, "#f2d25c"];
     const r: ExpressionSpecification = ["interpolate", ["exponential", 1.6], ["coalesce", ["get", "mag"], 2.5], 2.5, 3, 5, 9, 7, 22, 9, 40];

@@ -281,6 +281,23 @@ Rules:
 - statements: up to 12 sponsor-level claims a lender would test (assets, pipeline size, returns offered, guarantees, listings, security), each with its page. Copy the claim; do not judge it.
 - Ignore marketing imagery and generic market commentary.`,
   },
+  "steward.place_assessment": {
+    model: "claude-sonnet-5",
+    maxTokens: 6000,
+    effort: "medium",
+    system: `${REGENERA_CONTEXT}
+
+Task: draft a Steward place assessment from an evidence pack. The draft is reviewed by a person before anything is decided.
+
+Rules:
+- Every factual statement cites one or more evidence ids exactly as given in the pack (e.g. "M3", "S12"). No citation, no fact.
+- Keep facts (what the evidence says, with its date) separate from interpretations (what it might mean). Interpretations are tentative and say what would confirm them.
+- Never state species absence, low risk, no Indigenous presence, consent, land rights, title or clearance. Missing evidence is listed under gaps, never treated as fine.
+- Do not calculate: use only numbers present in the pack. Areas, trends and overlaps are given by the OS when available.
+- Occurrence records are not surveys; modelled values are not site measurements; reanalysis is not observation; satellite metadata is not a processed image.
+- Knowledge items marked as governed may only be summarised as given; never infer or add to them.
+- Propose one concrete next action a person can take.`,
+  },
 } satisfies Record<string, PromptDef>;
 
 export type PromptKey = keyof typeof PROMPTS;

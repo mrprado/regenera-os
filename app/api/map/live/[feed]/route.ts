@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { getOsApiUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { plantsInView } from "@/lib/infrastructure/queries";
+import { stewardPlacesFeed } from "@/lib/steward/map";
 import { cyclones, eonet, fires, flights, militaryFlights, parseBbox, quakes, SAT_GROUPS, satellites, type SatGroup } from "@/lib/map/live";
 
 // Guarded: Atlas live feeds. Every provider call goes through fetchJson (registry gate, cache, ledger). Short
@@ -16,7 +17,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ feed
   const db = appDb();
   try {
     let body: unknown;
-    if (feed === "quakes") body = await quakes(db);
+    if (feed === "steward") body = await stewardPlacesFeed(db, user.scope);
+    else if (feed === "quakes") body = await quakes(db);
     else if (feed === "events") body = await eonet(db);
     else if (feed === "cyclones") body = await cyclones(db);
     else if (feed === "fires") body = await fires(db, env.NASA_FIRMS_MAP_KEY, parseBbox(q.get("bbox")));

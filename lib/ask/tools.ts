@@ -9,6 +9,7 @@ import { projectPlan, studyGaps } from "@/lib/delivery/engine";
 import { mandateCondition, type UserScope } from "@/lib/db/scoped";
 import { computeMetrics } from "@/lib/reports/metrics";
 import { DEAL_STAGES } from "@/lib/vocab";
+import { stewardQuestion } from "@/lib/steward/questions";
 
 export type ToolCtx = { db: Db; scope: UserScope; actor: string; source: "ask" | "mcp"; now?: Date };
 export type ToolDef<S extends z.ZodType = z.ZodType> = {
@@ -257,6 +258,12 @@ export const TOOLS: ToolDef[] = [
         ...(run ? {} : { missing: "No site-intelligence run yet: run it from Atlas." }),
       };
     },
+  }),
+  tool({
+    name: "steward_questions", kind: "read",
+    description: "Steward questions over the caller's places and projects: projects_without_stewardship_budget, places_with_stale_baseline (no measurement in the last 12 months), reviews_due_this_month (consent, care plans, knowledge permissions; counts only), findings_on_revised_or_failing_sources, actions_blocked_by_permissions, groundwater_evidence_gaps (karst places with an open hydrogeology request). Governed knowledge content is never returned.",
+    input: z.object({ question: z.enum(["projects_without_stewardship_budget", "places_with_stale_baseline", "reviews_due_this_month", "findings_on_revised_or_failing_sources", "actions_blocked_by_permissions", "groundwater_evidence_gaps"]) }),
+    run: async (ctx, a) => stewardQuestion(ctx.db, ctx.scope, a.question, ctx.now ?? new Date()),
   }),
   // ---------- writes: proposals only ----------
   tool({

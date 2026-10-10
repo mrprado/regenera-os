@@ -54,6 +54,7 @@ import ReadinessPanel from "../readiness-panel";
 import { currentDecision } from "@/lib/integrity/engine";
 import { DECISION_STATE_LABEL } from "@/lib/integrity/policy";
 import { nextStep } from "@/lib/projects/next-step";
+import StewardTab, { StewardReadiness } from "../steward-tab";
 import IntegrityPanel from "../integrity-panel";
 import { archiveProjectAction } from "../../casework-actions";
 import { appDb, isOwner } from "@/lib/db/scoped";
@@ -67,14 +68,14 @@ const TAB_GROUPS: { label: string; tabs: TabKey[] }[] = [
   { label: "Overview", tabs: ["overview", "operating", "activity"] },
   { label: "Site & land", tabs: ["place", "questions", "land", "screening", "natural", "systems", "constraints"] },
   { label: "Development", tabs: ["readiness", "diligence", "plan", "engineering", "built", "power", "equipment", "materials", "procurement"] },
-  { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community", "stakeholders"] },
+  { label: "Rights, risk & permits", tabs: ["risk", "regulatory", "community", "steward", "stakeholders"] },
   { label: "Capital", tabs: ["capital", "pathways", "funding", "stack", "matches"] },
   { label: "Economics", tabs: ["financials", "economics", "benchmarks"] },
   { label: "Partners & agreements", tabs: ["partners", "contracts"] },
 ];
 export const metadata = { title: "Project" };
 
-const TABS = [["overview", "Overview"], ["operating", "Operating context"], ["place", "Place"], ["questions", "Site questions"], ["land", "Land control"], ["diligence", "Diligence & data room"], ["equipment", "Equipment & queue"], ["stakeholders", "Stakeholders"], ["matches", "Matches"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
+const TABS = [["steward", "Steward"], ["overview", "Overview"], ["operating", "Operating context"], ["place", "Place"], ["questions", "Site questions"], ["land", "Land control"], ["diligence", "Diligence & data room"], ["equipment", "Equipment & queue"], ["stakeholders", "Stakeholders"], ["matches", "Matches"], ["screening", "Environmental & spatial screening"], ["readiness", "Readiness"], ["plan", "Plan"], ["constraints", "Constraints"], ["engineering", "Engineering"], ["built", "Built environment"], ["materials", "Materials"], ["procurement", "Procurement"], ["systems", "Systems"], ["power", "Power"], ["natural", "Natural asset"], ["community", "Community / rights"], ["risk", "Risk & E&S"], ["capital", "Capital"], ["stack", "Capital stack"], ["pathways", "Funding pathways"], ["financials", "Financials"], ["benchmarks", "Benchmarks"], ["economics", "Economics"], ["regulatory", "Regulatory"], ["partners", "Partners"], ["contracts", "Contracts"], ["funding", "Funding"], ["activity", "Activity"]] as const;
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/projects");
@@ -327,6 +328,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <div>
             <PartnerScanPanel project={p} group="capital" />
             <IntegrityPanel projectId={p.id} owner={isOwner(user.scope)} />
+            <StewardReadiness projectId={p.id} mandateId={p.mandateId} />
             <ReadinessPanel projectId={p.id} owner={isOwner(user.scope)} />
             <FundingMatches projectId={p.id} />
             {data.capital.requirements.length === 0 ? <section className={r.panel}><p className={r.empty}>No capital requirements yet. Do not record the project as &quot;seeking $X&quot;: add one requirement per purpose and instrument (pre-development, development, sponsor equity, senior debt, mezzanine, catalytic …).</p></section> : data.capital.requirements.map(req => {
@@ -417,6 +419,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "natural" && <NaturalTab project={p} scope={user.scope} sec={sp.sec} />}
       {tab === "benchmarks" && <BenchmarksTab project={p} mandateIds={user.scope.mandateIds} />}
       {tab === "power" && <PowerTab project={p} scope={user.scope} sec={sp.sec} />}
+      {tab === "steward" && <StewardTab project={p} scope={user.scope} />}
       {tab === "community" && <CommunityTab project={p} scope={user.scope} sec={sp.sec} sp={sp} />}
       {tab === "systems" && <SystemsTab project={p} scope={user.scope} category={sp.cat} />}
       {tab === "materials" && <MaterialsTab project={p} scope={user.scope} />}

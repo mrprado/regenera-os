@@ -107,3 +107,14 @@ export const stewardAssessments = sqliteTable("steward_assessments", {
   basis: text("basis").notNull(), evidenceRef: text("evidence_ref").notNull().default(""), scope: text("scope").notNull().default(""),
   assessedBy: text("assessed_by").notNull(), assessedAt: text("assessed_at").notNull().default(now),
 }, t => [index("steward_assessments_place").on(t.placeId, t.dimension, t.assessedAt)]);
+
+/** AI-drafted Steward outputs (phase 28D). Always drafts until a person reviews; invalidated if evidence is withdrawn. */
+export const stewardDrafts = sqliteTable("steward_drafts", {
+  id: id(), mandateId: text("mandate_id").notNull(), placeId: text("place_id").notNull(),
+  kind: text("kind").notNull().default("place_assessment"),
+  status: text("status", { enum: ["draft", "reviewed", "rejected", "invalidated"] }).notNull().default("draft"),
+  content: json<Record<string, unknown>>("content").notNull(),
+  evidenceIds: json<string[]>("evidence_ids"), knowledgeIds: json<string[]>("knowledge_ids"),
+  model: text("model").notNull().default(""), reviewedBy: text("reviewed_by"), reviewedAt: text("reviewed_at"), invalidatedReason: text("invalidated_reason"),
+  ...stamps,
+}, t => [index("steward_drafts_place").on(t.placeId, t.createdAt)]);

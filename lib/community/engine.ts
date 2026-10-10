@@ -12,6 +12,7 @@ import {
   communities, communityAuthorities, communityCommitments, communityGrievances, communityLedger, communityRights, consentRecords, finModels, knowledgePermissions,
   knowledgeRecords, knowledgeUses, participationStructures, projects, tasks,
 } from "@/db/schema";
+import { stewardDrafts } from "@/db/schema";
 import type { StructureTerms } from "@/db/community";
 import type { Db } from "@/db";
 import { audit } from "@/lib/audit";
@@ -128,6 +129,8 @@ async function propagate(db: Db, r: KRecord, activities: Activity[] | null, why:
   const hit = uses.filter(u => !activities || activities.includes(u.activity as Activity));
   for (const u of hit) {
     await db.update(knowledgeUses).set({ status: "flagged", flaggedReason: why }).where(eq(knowledgeUses.id, u.id));
+    // Phase 28D dependency graph: an AI draft built on this knowledge stops being usable at once.
+    if (u.outputType === "steward_draft") await db.update(stewardDrafts).set({ status: "invalidated", invalidatedReason: why, updatedAt: new Date().toISOString() }).where(eq(stewardDrafts.id, u.outputRef));
     await db.insert(tasks).values({ mandateId: r.mandateId, projectId: r.projectId, type: "other", title: `Remediate knowledge use: ${u.outputType} ${u.outputRef}`.slice(0, 200), body: `${why}. The output used restricted knowledge under "${u.activity}". Withdraw, redact or re-authorise it; keep the governance record.`, dueAt: new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10) });
   }
   await audit(db, { actor, action: "knowledge.propagate", entity: "knowledge_record", entityId: r.id, after: { why, flagged: hit.length } });

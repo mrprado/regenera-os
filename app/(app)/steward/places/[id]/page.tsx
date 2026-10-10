@@ -14,6 +14,7 @@ import {
 import { addAllocationAction, addIndicatorAction, addMeasurementAction, createBudgetAction, createCarePlanAction, linkPlaceAction, setAssessmentAction, setGeometryAction } from "../../actions";
 import s from "../../steward.module.css";
 import SourcesPanel from "./sources-panel";
+import DraftsPanel from "./drafts-panel";
 import { centroidOf, regionalAdvisories } from "@/lib/steward/sources/packs";
 
 export const dynamic = "force-dynamic";
@@ -149,6 +150,7 @@ export default async function PlacePage({ params, searchParams }: { params: Prom
       </section>
 
       <SourcesPanel placeId={id} owner={owner} />
+      <DraftsPanel placeId={id} />
 
       <section className={s.card} style={{ marginTop: 16 }}>
         <h2>Knowledge for this place<span>{visibleKnowledge.length}</span></h2>

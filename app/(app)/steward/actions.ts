@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { env } from "cloudflare:workers";
 import { runSourceForPlace, syncSourceRegister } from "@/lib/steward/sources/pipeline";
 import { z } from "zod";
-import { careActions, carePlans, communities, fundingAllocations, knowledgeRecords, stewardIndicators, stewardPlaces, stewardshipBudgets } from "@/db/schema";
+import { careActions, carePlans, communities, fundingAllocations, knowledgeRecords, stewardDrafts, stewardIndicators, stewardPlaces, stewardshipBudgets } from "@/db/schema";
+import { aiConfig } from "@/lib/config";
+import { draftPlaceAssessment } from "@/lib/steward/drafts";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { createKnowledgeRecord, setPermission, withdraw } from "@/lib/community/engine";
@@ -23,7 +25,8 @@ const keys = <T extends Record<string, unknown>>(o: T) => Object.keys(o) as [key
 const str = (f: FormData, k: string, max = 1000) => z.string().trim().max(max).catch("").parse(f.get(k) ?? "");
 const date = (f: FormData, k: string) => zDate.safeParse(f.get(k)).data ?? null;
 const num = (f: FormData, k: string) => { const v = str(f, k, 40).replace(/[, ]/g, ""); const n = Number(v); return v && Number.isFinite(n) ? n : null; };
-const note = (path: string, text: string) => `${path}${path.includes("?") ? "&" : "?"}notice=${encodeURIComponent(text)}`;
+// The notice goes in the query, before any #anchor, so the page can read it.
+const note = (path: string, text: string) => { const [base, hash] = path.split("#"); return `${base}${base.includes("?") ? "&" : "?"}notice=${encodeURIComponent(text)}${hash ? `#${hash}` : ""}`; };
 
 async function scopedPlace(scope: Scope, id: string) {
   const [p] = await appDb().select().from(stewardPlaces).where(and(eq(stewardPlaces.id, id), mandateCondition(scope, stewardPlaces.mandateId)));
@@ -230,7 +233,36 @@ export async function runSourceAction(f: FormData) {
   await run(`/steward/places/${placeId}#sources`, await withOsUser(async u => ({ email: u.email, scope: u.scope })), async ({ email, scope }) => {
     await scopedPlace(scope, placeId);
     await syncSourceRegister(appDb());
-    const r = await runSourceForPlace(appDb(), { placeId, sourceKey, actor: email, env: { FIRMS_MAP_KEY: (env as unknown as Record<string, string | undefined>).FIRMS_MAP_KEY } });
+    const r = await runSourceForPlace(appDb(), { placeId, sourceKey, actor: email, env: { FIRMS_MAP_KEY: (env as unknown as Record<string, string | undefined>).NASA_FIRMS_MAP_KEY } });
     return r.state === "available" || r.state === "no_records" ? r.message : `Not available: ${r.message}`;
   }, "Done.");
+}
+
+/** Drafts an AI place assessment from the evidence pack (phase 28D). Always a draft until a person reviews it. */
+export async function draftAssessmentAction(f: FormData) {
+  const placeId = zId.parse(f.get("placeId"));
+  await run(`/steward/places/${placeId}#drafts`, await withOsUser(async u => ({ email: u.email, scope: u.scope })), async ({ email, scope }) => {
+    await scopedPlace(scope, placeId);
+    if (scope.kind !== "user") throw new Error("Drafts need a workspace user.");
+    const ai = aiConfig();
+    if (!ai) return "AI drafting is not configured (ANTHROPIC_API_KEY is not set). Your records are unchanged.";
+    try {
+      const d = await draftPlaceAssessment(appDb(), ai, scope, placeId, email);
+      await audit(appDb(), { actor: email, action: "steward_draft_created", entity: "steward_drafts", entityId: d.id });
+    } catch (e) { return `The AI draft could not be produced: ${(e as Error).message}. Your records are unchanged.`; }
+  }, "Draft saved for review.");
+}
+
+export async function reviewDraftAction(f: FormData) {
+  const draftId = zId.parse(f.get("draftId"));
+  const decision = z.enum(["reviewed", "rejected"]).parse(f.get("decision"));
+  await run("/steward", await withOsUser(async u => ({ email: u.email, scope: u.scope })), async ({ email, scope }) => {
+    const db = appDb();
+    const [d] = await db.select().from(stewardDrafts).where(and(eq(stewardDrafts.id, draftId), mandateCondition(scope, stewardDrafts.mandateId)));
+    if (!d) throw new Error("Draft not found");
+    if (d.status !== "draft") throw new Error(`This draft is ${d.status}; it cannot be ${decision}.`);
+    await db.update(stewardDrafts).set({ status: decision, reviewedBy: email, reviewedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(stewardDrafts.id, draftId));
+    await audit(db, { actor: email, action: `steward_draft_${decision}`, entity: "steward_drafts", entityId: draftId });
+    return `/steward/places/${d.placeId}#drafts`;
+  }, decision === "reviewed" ? "Marked reviewed." : "Rejected.");
 }
