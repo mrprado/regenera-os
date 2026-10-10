@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <summary aria-label="Menu"><Menu size={20} aria-hidden /></summary>
           <div className={styles.mobilePanel}>{mandateOptions.length>1&&<MandateSwitcher options={mandateOptions} current={focus}/>}<SidebarNav user={navUser} variant="accordion" /></div>
         </details>
-        <div className={styles.brandArea}><SidebarToggle /><Link href="/today" className={styles.brand}>REGENERA <b>OS</b></Link></div>
+        <div className={styles.brandArea}><SidebarToggle /><Link href="/today" className={styles.brand} aria-label="Regenera OS, go to Command">REGENERA</Link></div>
         <div className={styles.headerSlot}>
           <WorkspaceTrail user={navUser}/>
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
