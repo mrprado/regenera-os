@@ -1,6 +1,7 @@
 // Project delivery engine (docs/plans/phase-6.md M7): plan (milestones + critical path), decisions, missing engineering
 // information, E&S issues and insurance, and what of it belongs on Today. Functions over a Db so they are testable.
 import { and, asc, eq, inArray, isNull, lte, notInArray, sql } from "drizzle-orm";
+import { inChunks } from "@/lib/db/chunk";
 import type { Db } from "@/db";
 import { decisions, esIssues, insurancePolicies, projectMilestones, projects, studies } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -98,7 +99,8 @@ export async function deliveryAlerts(db: Db, mandateIds: string[] | null, now = 
     .where(and(live, eq(decisions.status, "open"), lte(decisions.dueDate, addDays(now, 7)))).orderBy(asc(decisions.dueDate)).limit(20);
 
   const ps = await db.select({ id: projects.id, name: projects.name, assetClass: projects.assetClass, stage: projects.stage }).from(projects).where(live).limit(300);
-  const st = ps.length ? await db.select({ projectId: studies.projectId, type: studies.type, status: studies.status }).from(studies).where(inArray(studies.projectId, ps.map(p => p.id))) : [];
+  // D1 allows 100 bound parameters per statement: query the studies of many projects in slices.
+  const st = await inChunks(ps.map(p => p.id), ids => db.select({ projectId: studies.projectId, type: studies.type, status: studies.status }).from(studies).where(inArray(studies.projectId, ids)));
   const missingEngineering = ps.map(p => ({ p, g: studyGaps(p, st.filter(s => s.projectId === p.id)) }))
     .filter(x => x.g.due && x.g.missing.length).map(x => ({ projectId: x.p.id, project: x.p.name, missing: x.g.missing }));
 
