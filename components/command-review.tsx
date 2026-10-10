@@ -43,7 +43,7 @@ export default function CommandReview({ children }: { children: ReactNode }) {
         event.preventDefault(); document.getElementById('command-record-frame')?.focus();
       }
     }}>
-      <header className={s.header}><div><p>COMMAND / REVIEW</p><h2 id="review-title">{record.title}</h2></div><div className={s.actions}><a href={record.href} target="_blank" rel="noopener noreferrer" aria-label="Open record in a full workspace"><ArrowUpRight size={18} aria-hidden /></a><button ref={close} onClick={dismiss} aria-label="Close review"><X size={20} aria-hidden /></button></div></header>
+      <header className={s.header}><div><h2 id="review-title">{record.title}</h2></div><div className={s.actions}><a href={record.href} target="_blank" rel="noopener noreferrer" aria-label="Open record in a full workspace"><ArrowUpRight size={18} aria-hidden /></a><button ref={close} onClick={dismiss} aria-label="Close review"><X size={20} aria-hidden /></button></div></header>
       {!loaded && <p className={s.loading} role="status">Loading record details…</p>}
       <iframe id="command-record-frame" key={record.href} src={record.href} title={`Review ${record.title}`} className={s.frame} onLoad={event => {
         const doc = event.currentTarget.contentDocument;

@@ -199,7 +199,6 @@ async function Desk({user, now, fullOpen, context, afterDecisions, view = "today
   return (
     <>
       <section className={t.decisions} aria-labelledby="dec-h">
-        <p className={t.reviewHint}>Select a record to review its evidence, details and next action alongside Command.</p>
         <p className={r.panelTitle}><span id="dec-h">{view === "all" ? `All priorities (${totalPriorities})` : "Today: needs your decision"}</span>{view === "today" && <Link href="/today?map=all">All priorities ({totalPriorities})</Link>}</p>
         {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
           <ul className={t.decisionList}>
