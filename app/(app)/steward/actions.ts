@@ -3,6 +3,8 @@
 // Knowledge permissions are only changed by a workspace owner, and never assumed: new records start restrictive.
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { env } from "cloudflare:workers";
+import { runSourceForPlace, syncSourceRegister } from "@/lib/steward/sources/pipeline";
 import { z } from "zod";
 import { careActions, carePlans, communities, fundingAllocations, knowledgeRecords, stewardIndicators, stewardPlaces, stewardshipBudgets } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -219,4 +221,16 @@ export async function withdrawKnowledgeStewardAction(f: FormData) {
     const w = await withdraw(appDb(), recordId, email, reason);
     return `Withdrawal recorded. ${w.flagged} recorded use(s) flagged for remediation.`;
   }, "Withdrawn.");
+}
+
+/** Runs one source for one place now (bounded). Disabled sources record a "restricted" attempt with the reason. */
+export async function runSourceAction(f: FormData) {
+  const placeId = zId.parse(f.get("placeId"));
+  const sourceKey = z.string().regex(/^[a-z0-9_]{2,40}$/).parse(f.get("sourceKey"));
+  await run(`/steward/places/${placeId}#sources`, await withOsUser(async u => ({ email: u.email, scope: u.scope })), async ({ email, scope }) => {
+    await scopedPlace(scope, placeId);
+    await syncSourceRegister(appDb());
+    const r = await runSourceForPlace(appDb(), { placeId, sourceKey, actor: email, env: { FIRMS_MAP_KEY: (env as unknown as Record<string, string | undefined>).FIRMS_MAP_KEY } });
+    return r.state === "available" || r.state === "no_records" ? r.message : `Not available: ${r.message}`;
+  }, "Done.");
 }

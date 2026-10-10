@@ -13,6 +13,7 @@ import {
 } from "@/lib/steward/vocab";
 import { addAllocationAction, addIndicatorAction, addMeasurementAction, createBudgetAction, createCarePlanAction, linkPlaceAction, setAssessmentAction, setGeometryAction } from "../../actions";
 import s from "../../steward.module.css";
+import SourcesPanel from "./sources-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Place" };
@@ -143,6 +144,8 @@ export default async function PlacePage({ params, searchParams }: { params: Prom
           <label>Indicator<input name="name" required /></label><label>Unit<input name="unit" required /></label><label>Method<input name="method" /></label>
           <label>Target<input name="target" inputMode="decimal" /></label><label>Frequency<input name="frequency" /></label><div><button className="btn" type="submit">Add indicator</button></div></form>
       </section>
+
+      <SourcesPanel placeId={id} owner={owner} />
 
       <section className={s.card} style={{ marginTop: 16 }}>
         <h2>Knowledge for this place<span>{visibleKnowledge.length}</span></h2>

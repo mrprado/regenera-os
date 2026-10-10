@@ -14,6 +14,7 @@ import { matchFundingToProjects } from "@/lib/funding/project-match";
 import { generateGapTheses, generateHypotheses, syncOriginationQueue } from "@/lib/origination/engine";
 import { screenDue } from "@/lib/integrity/engine";
 import { stewardshipDue } from "@/lib/integrity/stewardship";
+import { dueSourceRuns, runSourceForPlace, syncSourceRegister } from "@/lib/steward/sources/pipeline";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -277,6 +278,13 @@ export const handlers: Record<string, JobHandler> = {
   "stewardship.due": async ({ db, now }) => {
     await stewardshipDue(db, now);
   },
+  "steward.sources": async ({ db, now }) => {
+    // Phase 28B: refresh the register, then a bounded number of place × source queries that are due under each source's policy.
+    await syncSourceRegister(db);
+    for (const run of await dueSourceRuns(db, now, 12)) {
+      await runSourceForPlace(db, { ...run, actor: "system:steward.sources", env: { FIRMS_MAP_KEY: (env as unknown as Record<string, string | undefined>).FIRMS_MAP_KEY }, now });
+    }
+  },
   "origination.sync": async ({ db, now }) => {
     // Phase 22: market hypotheses from signals, then the unified origination queue (capital-, project-, market-first).
     await generateHypotheses(db, REGENERA_MANDATE_ID, now);
@@ -455,6 +463,7 @@ export const DEFAULT_SCHEDULES: Record<string, string> = {
   "origination.sync": "every:3h",
   "integrity.screen": "every:2h",
   "stewardship.due": "daily:06:40",
+  "steward.sources": "every:6h",
   "site_intel.continue": "every:5m",
   "mandates.queues": "daily:05:10",
   "mandates.automation": "daily:06:15",

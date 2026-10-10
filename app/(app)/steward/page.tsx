@@ -9,6 +9,8 @@ import { localDate } from "@/lib/command/desk";
 import { ACCESS_STATUS, COMMUNITY_TYPES, CONSENT_STATUS, KNOWLEDGE_CATEGORIES } from "@/lib/community/vocab";
 import { appDb, mandateCondition } from "@/lib/db/scoped";
 import { canSeeKnowledge, stewardOverview } from "@/lib/steward/engine";
+import { placeSourceStates } from "@/lib/steward/sources/pipeline";
+import { DATA_STATES } from "@/lib/steward/vocab";
 import { CARE_PLAN_STATUS, GEOMETRY_ACCURACY, KNOWLEDGE_KINDS, KNOWLEDGE_TRADITIONS, OUTCOME_DIMENSIONS, PLACE_STATUS } from "@/lib/steward/vocab";
 import { createCarePlanAction, createKnowledgeAction, createPlaceAction } from "./actions";
 import s from "./steward.module.css";
@@ -49,6 +51,8 @@ function Card({ title, count, empty, children }: { title: string; count: number;
 async function Overview({ scope }: { scope: Scope }) {
   const today = localDate(new Date());
   const o = await stewardOverview(appDb(), scope, today);
+  // Data coverage: for each place, enabled automated sources that were never queried, failed, or are stale.
+  const coverage = (await Promise.all(o.places.slice(0, 40).map(async p => ({ p, states: (await placeSourceStates(appDb(), p.id)).filter(x => x.source.enabled && x.source.accessMethod === "api" && ["not_queried", "failed", "stale", "insufficient"].includes(x.state)) })))).filter(x => x.states.length);
   if (!o.places.length) return (
     <section className={s.card}>
       <h2>Start with a place</h2>
@@ -79,6 +83,9 @@ async function Overview({ scope }: { scope: Scope }) {
         </Card>
         <Card title="Stewardship budget gaps" count={o.budgetGaps.length} empty="No budget with a funding gap.">
           {o.budgetGaps.map(({ b, s: sum }) => <li key={b.id}><Link href={`/steward/places/${b.placeId}#budgets`}>{b.label}</Link><span className={s.money}>Needs {fmt(sum.required, sum.currency)} · secured {fmt(sum.secured, sum.currency)} · gap {fmt(sum.gap, sum.currency)}</span></li>)}
+        </Card>
+        <Card title="Data coverage and freshness" count={coverage.length} empty="Every place has a current result from each enabled source.">
+          {coverage.map(({ p, states }) => <li key={p.id}><Link href={`/steward/places/${p.id}#sources`}>{p.name}</Link><span>{states.map(x => `${x.source.name}: ${DATA_STATES[x.state].toLowerCase()}`).join(" · ")}</span></li>)}
         </Card>
         {o.canSeeGrievances && (
           <Card title="Unresolved grievances" count={o.grievances.length} empty="No unresolved grievance.">
