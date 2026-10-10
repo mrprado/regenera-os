@@ -21,3 +21,6 @@
 .subtabs .subActive { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-tint); }
 
 .head{margin-bottom:24px}.title{font-size:var(--fs-display);font-weight:550;letter-spacing:-.035em;line-height:1.15}.titleRow{align-items:center;gap:20px}.kicker{font-size:14px;text-transform:none;letter-spacing:0;color:var(--text-2);margin:14px 0}.strip{background:var(--chalk);border:1px solid var(--line);border-radius:var(--radius-card);overflow:hidden;margin:20px 0 15px}.strip>div,.strip>div:first-child{padding:19px 20px}.strip dt{font-size:13px;text-transform:none;letter-spacing:0;margin-bottom:8px}.strip dd{font-size:20px}.meta{font-size:14px}.subtabs{gap:7px;margin:0 0 22px}.subtabs a{padding:8px 12px;font-size:14px;background:var(--chalk)}.subtabs .subActive{color:var(--text-1);border-color:var(--line);background:var(--surface-selected);font-weight:500}@media(max-width:560px){.strip{grid-template-columns:1fr 1fr}.strip>div{border-bottom:1px solid var(--line)}.strip dd{font-size:17px;white-space:normal}.title{font-size:30px}.actions{gap:7px}.actions a{font-size:13px}}
+/* Long values (e.g. "Insufficient evidence") wrap inside their cell instead of overlapping the next one. */
+.strip > div { min-width: 0; }
+.strip dd { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
