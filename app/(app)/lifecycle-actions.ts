@@ -9,6 +9,8 @@ import { z } from "zod";
 import { changeRequests, clientRequests, contacts, deals, deliveryTemplates, engagementDeliverables, engagements, offerProposals, offerProposalVersions, organizations, partnerships, relationshipIntroductions, services } from "@/db/schema";
 import { captureContact, createIntroduction, movePartnership, setIntroductionOutcome, setRelationshipStage, upsertPartnership } from "@/lib/lifecycle/network";
 import { addRole, removeRole } from "@/lib/lifecycle/relationships";
+import { completeEngagement } from "@/lib/lifecycle/closeout";
+import { reviewMeeting } from "@/lib/lifecycle/meetings";
 import { audit } from "@/lib/audit";
 import { withOsUser } from "@/lib/auth";
 import { appDb, isOwner, mandateCondition, type Scope } from "@/lib/db/scoped";
@@ -295,4 +297,34 @@ export async function introductionOutcomeAction(f: FormData) {
     if (!i) throw new Error("Introduction not found");
     await setIntroductionOutcome(appDb(), id, outcome, str(f, "note", 500), email);
   }, "Outcome recorded.");
+}
+
+// ---------- Phase 29D: meeting follow-up and engagement completion ----------
+export async function reviewMeetingAction(f: FormData) {
+  const dealId = zId.parse(f.get("dealId"));
+  await run(`/deals/${dealId}#meeting`, await withOsUser(me), async ({ email, scope }) => {
+    const d = await scopedDeal(scope, dealId);
+    // Actions: one per line, "title | owner | YYYY-MM-DD"; owner defaults to you, date to a week from now.
+    const week = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+    const actions = lines(str(f, "actions", 4000)).map(l => { const [title, owner, due] = l.split("|").map(x => x.trim()); return { title, owner: owner || email, due: due || week }; });
+    const subject = str(f, "followSubject", 300), body = str(f, "followBody", 8000);
+    const r = await reviewMeeting(appDb(), d.mandateId, {
+      dealId, title: str(f, "title", 200), heldOn: date(f, "heldOn") ?? new Date().toISOString().slice(0, 10), participants: str(f, "participants", 500), notes: str(f, "notes", 20000),
+      decisions: lines(str(f, "decisions", 4000)), actions, followUp: subject && body ? { subject, body } : null,
+      suggestedStage: z.enum(keys(COMMERCIAL_STAGES)).safeParse(f.get("suggestedStage")).data ?? null,
+    }, email);
+    return [`Meeting recorded with ${actions.length} action${actions.length === 1 ? "" : "s"}.`, r.messageId ? (r.styleIssues.length ? ` Follow-up draft needs edits before approval: ${r.styleIssues.join("; ")}.` : " Follow-up draft is in the approval queue (nothing was sent).") : "", r.suggestion ? ` Suggested stage change to review: ${r.suggestion}.` : ""].join("");
+  }, "Meeting recorded.");
+}
+
+export async function completeEngagementAction(f: FormData) {
+  const engagementId = zId.parse(f.get("engagementId"));
+  await run(`/commercial/engagements/${engagementId}#closeout`, await withOsUser(me), async ({ email, scope }) => {
+    await scopedEngagement(scope, engagementId);
+    const r = await completeEngagement(appDb(), engagementId, {
+      outcome: str(f, "outcome", 2000), acceptanceEvidence: str(f, "acceptanceEvidence", 1000), lessons: str(f, "lessons", 4000), continuation: str(f, "continuation", 1000),
+      outstandingReason: str(f, "outstandingReason", 1000), caseStudy: f.get("askCaseStudy") === "on" ? "requested" : "not_asked", askReferral: f.get("askReferral") === "on", reviewInDays: num(f, "reviewInDays") ?? 30,
+    }, email);
+    return `Completed. Relationship review scheduled for ${r.reviewDue}.${r.unpaid.length ? ` ${r.unpaid.length} invoice(s) still unpaid: collection tasks created.` : ""}`;
+  }, "Completed.");
 }

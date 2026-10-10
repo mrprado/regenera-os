@@ -192,3 +192,15 @@ export const relationshipIntroductions = sqliteTable("relationship_introductions
   openKey: text("open_key"),                                                // set while open; unique, so an open duplicate is refused
   ...stamps,
 }, t => [uniqueIndex("relationship_introductions_open").on(t.openKey), index("relationship_introductions_project").on(t.projectId)]);
+
+/** How an engagement ended (phase 29D): outcome, the client's acceptance, lessons, continuation and permissions asked. */
+export const engagementCloseouts = sqliteTable("engagement_closeouts", {
+  id: id(), mandateId: text("mandate_id").notNull(), engagementId: text("engagement_id").notNull(),
+  outcome: text("outcome").notNull(), acceptanceEvidence: text("acceptance_evidence").notNull(), lessons: text("lessons").notNull().default(""),
+  continuation: text("continuation").notNull().default(""),
+  caseStudy: text("case_study", { enum: ["not_asked", "requested", "granted", "declined"] }).notNull().default("not_asked"),
+  referralRequested: integer("referral_requested", { mode: "boolean" }).notNull().default(false),
+  outstanding: arr<string>("outstanding"),                                  // what was still open at closeout, as recorded
+  reviewDue: text("review_due"),
+  ...stamps,
+}, t => [uniqueIndex("engagement_closeouts_engagement").on(t.engagementId)]);

@@ -144,3 +144,33 @@ Plan: [phase-29-commercial-lifecycle.md](phase-29-commercial-lifecycle.md). Appr
   - `tests/integration/client-portal.test.ts` passes. It covers Scenario D and isolation: another client, a cross-workspace grant and a revoked grant are all refused, and internal fields are absent from the view.
   - Portal tests and route guard pass. Typecheck is clean.
   - The client page has not been opened in a browser: that needs a client portal session, which was not created locally.
+
+## 29D: follow-through, meetings and completion (done, 2026-10-10, not deployed)
+
+- **Next actions on Today** (`lib/lifecycle/attention.ts`, fed into Command's attention list under "Next action and follow-through"). Fixed rules (`RULES`), nothing scored. It lists:
+  - open opportunities with no next action and no open task;
+  - overdue next actions;
+  - proposals waiting more than 10 days, and expired proposals;
+  - relationships with no next action and no stated reason, overdue follow-ups, and quiet relationships (no meaningful contact in 90 days);
+  - partnerships with no next action;
+  - overdue introduction follow-ups;
+  - client documents that are overdue, or submitted and waiting for review;
+  - deliverables with the client for more than 7 days, and overdue deliverables;
+  - active engagements with no open work;
+  - renewals or ends within 60 days.
+- **Meeting follow-up** (opportunity page → "Record a meeting and its follow-up").
+  - Records notes and decisions. Actions become tasks; each needs an owner and a date, and the first one becomes the opportunity's next action.
+  - Updates the last meaningful contact on the relationship.
+  - The follow-up email is a draft that passes the style validator into the approval queue and is never sent from here.
+  - A suggested stage change is a task to review, not a move.
+- **Completing an engagement** (engagement page → "Complete this engagement").
+  - Needs the outcome and the client's acceptance evidence.
+  - Open deliverables and client requests either get finished or are recorded with a reason (open requests are then cancelled).
+  - Unpaid invoices create collection tasks and are never marked paid.
+  - Records lessons and a continuation, and derives the former-client role.
+  - The relationship stays active, with a review task.
+  - Case-study permission and referral requests are created only when ticked.
+- **Migration** `0066_military_meltdown.sql`, additive only: `engagement_closeouts`.
+- **Validation.**
+  - `tests/integration/followthrough.test.ts` passes, covering detection, meeting follow-up and completion. Route guard passes. Typecheck is clean.
+  - Local Today shows the new items, and the opportunity page shows the meeting panel.

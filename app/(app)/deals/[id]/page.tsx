@@ -20,6 +20,7 @@ import { createProjectFromDealAction } from "../../project-actions";
 import { GenerateMenu } from "@/components/generate-menu";
 import { DealFlowPanels } from "./panels";
 import CommercialPanel from "./commercial-panel";
+import { MeetingReviewPanel } from "../../lifecycle-panels";
 import lc from "./lifecycle.module.css";
 
 // Phase 24: the sales lifecycle as one strip, with the button that does the next step.
@@ -130,6 +131,7 @@ export default async function DealPage({ params, searchParams }: { params: Promi
           </section>
 
           <CommercialPanel db={db} deal={d} owner={owner} />
+          <MeetingReviewPanel dealId={d.id} />
 
           <DealFlowPanels db={db} d={{ id: d.id, mandateId: d.mandateId, name: d.name, orgId: d.orgId }} />
 

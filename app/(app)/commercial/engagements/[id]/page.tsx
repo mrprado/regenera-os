@@ -16,6 +16,7 @@ import { createContractAction } from "../../../contract-actions";
 import styles from "../../commercial.module.css";
 import Lifecycle from "./lifecycle";
 import DeliveryPanel from "./delivery-panel";
+import { CloseoutPanel } from "../../../lifecycle-panels";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Engagement" };
@@ -95,6 +96,7 @@ export default async function EngagementPage({ params, searchParams }: { params:
           </section>
 
           <DeliveryPanel db={db} e={e} />
+          <CloseoutPanel db={db} e={e} />
 
           {e.deliverables.length > 0 && <section className={r.panel}>
             <p className={r.panelTitle}>Earlier deliverables list</p>
