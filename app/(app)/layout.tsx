@@ -42,7 +42,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
 
   return (
     <WorkspaceShell><a className="skip-link" href="#main-content">Skip to workspace content</a>
-      <header className={styles.header}>
+      <header className={styles.header} data-shell-header>
         {/* Phone: the sidebar becomes a disclosure menu under the header, no client JS needed. */}
         <details className={styles.mobileMenu} data-mobile-navigation>
           <summary aria-label="Menu"><Menu size={20} aria-hidden /></summary>
@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         <SidebarNav user={navUser} />
       </aside>
 
-      <div className={styles.content}>
+      <div className={styles.content} data-shell-content>
         {user.visitor && <div className={styles.banner} role="status"><b>OPEN ACCESS · VIEW ONLY</b> Opened without a password. Nothing can be changed, sent or spent until you <a href={withBase("/signin?return_to=/today")}>sign in</a>.</div>}
         {(env.ISOLATED_DEMO==='true'||sandboxFocus||(schedulerStale&&isInternal(user.scope)))&&<details className={styles.statusStrip}><summary><span className={styles.statusLabel}>{env.ISOLATED_DEMO==='true'?'Demo workspace':sandboxFocus?'Sandbox workspace':'Automation paused'}</span><span>{env.ISOLATED_DEMO==='true'?'Fictional records · external actions disabled':'Workspace operating status'}</span><span>Details</span></summary><div className={styles.statusBody}>
         {env.ISOLATED_DEMO === "true" && <div className={styles.banner} role="status"><b>PRIVATE DEMO</b> Same Regenera build; fictional data and isolated storage. External actions are disabled. <Link href="/demo">Change demo identity</Link></div>}

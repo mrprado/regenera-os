@@ -3,7 +3,7 @@
 import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { Db } from "@/db";
-import { contractObligations, organizations, scanRuns } from "@/db/schema";
+import { contractObligations, organizations, scanRuns, tasks } from "@/db/schema";
 import { localDate } from "@/lib/command/desk";
 import { hubData, type Hub } from "@/lib/hubs";
 import { loopHub } from "@/lib/hubs-loop";
@@ -56,8 +56,13 @@ export async function workspaceHub(db: Db, key: WorkspaceHubKey | "projects", id
         purpose: "Qualify, propose, agree terms and deliver the engagement. Regenera's fees only: project capital and grant amounts are never counted here." };
     }
     case "workflows": {
-      const deliver = await loopHub(db, "deliver", ids, now);
-      return { ...deliver, title: "Workflows", purpose: "Run the work through named owners, dependencies, playbooks and versioned documents. Approval and submission of applications stay a person's decision." };
+      const [deliver, rows] = await Promise.all([
+        loopHub(db, "deliver", ids, now),
+        db.select().from(tasks).where(and(inWs(tasks.mandateId, ids), eq(tasks.status, "open"), eq(tasks.testRecord, false))).orderBy(asc(tasks.dueAt)).limit(16),
+      ]);
+      return { ...deliver, title: "Workflows", recentTitle: "Delivery queue",
+        recent: rows.map(task => ({ label: task.title, href: task.projectId ? `/projects/${task.projectId}?tab=plan` : task.dealId ? `/deals/${task.dealId}` : "/tasks", sub: `Due ${task.dueAt.slice(0, 10)} · ${task.owner || "Owner unassigned"}${task.workstream ? ` · ${task.workstream}` : ""}` })),
+        purpose: "Run the work through named owners, dependencies, playbooks and versioned documents. Approval and submission of applications stay a person's decision." };
     }
     case "steward": {
       const today = localDate(now);

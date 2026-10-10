@@ -159,3 +159,6 @@
 
 
 
+
+/* Approved Command palette: quiet stone canvas, white work surfaces, moss actions. */
+:root{--bg:#F6F7F3;--workspace-canvas:#F6F7F3;--surface:#FFFFFF;--secondary-surface:#F0F2EB;--header-surface:#FFFFFF;--line:#E0E4DB;--surface-selected:#EAF0E5;--dashboard-map-water:#DDE6D4}

@@ -1,32 +1,34 @@
 "use client";
-// Workspace landing page (October 2026 redesign, merged onto phase 24): searchable shown records, attention first,
-// drill-through metrics with definitions, the group's operating path and its tools.
-import {useState} from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import {Search,BookOpen,AlertCircle} from 'lucide-react';
-import type {Hub,HubLink} from '@/lib/hubs';
-import type {NavGroup} from '@/lib/nav';
+import { ArrowUpRight, Search, ChevronRight } from 'lucide-react';
+import type { Hub, HubLink } from '@/lib/hubs';
+import type { NavGroup } from '@/lib/nav';
+import { DESKS, workspaceRecords } from '@/lib/dashboard-view';
 import s from './workspace-dashboard.module.css';
-export default function WorkspaceDashboard({hub,group,refreshedAt}:{hub:Hub;group?:NavGroup;refreshedAt:string}){
- const [query,setQuery]=useState(''),[view,setView]=useState(hub.recent.length?'recent':'attention');
- const source=view==='attention'?hub.attention:hub.recent;
- const records=source.filter(row=>(row.label+' '+(row.sub??'')).toLowerCase().includes(query.toLowerCase().trim()));
- const steps=group?.sections.filter(section=>section.items.length).slice(0,4)??[];
- const row=(item:HubLink,index:number)=><li key={item.href+item.label}><span className={s.index}>{String(index+1).padStart(2,'0')}</span><div><Link href={item.href}>{item.label}</Link><p>{item.sub??'Open the record to review its evidence and history.'}</p></div><Link href={item.href} className={s.open} aria-label={'Open '+item.label}>Open</Link></li>;
- return <div className={s.workspace} data-workspace={group?.key}>
-  <header className={s.header}><div><p className={s.eyebrow}>REGENERA / WORKSPACE</p><h1>{hub.title}</h1><p className={s.purpose}>{hub.purpose}</p></div><nav className={s.actions} aria-label={hub.title+' actions'}>{hub.actions.slice(0,3).map((a,i)=><Link key={a.href} href={a.href} className={i===0?'btn btn--primary':'btn'}>{a.label}</Link>)}</nav></header>
-  <section className={s.metrics} aria-label={hub.title+' recorded metrics'}>{hub.metrics.map(metric=><article key={metric.label}><span>{metric.label}</span><Link href={metric.href}>{metric.value}</Link><details><summary>Basis & definition</summary><p>{metric.def}</p></details></article>)}</section>
-  <div className={s.body}><div className={s.work}>
-   {hub.attention.length>0&&<section className={s.attention} aria-label="Do this next"><div><AlertCircle size={18} aria-hidden/><h2>Do this next</h2><span>{hub.attention.length} shown</span></div><ul>{hub.attention.slice(0,5).map(row)}</ul></section>}
-   <section className={s.records}><div className={s.sectionHead}><h2>{view==='attention'?'Needs attention':hub.recentTitle||'Recent records'}</h2><span aria-live="polite">{records.length} shown</span></div>
-    <div className={s.controls}><label className={s.search}><Search size={17} aria-hidden/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search shown records" aria-label={'Search '+hub.title+' shown records'}/></label><select value={view} onChange={e=>setView(e.target.value)} aria-label="Record view"><option value="recent">Recent records</option><option value="attention">Needs attention</option></select></div>
-    {records.length?<ul className={s.recordList}>{records.map(row)}</ul>:<div className={s.empty}><BookOpen size={25} strokeWidth={1.3} aria-hidden/><h3>{query?'No matching records':view==='attention'?'No attention items shown':'No records shown'}</h3><p>{query?'Try a different name or clear the search.':hub.empty??'Open the register to see all records and their current state.'}</p>{query?<button className="btn" onClick={()=>setQuery('')}>Clear search</button>:hub.actions[0]&&<Link className="btn" href={hub.actions[0].href}>{hub.actions[0].label}</Link>}</div>}
-    <footer className={s.basis}>Workspace records · authorized scope · refreshed {refreshedAt}. Open the linked register for the complete inventory.</footer>
+
+export default function WorkspaceDashboard({ hub, group, refreshedAt }: { hub: Hub; group?: NavGroup; refreshedAt: string }) {
+ const desk = DESKS[hub.title] ?? { question: hub.purpose, title: hub.recentTitle || 'Workspace records', action: 'Open record', context: hub.purpose, mode: 'directory' };
+ const { priorities, records } = workspaceRecords(hub.attention, hub.recent);
+ const [query, setQuery] = useState('');
+ const [selection, setSelection] = useState<HubLink | null>(null);
+ const selected = selection && [...priorities, ...records].some(row => row.href === selection.href && row.label === selection.label) ? selection : priorities[0] ?? records[0];
+ const visible = records.filter(row => `${row.label} ${row.sub ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
+ const tools = group?.sections.filter(section => section.items.length) ?? [];
+ const record = (row: HubLink) => <li key={row.href + row.label} className={s.record} data-selected={selected?.href === row.href && selected?.label === row.label}><button type="button" className={s.recordButton} onClick={() => setSelection(row)} aria-pressed={selected?.href === row.href && selected?.label === row.label}><span>{row.label}</span><ChevronRight size={16} aria-hidden /></button><p>{row.sub || 'Details are available in the source register.'}</p><Link className={s.recordLink} href={row.href}>{desk.action}<ArrowUpRight size={13} aria-hidden /></Link></li>;
+ return <div className={s.workspace} data-workspace={group?.key} data-layout={desk.mode}>
+  <header className={s.header}><div><p className={s.eyebrow}>REGENERA / {hub.title.toUpperCase()}</p><h1>{hub.title}</h1><p className={s.question}>{desk.question}</p></div><nav className={s.actions} aria-label={`${hub.title} actions`}>{hub.actions.slice(0,2).map((a,i)=><Link key={a.href} href={a.href} className={i===0?'btn btn--primary':'btn'}>{a.label}</Link>)}</nav></header>
+  <div className={s.desk}><div className={s.work}>
+   {priorities.length>0 && <section className={s.attention}><div className={s.sectionHead}><h2>{desk.mode==='commitments'?'Review before closing':desk.mode==='delivery'?'Delivery needs attention':'Needs a decision'}</h2><span>{priorities.length} shown</span></div><ul className={s.priorityList}>{priorities.map(record)}</ul></section>}
+   <section className={s.records} aria-label={desk.title}><div className={s.sectionHead}><h2>{desk.title}</h2><span>{records.length} shown</span></div>
+    {records.length>0 && <label className={s.search}><Search size={16} aria-hidden /><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Find in ${desk.title.toLowerCase()}`} aria-label={`Search shown ${desk.title.toLowerCase()}`} /></label>}
+    {desk.mode==='research' && <div className={s.research}><p className={s.eyebrow}>FROM QUESTION TO DECISION</p><h3>Investigate a specific project question</h3><p>Use the analyst workbench for diligence, source comparison and decision briefs. Read signals separately from project evidence.</p><div className={s.routes}>{hub.actions.map(a=><Link key={a.href} href={a.href}>{a.label}<ArrowUpRight size={16} aria-hidden /></Link>)}</div></div>}
+    {desk.mode==='capital' && <nav className={s.capitalRoutes} aria-label="Financing paths">{hub.actions.slice(1).map(a=><Link key={a.href} href={a.href}>{a.label}<ArrowUpRight size={15} aria-hidden /></Link>)}</nav>}
+    {visible.length>0 ? <ul className={s.recordList} data-mode={desk.mode}>{visible.map(record)}</ul> : desk.mode!=='research' && <div className={s.empty}><h3>{query?'No matching records':'No additional records shown'}</h3><p>{query?'Try another name or clear your search.':priorities.length?'Work needing a decision is listed above. Open the full register for the complete inventory.':hub.empty || 'Start with a real record. This desk reflects work recorded in your authorized workspace.'}</p>{query?<button className="btn" onClick={()=>setQuery('')}>Clear search</button>:hub.actions[0]&&<Link className="btn" href={hub.actions[0].href}>{hub.actions[0].label}</Link>}</div>}
    </section>
-  </div><aside className={s.rail}>
-   {steps.length>0&&<section className={s.path}><p className={s.eyebrow}>OPERATING PATH</p><h2>Move work forward</h2><ol>{steps.map((step,index)=><li key={step.label}><span>{index+1}</span><div><h3>{step.label}</h3><Link href={step.items[0].href}>{step.items[0].label}</Link></div></li>)}</ol></section>}
-   {group&&<details className={s.tools} open><summary>Workspace tools</summary>{group.sections.map(section=><div key={section.label}><h3>{section.label}</h3><ul>{section.items.map(item=><li key={item.href}><Link href={item.href}>{item.label}</Link></li>)}</ul></div>)}</details>}
-   <details className={s.provenance}><summary>Evidence & provenance</summary><p>Figures come from the existing registers; their definitions state the counting rules. Record pages hold the sources, review history and supporting documents. Unassessed values remain explicit.</p><p>Discovery and generated analysis require review before commitment. Check Settings for provider health; this dashboard does not establish that an integration is connected.</p></details>
-  </aside></div>
+  </div><aside className={s.context} aria-label="Decision context"><section className={s.contextPanel}><p className={s.eyebrow}>IN FOCUS</p><h2>{selected?.label ?? 'Start with the decision'}</h2>{selected && <p className={s.fact}>{selected.sub || 'Open the record to inspect its current state.'}</p>}<div className={s.contextNote}><h3>{desk.mode==='commitments'?'Evidence before closure':'Before the next step'}</h3><p>{desk.context}</p></div>{selected && <Link className="btn btn--primary" href={selected.href}>{desk.action}<ArrowUpRight size={15} aria-hidden /></Link>}</section>
+   <details className={s.snapshot}><summary>Register snapshot <span>{hub.metrics.length} measures</span></summary><dl>{hub.metrics.map(m=><div key={m.label}><dt><Link href={m.href}>{m.label}</Link></dt><dd>{m.value}</dd><p>{m.def}</p></div>)}</dl></details>
+   {tools.length>0 && <details className={s.tools}><summary>All {hub.title.toLowerCase()} tools</summary>{tools.map(section=><div key={section.label}><h3>{section.label}</h3>{section.items.map(item=><Link key={item.href} href={item.href}>{item.label}<ArrowUpRight size={12} aria-hidden /></Link>)}</div>)}</details>}
+  </aside></div><footer className={s.basis}>Authorized workspace records · refreshed {refreshedAt}. Shown records are a limited view; open the register for the full inventory.<details><summary>Purpose &amp; evidence</summary><p>{hub.purpose}</p><p>Record pages hold sources, documents and review history. Missing evidence stays unknown. Source health is available in Settings.</p></details></footer>
  </div>;
 }

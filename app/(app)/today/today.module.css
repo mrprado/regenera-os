@@ -165,3 +165,6 @@ ol.briefList { list-style: decimal; padding-left: 20px; }
 .briefList span { color: var(--text-2); font-size: 13px; }
 .systemLine { margin: 10px 0 14px; font-size: 13px; color: var(--text-2); }
 .systemLine span { color: var(--text-3); }
+
+/* Command hierarchy: orientation, decisions, operating detail. */
+.mapBand{padding:18px;margin-bottom:24px;background:var(--surface)}.commandHead{border-bottom:0;padding-bottom:16px}.commandTitle{font-size:30px;font-weight:500}.reviewHint{font-size:13px;line-height:1.6;color:var(--text-2);margin:0 0 14px}.decisionList{background:var(--surface)}.decision:hover{background:var(--surface-selected)}.decision b{font-size:16px;font-weight:500}.decisionWhy{font-size:13px}.todayPanel{padding:22px;background:var(--surface);border:1px solid var(--line);border-radius:10px}.todayCols{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.launcher>summary{cursor:pointer;font-size:13px;color:var(--text-2);padding:8px 0}.launcher .shortcuts{margin:12px 0 24px}.compactCols{margin-top:24px}.briefList{font-size:13px;gap:14px}.briefList li{border-bottom:1px solid var(--line);padding-bottom:12px}.briefList li:last-child{border:0;padding:0}@media(max-width:800px){.todayCols{grid-template-columns:1fr}}

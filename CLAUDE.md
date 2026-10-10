@@ -147,6 +147,13 @@ Phase plans: docs/plans/ (phase-6 = master-spec roadmap). Environment: docs/ENV.
   margin checks, prelaunch delivery, price-floor overrides with an owner's reason (migration 0049); founder Command
   (hero, map modes new/today/all, three decisions, shortcuts, full desk below). Workspace time zone: lib/time/zone.ts.
 
+## UX laws — 2026-10-09
+
+For any UI work (layouts, navigation, forms, settings, dashboards, flows), follow docs/ux-laws.md: 20 UX laws plus the
+eight implementation steps. When it conflicts with DESIGN.md or docs/design-system.md, the design system decides how
+things look; the UX laws decide flow, hierarchy, defaults, feedback and error handling. Approval gates, permissions,
+evidence labels and business enumerations are never removed to satisfy a law.
+
 ## Authorized UI revamp — 2026-10-05
 
 The user explicitly authorized the full visual and workflow redesign while preserving content. For presentation, `DESIGN.md` and `docs/plans/phase-18-design-revamp.md` supersede the older frozen typography, shape and navigation ordering above. Keep the existing stack, records, permission boundaries, approval gates, and distinct route destinations.

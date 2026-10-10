@@ -1,5 +1,5 @@
 import Link from "next/link";
-import IntegratedCommand from "./integrated-command";
+import CommandReview from "@/components/command-review";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import Loading from "../loading";
@@ -59,7 +59,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const date = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COMMAND_TZ }).format(now);
   const scope = ws.length === 1 ? ws[0].name : ws.length > 1 ? `${ws.length} workspaces` : "No workspace";
   const scanPreset = BUILT_IN_PRESETS[0];
-  const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "today";
+  const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "all";
   const deskContext = loadDeskContext(user, now);
   const [ops, brief, queue] = await Promise.all([
     opsSummary(db, now), dailyBrief(db, user.scope.mandateIds, now),
@@ -85,15 +85,16 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
     <>
       <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
       <Notice text={sp.notice} />
-      <IntegratedCommand scope={user.scope} selectedProjectId={sp.project}/>
+      <CommandReview>
+      <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <Suspense fallback={<Loading />}>
         <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} afterDecisions={today} />
       </Suspense>
-      <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <p className={t.systemLine} aria-label="System status">
         <b>System:</b> {health ? <>{ops.aiPaused ? `AI paused until ${ops.aiPaused.slice(11, 16)} UTC (rules reads continue) · ` : ""}{ops.degraded.length ? `${ops.degraded.length} source${ops.degraded.length === 1 ? "" : "s"} degraded · ` : ""}{ops.dead ? `${ops.dead} failed jobs · ` : ""}<Link href="/settings/jobs">details</Link></> : "healthy"}
         <span> · last 24 h: {ops.funding} funding calls, {ops.matches} matches, {ops.assessments} site assessments, {ops.orgs} organizations</span>
       </p>
+      </CommandReview>
       <details className={t.workspacePurpose}><summary>About your workspace and regenerative purpose</summary><div className={t.purposeBody}>
         <section className={t.lens} aria-labelledby="lens-h">
           <div className={t.lensLintel}><h2 id="lens-h" className={t.lensTitle}>Regeneration lens</h2><p className={t.lensSub}>Three pillars every project, partner and decision is weighed against.</p></div>
@@ -194,7 +195,8 @@ async function Desk({user, now, fullOpen, context, afterDecisions}: {user: Await
   return (
     <>
       <section className={t.decisions} aria-labelledby="dec-h">
-        <p className={r.panelTitle}><span id="dec-h">Needs your decision</span><Link href="/today?full=1#full-desk">All priorities ({totalPriorities})</Link></p>
+        <p className={t.reviewHint}>Select a record to review its evidence, details and next action alongside Command.</p>
+        <p className={r.panelTitle}><span id="dec-h">Priority desk</span><Link href="/today?full=1#full-desk">All priorities ({totalPriorities})</Link></p>
         {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
           <ul className={t.decisionList}>
             {decisions.map(g => { const it = g.items[0]; return (
@@ -211,9 +213,9 @@ async function Desk({user, now, fullOpen, context, afterDecisions}: {user: Await
       </section>
 
       {afterDecisions}
-      <nav className={t.shortcuts} aria-label="Move work forward">
+      <details className={t.launcher}><summary>Start new work</summary><nav className={t.shortcuts} aria-label="Move work forward">
         {SHORTCUTS.map(x => <Link key={x.href} href={x.href} className={t.shortcut}><b>{x.label}</b><span>{x.body}</span></Link>)}
-      </nav>
+      </nav></details>
 
 
       <div className={t.compactCols}>

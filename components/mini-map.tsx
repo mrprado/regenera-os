@@ -16,13 +16,13 @@ const KIND_LABEL: Record<MiniKind, string> = { project: "Projects", prospect: "P
 const QUALITY_LABEL: Record<MiniQuality, string> = { exact: "Site geometry recorded", recorded: "Point recorded", approximate: "Approximate (geocoded headquarters)", country: "Country-level only, not a site location" };
 
 const T = 256;
-const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`;
+const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/${z}/${y}/${x}`;
 const wx = (lng: number, z: number) => ((lng + 180) / 360) * T * 2 ** z;
 const wy = (lat: number, z: number) => { const r = (Math.max(-85, Math.min(85, lat)) * Math.PI) / 180; return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * T * 2 ** z; };
 
 function fit(points: MiniPoint[], w: number, h: number) {
   if (!points.length) return { z: 2, cx: wx(-40, 2), cy: wy(20, 2) };
-  for (let z = 10; z >= 1; z--) {
+  for (let z = 8; z >= 1; z--) {
     const xs = points.map(p => wx(p.lng, z)), ys = points.map(p => wy(p.lat, z));
     const dx = Math.max(...xs) - Math.min(...xs), dy = Math.max(...ys) - Math.min(...ys);
     if (dx < w * 0.7 && dy < h * 0.7) return { z, cx: (Math.max(...xs) + Math.min(...xs)) / 2, cy: (Math.max(...ys) + Math.min(...ys)) / 2 };
@@ -32,6 +32,7 @@ function fit(points: MiniPoint[], w: number, h: number) {
 
 export default function MiniMap({ points: all, height = 320, missing, emptyText }: { points: MiniPoint[]; height?: number; missing?: { count: number; href: string }; emptyText?: string }) {
   const box = useRef<HTMLDivElement>(null);
+  const fitted = useRef(false);
   const [w, setW] = useState(520);
   const kinds = useMemo(() => [...new Set(all.map(p => p.kind ?? "project"))], [all]);
   const [hidden, setHidden] = useState<Set<MiniKind>>(new Set());
@@ -43,10 +44,14 @@ export default function MiniMap({ points: all, height = 320, missing, emptyText 
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(200, Math.round(e.contentRect.width))));
+    const ro = new ResizeObserver(([e]) => {
+      const width = Math.max(200, Math.round(e.contentRect.width));
+      setW(width);
+      if (!fitted.current) { setView(fit(all, width, height)); fitted.current = true; }
+    });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [all, height]);
 
   const { z, cx, cy } = view;
   const left = cx - w / 2, top = cy - height / 2, n = 2 ** z;
@@ -74,7 +79,7 @@ export default function MiniMap({ points: all, height = 320, missing, emptyText 
   }, [points, z, left, top]);
 
   const zoomAt = (dz: number, px = w / 2, py = height / 2) => setView(v => {
-    const nz = Math.max(1, Math.min(14, v.z + dz));
+    const nz = Math.max(1, Math.min(8, v.z + dz));
     if (nz === v.z) return v;
     const f = 2 ** (nz - v.z), ax = v.cx - w / 2 + px, ay = v.cy - height / 2 + py;
     return { z: nz, cx: ax * f - px + w / 2, cy: ay * f - py + height / 2 };
