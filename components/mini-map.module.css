@@ -6,7 +6,7 @@
 .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--copper); box-shadow: 0 0 0 2px var(--surface); }
 .dot:hover, .dot.sel { background: var(--gold); box-shadow: 0 0 0 2px var(--forest-carbon), 0 0 0 6px rgba(211, 154, 52, .28); }
 .alert { background: var(--critical); }
-.cluster { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255, .9); border: 1px solid var(--copper); color: var(--heading); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cluster { width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 90%, transparent); border: 1px solid var(--copper); color: var(--heading); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cluster:hover { background: rgba(217,166,28, .4); }
 .zoom { position: absolute; right: 8px; top: 8px; display: grid; }
 .zoom button { width: 26px; height: 26px; border: 1px solid rgba(255, 255, 255, .14); background: var(--glass-dark); color: var(--text-on-dark); font-size: 15px; line-height: 1; cursor: pointer; }
@@ -33,13 +33,13 @@
 .missing { margin: 6px 0 0; font-size: 14px; color: var(--text-2); }
 @media (prefers-reduced-motion: reduce) { .preview { animation: none; } .dot, .cluster { transition: none; } }
 /* Light basemap (2026-10-02): marks and labels in Graphite Moss so they read on light grey. */
-.attr { color: var(--text-2) !important; background: rgba(255, 255, 255, .7); }
+.attr { color: var(--text-2) !important; background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .empty { color: var(--text-2); }
 .dot[data-quality="approximate"] { box-shadow: inset 0 0 0 2px var(--volcanic), 0 0 0 1px var(--surface); }
 .dot[data-quality="country"] { border-color: var(--volcanic); }
 
 /* Terrain orientation band, with recorded location quality retained. */
-.map{background:var(--dashboard-map-water);border-radius:8px}.tile{filter:saturate(.62) brightness(1.04)}.preview{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:0 0 8px 8px;padding:16px}.preview span{color:var(--text-2)}.actions a{color:var(--action)}.actions button{color:var(--text-2)}.zoom button{background:var(--surface);color:var(--text);border-color:var(--line);height:32px;width:32px}.filters button{min-height:32px;border-radius:6px}.filters button[aria-pressed=true]{background:var(--surface-selected);border-color:var(--lichen)}.dot:hover,.dot.sel{background:var(--copper);box-shadow:0 0 0 3px var(--surface),0 0 0 7px rgba(37,45,39,.2)}.attr{font-size:12px}.empty{padding:24px;text-align:center;background:rgba(255,255,255,.7);margin:24px;border-radius:8px}
+.map{background:var(--dashboard-map-water);border-radius:8px}.tile{filter:saturate(.62) brightness(1.04)}.preview{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:0 0 8px 8px;padding:16px}.preview span{color:var(--text-2)}.actions a{color:var(--action)}.actions button{color:var(--text-2)}.zoom button{background:var(--surface);color:var(--text);border-color:var(--line);height:32px;width:32px}.filters button{min-height:32px;border-radius:6px}.filters button[aria-pressed=true]{background:var(--surface-selected);border-color:var(--lichen)}.dot:hover,.dot.sel{background:var(--copper);box-shadow:0 0 0 3px var(--surface),0 0 0 7px rgba(37,45,39,.2)}.attr{font-size:12px}.empty{padding:24px;text-align:center;background:color-mix(in srgb,var(--surface) 70%,transparent);margin:24px;border-radius:8px}
 /* Phase 26: terrain tiles dimmed in dark mode so markers keep their contrast. */
 :global(:root[data-theme="dark"]) .tile{filter:saturate(.55) brightness(.62)}
 @media (prefers-color-scheme: dark){:global(:root[data-theme="system"]) .tile{filter:saturate(.55) brightness(.62)}}
