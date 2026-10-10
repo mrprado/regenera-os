@@ -31,10 +31,12 @@ export async function commandMapPoints(db: Db, mandateIds: string[], flaggedProj
       .from(organizations).leftJoin(partners, eq(partners.orgId, organizations.id))
       .where(and(inArray(organizations.mandateId, ids), eq(organizations.testRecord, false), isNull(organizations.archivedAt),
         or(isNotNull(partners.id), sql`${organizations.roles} like '%partner%'`, sql`${organizations.roles} like '%capital_provider%'`))).limit(500),
-    mode === "new" ? db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, countries: fundingOpportunities.countries, deadline: fundingOpportunities.deadline })
+    mode !== "all" ? db.select({ id: fundingOpportunities.id, title: fundingOpportunities.title, countries: fundingOpportunities.countries, deadline: fundingOpportunities.deadline })
       .from(fundingOpportunities).where(and(inArray(fundingOpportunities.mandateId, ids), gte(fundingOpportunities.createdAt, since), eq(fundingOpportunities.status, "open"))).limit(20) : Promise.resolve([]),
   ]);
-  const keep = (id: string, createdAt: string) => mode === "all" || (mode === "new" ? createdAt >= since : opts.focus?.has(id) ?? false);
+  // Today: the records behind today's and overdue work, plus anything new since the start of the day ("new" is the
+  // former New alerts tab, kept as an alias of Today). All: every mapped record.
+  const keep = (id: string, createdAt: string) => mode === "all" || createdAt >= since || (mode === "today" && (opts.focus?.has(id) ?? false));
   const points: MiniPoint[] = [];
   const unmapped: Unmapped[] = [];
   let missing = 0;

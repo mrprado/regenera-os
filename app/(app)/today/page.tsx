@@ -59,11 +59,13 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   const date = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: COMMAND_TZ }).format(now);
   const scope = ws.length === 1 ? ws[0].name : ws.length > 1 ? `${ws.length} workspaces` : "No workspace";
   const scanPreset = BUILT_IN_PRESETS[0];
-  const mapMode: MapMode | "off" = sp.map === "new" || sp.map === "all" || sp.map === "off" ? sp.map : "all";
+  // Two views, Today (default) and All. They filter the map and the dashboard below; ?map=new is the old New alerts tab.
+  const mapMode: MapMode | "off" = sp.map === "all" || sp.map === "off" ? sp.map : "today";
+  const view: "today" | "all" = mapMode === "all" ? "all" : "today";
   const deskContext = loadDeskContext(user, now);
   const [ops, brief, queue] = await Promise.all([
     opsSummary(db, now), dailyBrief(db, user.scope.mandateIds, now),
-    db.select().from(originationItems).where(and(mandateCondition(user.scope, originationItems.mandateId), notInArray(originationItems.stage, ["won", "lost", "deferred"]), sql`${originationItems.priority} >= 0`)).orderBy(desc(originationItems.priority)).limit(5),
+    db.select().from(originationItems).where(and(mandateCondition(user.scope, originationItems.mandateId), notInArray(originationItems.stage, ["won", "lost", "deferred"]), sql`${originationItems.priority} >= 0`)).orderBy(desc(originationItems.priority)).limit(view === "all" ? 15 : 5),
   ]);
   const health = ops.aiPaused || ops.degraded.length || ops.dead;
   // Phase 24: after decisions, the brief and the top of the queue, each with its one action.
@@ -74,7 +76,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
         <ul className={t.briefList}>{brief.map(b => <li key={b.heading}><b>{b.heading}</b>{b.href ? <Link href={b.href}>{b.text}</Link> : <span>{b.text}</span>}</li>)}</ul>
       </section>
       <section className={t.todayPanel} aria-labelledby="queue-h">
-        <p className={r.panelTitle}><span id="queue-h">Top of the opportunity queue</span><Link href="/origination">All {ops.queued}</Link></p>
+        <p className={r.panelTitle}><span id="queue-h">{view === "all" ? "Opportunity queue" : "Top of the opportunity queue"}</span><Link href="/origination">All {ops.queued}</Link></p>
         {queue.length === 0 ? <p className={r.empty}>The queue is empty; it rebuilds every 3 hours.</p> : (
           <ol className={t.briefList}>{queue.map(q => <li key={q.id}><Link href={q.projectId ? `/projects/${q.projectId}?tab=capital` : q.orgId ? `/companies/${q.orgId}` : "/origination"}>{q.title}</Link><span>{q.nextAction ?? "Review"}{q.recommendedService ? ` · offer: ${serviceName(q.recommendedService)}` : ""}</span></li>)}</ol>
         )}
@@ -88,7 +90,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
       <CommandReview>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
       <Suspense fallback={<Loading />}>
-        <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} afterDecisions={today} />
+        <Desk user={user} now={now} context={deskContext} fullOpen={sp.full === "1"} afterDecisions={today} view={view} />
       </Suspense>
       <p className={t.systemLine} aria-label="System status">
         <b>System:</b> {health ? <>{ops.aiPaused ? `AI paused until ${ops.aiPaused.slice(11, 16)} UTC (rules reads continue) · ` : ""}{ops.degraded.length ? `${ops.degraded.length} source${ops.degraded.length === 1 ? "" : "s"} degraded · ` : ""}{ops.dead ? `${ops.dead} failed jobs · ` : ""}<Link href="/settings/jobs">details</Link></> : "healthy"}
@@ -140,7 +142,7 @@ const LENS = [
   { title: "Community well-being", body: "Participation, equitable benefits, and community resilience." },
   { title: "Economic resilience", body: "Durable livelihoods, local value creation, and long-term prosperity." },
 ];
-const MAP_MODES: { key: MapMode; label: string }[] = [{ key: "today", label: "Today's work" }, { key: "new", label: "New alerts" }, { key: "all", label: "All records" }];
+const MAP_MODES: { key: MapMode; label: string; href: string }[] = [{ key: "today", label: "Today", href: "/today" }, { key: "all", label: "All", href: "/today?map=all" }];
 
 async function loadDeskContext(user: Awaited<ReturnType<typeof requireOsUser>>, now: Date) {
   const db = appDb(), ws = user.scope.mandateIds;
@@ -176,12 +178,12 @@ async function loadDeskContext(user: Awaited<ReturnType<typeof requireOsUser>>, 
 async function CommandActivityMap({context, mapMode}: {context: ReturnType<typeof loadDeskContext>; mapMode: MapMode | "off"}) {
   const {ws, flagged, focus, since} = await context;
   return <>{mapMode === "off" ? (
-        <p className={t.mapOff}><Link href="/today?map=today">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
+        <p className={t.mapOff}><Link href="/today">Show map</Link> · <Link href="/map">Open Atlas</Link></p>
       ) : (
         <section className={t.mapBand} aria-labelledby="map-h">
           <div className={t.mapBar}>
             <h2 id="map-h" className={t.sectionTitle}>Your global activity</h2>
-            <nav className={t.modes} aria-label="Map mode">{MAP_MODES.map(m => <Link key={m.key} href={`/today?map=${m.key}`} className={t.mode} aria-current={mapMode === m.key ? "page" : undefined}>{m.label}</Link>)}</nav>
+            <nav className={t.modes} aria-label="Map mode">{MAP_MODES.map(m => <Link key={m.key} href={m.href} className={t.mode} aria-current={mapMode === m.key ? "page" : undefined}>{m.label}</Link>)}</nav>
             <span className={t.mapLinks}><Link href="/map">Open Atlas</Link> · <Link href="/today?map=off">Hide map</Link></span>
           </div>
           <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading map" />}><CommandMap ws={ws} flagged={flagged} mode={mapMode} since={since} focus={focus} /></Suspense>
@@ -189,14 +191,16 @@ async function CommandActivityMap({context, mapMode}: {context: ReturnType<typeo
       )}</>;
 }
 
-async function Desk({user, now, fullOpen, context, afterDecisions}: {user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; fullOpen: boolean; context: ReturnType<typeof loadDeskContext>; afterDecisions?: ReactNode}) {
-  const {del, obl, changes, ready, mc, mail, pending, desk, s, notReady, deliveryItems, maxStage, totalPriorities, decisions, today, ev} = await context;
+async function Desk({user, now, fullOpen, context, afterDecisions, view = "today"}: {user: Awaited<ReturnType<typeof requireOsUser>>; now: Date; fullOpen: boolean; context: ReturnType<typeof loadDeskContext>; afterDecisions?: ReactNode; view?: "today" | "all"}) {
+  const {del, obl, changes, ready, mc, mail, pending, desk, s, notReady, deliveryItems, maxStage, totalPriorities, decisions: todays, today, ev} = await context;
+  // Today: what is overdue, due today or blocked. All: every priority bucket, so the list matches the All map.
+  const decisions = view === "all" ? BUCKETS.flatMap(b => desk.priorities[b.key]) : todays;
 
   return (
     <>
       <section className={t.decisions} aria-labelledby="dec-h">
         <p className={t.reviewHint}>Select a record to review its evidence, details and next action alongside Command.</p>
-        <p className={r.panelTitle}><span id="dec-h">Priority desk</span><Link href="/today?full=1#full-desk">All priorities ({totalPriorities})</Link></p>
+        <p className={r.panelTitle}><span id="dec-h">{view === "all" ? `All priorities (${totalPriorities})` : "Today: needs your decision"}</span>{view === "today" && <Link href="/today?map=all">All priorities ({totalPriorities})</Link>}</p>
         {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
           <ul className={t.decisionList}>
             {decisions.map(g => { const it = g.items[0]; return (
