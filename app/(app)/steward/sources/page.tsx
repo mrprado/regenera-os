@@ -6,6 +6,7 @@ import { stewardSources } from "@/db/schema";
 import { requireOsUser } from "@/lib/auth";
 import { appDb } from "@/lib/db/scoped";
 import { STEWARD_SOURCES } from "@/lib/steward/sources/catalog";
+import { MEXICO_SOURCES } from "@/lib/steward/sources/packs";
 import s from "../steward.module.css";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function SourcesPage() {
   await requireOsUser("/steward/sources");
   const rows = await appDb().select().from(stewardSources).orderBy(asc(stewardSources.region), asc(stewardSources.accessMethod), asc(stewardSources.name));
   // Before the first scheduled run the register may be empty: show the catalogue, marked as such.
-  const list = rows.length ? rows : STEWARD_SOURCES.map(x => ({ ...x, lastCheckedAt: null, lastSuccessAt: null, latestObservation: null }));
+  const list = rows.length ? rows : [...STEWARD_SOURCES, ...MEXICO_SOURCES].map(x => ({ ...x, lastCheckedAt: null, lastSuccessAt: null, latestObservation: null }));
   return (
     <>
       <PageHeader title="Steward sources" actions={<Link className="btn" href="/steward">Steward</Link>} />

@@ -7,12 +7,13 @@ import { stewardPlaces, stewardSourceFetches, stewardSourceRecords, stewardSourc
 import type { DataState } from "@/lib/steward/vocab";
 import { ADAPTERS, SourceUnavailable, type SourceRecord } from "./adapters";
 import { STEWARD_SOURCES } from "./catalog";
+import { MEXICO_SOURCES } from "./packs";
 
 const sha = async (s: string) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
 
 /** Writes the catalogue into the register. Live state (health after a run, last success, latest observation) is kept. */
 export async function syncSourceRegister(db: Db) {
-  for (const s of STEWARD_SOURCES) {
+  for (const s of [...STEWARD_SOURCES, ...MEXICO_SOURCES]) {
     const catalogue = { ...s, updatedAt: new Date().toISOString() };
     const { health: _h, enabled: _e, ...descriptive } = catalogue;
     void _h; void _e;

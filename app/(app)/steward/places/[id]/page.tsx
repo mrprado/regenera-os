@@ -14,6 +14,7 @@ import {
 import { addAllocationAction, addIndicatorAction, addMeasurementAction, createBudgetAction, createCarePlanAction, linkPlaceAction, setAssessmentAction, setGeometryAction } from "../../actions";
 import s from "../../steward.module.css";
 import SourcesPanel from "./sources-panel";
+import { centroidOf, regionalAdvisories } from "@/lib/steward/sources/packs";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Place" };
@@ -45,6 +46,7 @@ export default async function PlacePage({ params, searchParams }: { params: Prom
   const sums = budgets.map(b => ({ b, s: summariseBudget(b, allocations) }));
   const visibleKnowledge = knowledge.filter(k => canSeeKnowledge(user.scope, k));
   const geometry = visibleGeometry(place, owner);
+  const advisories = regionalAdvisories(place, centroidOf(place.geometry));
 
   // Gaps: what is missing, stated plainly. Missing never means fine.
   const gaps = [
@@ -67,6 +69,7 @@ export default async function PlacePage({ params, searchParams }: { params: Prom
         <div><b>Location</b><p>{[place.region, place.country].filter(Boolean).join(", ") || "Not recorded"}</p></div>
       </div>
 
+      {advisories.map(a => <p key={a.key} className={s.note} style={{ marginTop: 12 }}><b>{a.title}.</b> {a.text}</p>)}
       <section className={s.card} style={{ marginTop: 16 }}>
         <h2>Gaps to close<span>{gaps.length}</span></h2>
         {gaps.length ? <ul>{gaps.map(g => <li key={g}>{g}</li>)}</ul> : <p className={s.empty}>No structural gap recorded. Individual assessments below state their own scope.</p>}

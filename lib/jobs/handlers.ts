@@ -15,6 +15,7 @@ import { generateGapTheses, generateHypotheses, syncOriginationQueue } from "@/l
 import { screenDue } from "@/lib/integrity/engine";
 import { stewardshipDue } from "@/lib/integrity/stewardship";
 import { dueSourceRuns, runSourceForPlace, syncSourceRegister } from "@/lib/steward/sources/pipeline";
+import { ensureAdvisoryTasks } from "@/lib/steward/sources/packs";
 import { aiConfig, apolloConfig, outreachConfig, sendPolicy, siteConfig } from "@/lib/config";
 import { capitalOpportunities, listSources, organizations } from "@/db/schema";
 import { eq, ne } from "drizzle-orm";
@@ -281,6 +282,7 @@ export const handlers: Record<string, JobHandler> = {
   "steward.sources": async ({ db, now }) => {
     // Phase 28B: refresh the register, then a bounded number of place × source queries that are due under each source's policy.
     await syncSourceRegister(db);
+    await ensureAdvisoryTasks(db, now);
     for (const run of await dueSourceRuns(db, now, 12)) {
       await runSourceForPlace(db, { ...run, actor: "system:steward.sources", env: { FIRMS_MAP_KEY: (env as unknown as Record<string, string | undefined>).FIRMS_MAP_KEY }, now });
     }

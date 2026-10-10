@@ -8,6 +8,7 @@ import { appDb, isOwner, mandateCondition } from "@/lib/db/scoped";
 import { canSeeKnowledge, currentAssessments, indicatorsFor, summariseBudget } from "@/lib/steward/engine";
 import { ASSESSMENT_DIMENSIONS, ASSESSMENT_STATUS, CARE_ACTION_STATUS, GEOMETRY_ACCURACY, KNOWLEDGE_KINDS, OUTCOME_DIMENSIONS, PLACE_LINK_RELATIONS } from "@/lib/steward/vocab";
 import s from "../../../steward.module.css";
+import { centroidOf, regionalAdvisories } from "@/lib/steward/sources/packs";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Steward brief" };
@@ -61,6 +62,8 @@ export default async function BriefPage({ params }: { params: Promise<{ id: stri
       <p>{GEOMETRY_ACCURACY[place.geometryAccuracy]}{place.areaHa != null ? `, ${place.areaHa} ha (geodesic)` : place.geometry ? ", point only (no area)" : ", no geometry"}. {[place.region, place.country].filter(Boolean).join(", ")}. Responsible: {place.responsible ?? "not assigned"}.</p>
       <p>Projects: {projs.filter(p => projIds.includes(p.id)).map(p => p.name).join(", ") || "none linked"}.</p>
       <p>Communities and rights holders: {commIds.length ? links.filter(l => l.entityType === "community").map(l => { const c = comms.find(x => x.id === l.entityId); return c ? `${c.preferredName || c.name} (${PLACE_LINK_RELATIONS[l.relation]}${c.representationVerified ? "" : ", representation unverified"}${l.note ? `; basis: ${l.note}` : ""})` : "a community not visible to you"; }).join("; ") : "none recorded"}.</p>
+
+      {regionalAdvisories(place, centroidOf(place.geometry)).map(a => <p key={a.key}><b>{a.title}.</b> {a.text}</p>)}
 
       <h2>Assessment by dimension</h2>
       <ul>{assessments.map(a => <li key={a.dimension}><b>{ASSESSMENT_DIMENSIONS[a.dimension]}</b>: {ASSESSMENT_STATUS[a.status]}{a.basis ? `. ${a.basis}` : ""}{a.scope ? ` (scope: ${a.scope})` : ""}{a.evidenceRef ? ` [evidence: ${a.evidenceRef}]` : ""}{a.assessedAt ? ` (${a.assessedBy}, ${a.assessedAt.slice(0, 10)})` : ""}</li>)}</ul>
