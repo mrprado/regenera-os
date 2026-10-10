@@ -1,0 +1,29 @@
+/* Pinned items tray (phase 25). Colours from tokens; 32 px minimum targets in the header. */
+.tray { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; justify-content: flex-end; }
+.list { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; overflow: hidden; }
+.item { display: flex; align-items: center; min-width: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.item[data-current] { border-color: var(--action); box-shadow: inset 0 -2px 0 var(--action); }
+.item a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 4px 0 10px; font-size: 13px; color: var(--text-1); text-decoration: none; white-space: nowrap; }
+.item a span { overflow: hidden; text-overflow: ellipsis; }
+.item a:hover { color: var(--accent-ink); }
+.unpin { display: grid; place-items: center; width: 28px; min-height: 32px; border: 0; background: none; color: var(--text-3); cursor: pointer; border-radius: 0 6px 6px 0; }
+.unpin:hover { color: var(--text-1); background: var(--surface-selected); }
+.pinButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text-2); font: 13px var(--font); cursor: pointer; white-space: nowrap; }
+.pinButton:hover { border-color: var(--action); color: var(--accent-ink); }
+.pinButton[data-pinned] { background: var(--surface-selected); border-color: var(--action); color: var(--accent-ink); }
+.pinButton:disabled, .unpin:disabled { opacity: .6; cursor: progress; }
+.menu { display: none; position: relative; }
+.menu > summary { list-style: none; min-height: 32px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; cursor: pointer; background: var(--surface); }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > ul { position: absolute; right: 0; top: calc(100% + 8px); z-index: 70; display: grid; gap: 6px; margin: 0; padding: 8px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-overlay); width: min(300px, calc(100vw - 32px)); }
+.replace { position: absolute; right: 0; top: calc(100% + 8px); z-index: 70; width: min(320px, calc(100vw - 32px)); padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-overlay); }
+.replace p { margin: 0 0 8px; font-size: 13px; color: var(--text-2); }
+.replace ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.replace li button, .cancel { width: 100%; min-height: 36px; text-align: left; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 13px var(--font); color: var(--text-1); cursor: pointer; }
+.replace li button:hover { background: var(--surface-selected); }
+.cancel { text-align: center; color: var(--text-2); }
+.note { position: absolute; right: 0; top: calc(100% + 8px); z-index: 70; margin: 0; padding: 10px 12px; width: max-content; max-width: min(320px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--copper); border-radius: 6px; font-size: 13px; box-shadow: var(--shadow-overlay); }
+.item a:focus-visible, .unpin:focus-visible, .pinButton:focus-visible, .menu > summary:focus-visible, .replace button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 1200px) { .list { display: none; } .menu { display: block; } }
+@media (max-width: 600px) { .pinButton { padding: 0 8px; } .pinButton { font-size: 0; gap: 0; } }
+@media print { .tray { display: none; } }

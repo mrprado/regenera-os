@@ -17,6 +17,8 @@ import styles from "./shell.module.css";
 import WorkspaceTrail from './workspace-trail';
 import ErrorReporter from "@/components/error-reporter";
 import FormGuard from "@/components/form-guard";
+import PinnedTray from "./pinned-tray";
+import { listPins } from "@/lib/pins/queries";
 import { currentOsUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,8 @@ export default async function AppLayout({ children }: Readonly<{ children: React
   const navUser = { modules: user.scope.modules ?? "all", internal: isInternal(user.scope), owner:isOwner(user.scope) };
   const sandboxFocus = user.scope.mandateIds.length === 1 ? (await appDb().select({ sandbox: mandates.sandbox }).from(mandates).where(eq(mandates.id, user.scope.mandateIds[0])))[0]?.sandbox : false;
   const [profile] = await appDb().select({ name: tenantMembers.name }).from(tenantMembers).where(and(eq(tenantMembers.email, user.email), eq(tenantMembers.status, "active"))).limit(1);
+  // Pinned items (phase 25): access re-checked on every load; a failure never blocks the page.
+  const pinned = user.visitor ? { pins: [], removed: 0 } : await listPins(appDb(), user.scope, user.email).catch(() => ({ pins: [], removed: 0 }));
   const focus = user.scope.mandateIds.length === 1 && memberOf.length > 1 ? user.scope.mandateIds[0] : "all";
 
   return (
@@ -52,6 +56,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         <div className={styles.brandArea}><SidebarToggle /><Link href="/today" className={styles.brand} aria-label="Regenera OS, go to Command">REGENERA</Link></div>
         <div className={styles.headerSlot}>
           <WorkspaceTrail user={navUser}/>
+          <PinnedTray pins={pinned.pins} removed={pinned.removed} canPin={!user.visitor && user.scope.userType !== "read_only"} />
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
           <ErrorReporter /><FormGuard viewOnly={!!user.visitor || user.scope.userType === "read_only"} />
         </div>

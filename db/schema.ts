@@ -163,3 +163,4 @@ export * from "./infrastructure";
 export * from "./funding-match";
 export * from "./origination";
 export * from "./integrity";
+export * from "./pins";
