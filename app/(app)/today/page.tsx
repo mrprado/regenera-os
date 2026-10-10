@@ -83,7 +83,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   );
   return (
     <>
-      <header className={t.commandHead}><div><h1 className={t.commandTitle}>Command</h1><p className={t.commandContext}>{date} · {scope}{name?` · ${name}`:""}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
+      <header className={t.commandHead}><div><h1 className="sr-only">Command</h1><p className={t.commandContext}>{date}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
       <Notice text={sp.notice} />
       <CommandReview>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
