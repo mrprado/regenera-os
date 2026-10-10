@@ -106,7 +106,7 @@ export async function PartiesObligations({ c, scope }: { c: Contract; scope: Use
         {obligations.length === 0 ? <p className={r.empty}>None recorded. Each obligation names who owes it, when, the evidence required and the clause it comes from.</p> : (
           <table className={ui.table}><tbody>{obligations.map(o => (
             <tr key={o.id}>
-              <td style={{ whiteSpace: "nowrap", color: o.dueDate && o.dueDate < today && (o.status === "open" || o.status === "in_progress") ? "#b0432f" : undefined }}>{o.dueDate ?? "No date"}<span className={ui.sub}>{RECURRENCE[o.recurrence]}</span></td>
+              <td style={{ whiteSpace: "nowrap", color: o.dueDate && o.dueDate < today && (o.status === "open" || o.status === "in_progress") ? "var(--critical)" : undefined }}>{o.dueDate ?? "No date"}<span className={ui.sub}>{RECURRENCE[o.recurrence]}</span></td>
               <td>{o.obligation}<span className={ui.sub}>{[OBLIGATION_CATEGORIES[o.category], o.responsibleParty, o.sourceClause && `Clause ${o.sourceClause}`, o.evidenceRequired && `Evidence: ${o.evidenceRequired}`, o.riskIfMissed && `If missed: ${o.riskIfMissed}`].filter(Boolean).join(" · ")}</span>
                 {o.completionEvidence && <span className={ui.sub}>Done: {o.completionEvidence}</span>}</td>
               <td>{o.status === "open" || o.status === "in_progress" ? (

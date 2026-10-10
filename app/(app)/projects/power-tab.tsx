@@ -17,7 +17,7 @@ import s from "./natural.module.css";
 type Project = typeof projects.$inferSelect;
 type Scope = Parameters<typeof mandateCondition>[0];
 const SECTIONS = [["ppa", "PPAs & bankability"], ["stack", "Revenue stack"], ["grid", "Grid interconnection"], ["storage", "Storage"], ["loads", "Loads that could take the power"]] as const;
-const COLORS: Record<string, string> = { strong: "#2f7d4f", acceptable: "#5f8f6a", conditional: "#b58a2a", material_issue: "#b0432f", unknown: "#8a8f86", fit: "#2f7d4f", no_fit: "#b0432f" };
+const COLORS: Record<string, string> = { strong: "var(--positive)", acceptable: "var(--positive)", conditional: "var(--warning)", material_issue: "var(--critical)", unknown: "var(--text-3)", fit: "var(--positive)", no_fit: "var(--critical)" };
 const Opts = ({ o }: { o: Record<string, string> }) => <>{Object.entries(o).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</>;
 const P = ({ id }: { id: string }) => <input type="hidden" name="projectId" value={id} />;
 

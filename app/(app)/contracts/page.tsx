@@ -64,7 +64,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     <td><Link className={ui.primary} href={`/contracts/${c.id}`}>{c.title}</Link>
                       <span className={ui.sub}>{kindLabel(c)}{orgName ? ` · ${orgName}` : ""}{dealName ? ` · ${dealName}` : ""} · v{c.version}</span></td>
                     <td><span className={c.status === "signed" ? ui.chip : ui.chipMuted}>{CONTRACT_STATUS_LABEL[c.status]}</span>
-                      {c.counselRequired && !c.counselReviewedAt && <span className={ui.sub} style={{ color: "#b0432f" }}>Counsel review needed</span>}</td>
+                      {c.counselRequired && !c.counselReviewedAt && <span className={ui.sub} style={{ color: "var(--critical)" }}>Counsel review needed</span>}</td>
                     <td>{money(c.value, c.terms.currency)}</td>
                     <td>{c.signedAt ?? "—"}</td>
                     <td>{c.endDate ?? "—"}</td>
@@ -114,7 +114,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
               <ul className={r.timeline}>
                 {alerts.awaitingSignature.map(a => <li key={a.id}><span className={r.when}>{a.days} days</span><span>Unsigned: <Link href={`/contracts/${a.id}`}>{a.title}</Link></span></li>)}
                 {alerts.renewals.map(a => <li key={a.id}><span className={r.when}>{a.noticeBy}</span><span>{a.autoRenew ? "Renews" : "Ends"} {a.endDate}: <Link href={`/contracts/${a.id}`}>{a.title}</Link> (notice by {a.noticeBy})</span></li>)}
-                {alerts.milestonesDue.map(m => <li key={m.id}><span className={r.when} style={{ color: m.overdue ? "#b0432f" : undefined }}>{m.dueDate}</span><span>{m.title}, {money(m.amount, m.currency)}: <Link href={`/contracts/${m.contractId}`}>{m.contractTitle}</Link></span></li>)}
+                {alerts.milestonesDue.map(m => <li key={m.id}><span className={r.when} style={{ color: m.overdue ? "var(--critical)" : undefined }}>{m.dueDate}</span><span>{m.title}, {money(m.amount, m.currency)}: <Link href={`/contracts/${m.contractId}`}>{m.contractTitle}</Link></span></li>)}
               </ul>
             )}
           </section>

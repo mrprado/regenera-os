@@ -106,7 +106,7 @@ export default async function PrivateInvestorPage({ params, searchParams }: { pa
             <p className={ui.sub} style={{ marginTop: 0 }}>Per jurisdiction, rule and date. Never inferred from wealth, title or experience.</p>
             {quals.length === 0 ? <p className={r.empty}>None on record: assessment required before any investment communication.</p> : (
               <ul className={r.timeline}>{quals.map(q => (
-                <li key={q.id}><span className={r.when} style={{ color: q.expiresAt && q.expiresAt < today ? "#b0432f" : undefined }}>{q.jurisdiction}</span>
+                <li key={q.id}><span className={r.when} style={{ color: q.expiresAt && q.expiresAt < today ? "var(--critical)" : undefined }}>{q.jurisdiction}</span>
                   <span>{q.classification}{q.definitionVersion ? ` (${q.definitionVersion})` : ""} · {QUALIFICATION_STATUSES[q.verificationStatus]}{q.verifiedBy ? ` by ${q.verifiedBy}` : ""}{q.expiresAt ? ` · until ${q.expiresAt}` : ""}{q.restrictions ? ` · ${q.restrictions}` : ""}</span></li>
               ))}</ul>
             )}

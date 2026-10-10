@@ -12,7 +12,7 @@ import { contributeProjectAction } from "../benchmark-actions";
 import s from "./natural.module.css";
 
 type Project = typeof projects.$inferSelect;
-const FLAG: Record<string, [string, string]> = { material_above: ["MATERIAL ABOVE-BENCHMARK", "#b0432f"], above: ["Above median", "#b58a2a"], within: ["Within range", "#2f7d4f"], below: ["Below median", "#b58a2a"], material_below: ["MATERIAL BELOW-BENCHMARK", "#b0432f"], insufficient: ["Insufficient benchmarks (<3)", "#8a8f86"] };
+const FLAG: Record<string, [string, string]> = { material_above: ["MATERIAL ABOVE-BENCHMARK", "var(--critical)"], above: ["Above median", "var(--warning)"], within: ["Within range", "var(--positive)"], below: ["Below median", "var(--warning)"], material_below: ["MATERIAL BELOW-BENCHMARK", "var(--critical)"], insufficient: ["Insufficient benchmarks (<3)", "var(--text-3)"] };
 
 export default async function BenchmarksTab({ project, mandateIds }: { project: Project; mandateIds: string[] }) {
   const db = appDb(), year = new Date().getUTCFullYear();
@@ -40,7 +40,7 @@ export default async function BenchmarksTab({ project, mandateIds }: { project: 
       <p className={r.panelTitle}>Data consistency</p>
       <p className={ui.sub}>The same fact from different sources, side by side. Conflicts are flagged, never silently resolved.</p>
       {conflicts.length === 0 ? <p className={r.empty}>Only one source per fact so far.</p> : conflicts.map(c => <div key={c.fact} className={s.card}>
-        <b style={{ color: c.material ? "#b0432f" : undefined }}>{c.fact}{c.material ? ": material conflict" : ""}</b>
+        <b style={{ color: c.material ? "var(--critical)" : undefined }}>{c.fact}{c.material ? ": material conflict" : ""}</b>
         {c.values.map(v => <span key={v.source} className={ui.sub}>{v.source}: {v.currency && v.currency !== "MW" ? `${v.currency} ` : ""}{v.value.toLocaleString("en-US")}{v.currency === "MW" ? " MW" : ""}</span>)}
         <span className={ui.sub}>Spread {c.spreadPct}% · {c.note}</span></div>)}
     </section></aside>

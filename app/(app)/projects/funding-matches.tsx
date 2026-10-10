@@ -15,7 +15,7 @@ export default async function FundingMatches({ projectId }: { projectId: string 
       <p className={ui.sub}>Open or forthcoming records that list this project&apos;s country (or global eligibility) and, where both state one, the same sector. A match is not eligibility: check the unknowns with the funder. Refreshed after every funding scan.</p>
       {rows.length === 0 ? <p className={r.empty}>No open funding record passes the gates yet. Set the project&apos;s country and technology for better matching.</p> : (
         <ul style={{ listStyle: "none", padding: 0, display: "grid", gap: 10 }}>{rows.map(m => (
-          <li key={m.id} style={{ borderTop: "1px solid var(--line, #D8D5CE)", paddingTop: 8 }}>
+          <li key={m.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 8 }}>
             <a href={m.url} target="_blank" rel="noreferrer"><b>{m.title}</b></a> <span className={ui.chip}>{m.status === "accepted" ? "Accepted" : m.geography === "listed" ? "Country listed" : "Global"}</span>
             <div className={ui.sub}>{m.funder ?? m.source} · deadline {m.deadline ?? "not stated (unverified)"}</div>
             {m.eligibility && <div className={ui.sub}><b>{ELIGIBILITY[m.eligibility]}</b>{m.capitalStage ? ` · ${m.capitalStage.replace("_", "-")} capital` : ""}</div>}

@@ -9,7 +9,7 @@
 .fields label { display: grid; gap: 3px; font-size: 14px; color: var(--text-muted); }
 .fields input { height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; font-size: 14px; }
 .wide { grid-column: 1 / -1; }
-.blockers { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: #b0432f; }
+.blockers { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: var(--critical); }
 .inline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .inline input { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 14px; }
 .printBar { display: flex; gap: 8px; margin-bottom: 16px; }

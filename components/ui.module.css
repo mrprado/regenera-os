@@ -49,7 +49,7 @@
 .rowActions { display: flex; gap: 6px; flex-wrap: wrap; }
 .miniBtn { display: inline-flex; align-items: center; min-height: 32px; height: auto; padding: 0 9px; border-radius: var(--radius-control); border: 1px solid var(--ash); background: var(--chalk); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--heading); transition: border-color var(--t-fast) var(--ease); }
 .miniBtn:hover { border-color: var(--text-3); }
-.miniPrimary { background: var(--volcanic); border-color: var(--volcanic); color: #fff; }
+.miniPrimary { background: var(--volcanic); border-color: var(--volcanic); color: var(--action-text); }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-bottom: 26px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .stat { display: block; border: 0; border-left: 1px solid var(--line); border-radius: 0; padding: 14px 18px 16px; color: inherit; }

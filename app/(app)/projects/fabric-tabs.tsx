@@ -233,7 +233,7 @@ export async function DiligenceTab({ project, scope }: { project: Project; scope
       <p className={r.panelTitle} style={{ marginTop: 24 }}>Values by source</p>
       {fields.length === 0 ? <p className={r.empty}>No field-level claims on this project yet. Claims with a field and value (Overview → claims) appear here source by source.</p> :
         fields.map(f => <div key={f.field} className={r.read} style={{ marginTop: 10 }}>
-          <b style={{ color: f.conflict ? "var(--rust, #A45F3F)" : undefined }}>{f.field.replace(/_/g, " ")}{f.conflict ? ": sources disagree" : ""}</b>
+          <b style={{ color: f.conflict ? "var(--rust, var(--copper))" : undefined }}>{f.field.replace(/_/g, " ")}{f.conflict ? ": sources disagree" : ""}</b>
           <ul className={ui.sub}>{f.values.map(v => <li key={v.claimId}>{v.value}{v.unit ? ` ${v.unit}` : ""} · {v.status.replace(/_/g, " ")} · {v.sources.join(", ") || "no evidence"}{v.validFrom || v.validTo ? ` · valid ${v.validFrom ?? "…"} to ${v.validTo ?? "…"}` : ""}</li>)}</ul>
           <span className={ui.sub}>Canonical: {f.canonical ? `${f.canonical.value}${f.canonical.unit ? ` ${f.canonical.unit}` : ""}` : "none"}. {f.why} Nothing is overwritten.</span></div>)}
 

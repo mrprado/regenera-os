@@ -101,7 +101,7 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
               {investment && (
                 <fieldset style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", marginTop: 10 }}>
                   <legend style={{ fontSize: 12, fontWeight: 600 }}>{mandate.name}: prior relationship (required, logged with the send)</legend>
-                  {!mandate.counsel && <p className={r.why} style={{ color: "#b0432f", marginTop: 0 }}>Sending is off for this mandate until an owner records counsel&apos;s confirmation.</p>}
+                  {!mandate.counsel && <p className={r.why} style={{ color: "var(--critical)", marginTop: 0 }}>Sending is off for this mandate until an owner records counsel&apos;s confirmation.</p>}
                   <input name="prHow" placeholder="How you know them (e.g. co-investor on a 2025 deal)" aria-label="How you know them" maxLength={200} />
                   <input name="prSince" placeholder="Since when (e.g. 2023)" aria-label="Since when" maxLength={40} style={{ marginTop: 6 }} />
                   <textarea name="prEvidence" placeholder="Evidence: meeting, email thread or introduction, with dates" aria-label="Evidence" maxLength={1000} style={{ marginTop: 6, minHeight: 60 }} />

@@ -80,7 +80,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                   <td>{d.version}</td>
                   <td>{DOCUMENT_STATUSES[d.status]}</td>
                   <td>{project ?? "—"}<span className={ui.sub}>{org ?? ""}</span></td>
-                  <td style={{ color: d.expiryDate && d.expiryDate < today ? "#b0432f" : undefined }}>{d.expiryDate ?? "—"}</td>
+                  <td style={{ color: d.expiryDate && d.expiryDate < today ? "var(--critical)" : undefined }}>{d.expiryDate ?? "—"}</td>
                   <td>{d.status !== "superseded" && (
                     <form action={documentVersionAction} className={styles.inline}>
                       <input type="hidden" name="id" value={d.id} />

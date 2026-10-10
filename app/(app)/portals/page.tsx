@@ -136,7 +136,7 @@ async function AccessTab({ scope, users, projectRows, docRows, nameOf }: { scope
         <section className={r.panel}>
           <p className={r.panelTitle}>Recent portal access</p>
           {log.length === 0 ? <p className={r.empty}>No access yet.</p> : (
-            <table className={ui.table}><tbody>{log.map(l => <tr key={l.id}><td>{l.at.slice(0, 16).replace("T", " ")}</td><td>{nameOf.get(l.portalUserId)}</td><td>{l.action}{l.entityType ? ` · ${l.entityType}` : ""}</td><td style={{ color: l.allowed ? undefined : "#b0432f" }}>{l.allowed ? "allowed" : "denied"}{l.reason ? `: ${l.reason}` : ""}</td></tr>)}</tbody></table>
+            <table className={ui.table}><tbody>{log.map(l => <tr key={l.id}><td>{l.at.slice(0, 16).replace("T", " ")}</td><td>{nameOf.get(l.portalUserId)}</td><td>{l.action}{l.entityType ? ` · ${l.entityType}` : ""}</td><td style={{ color: l.allowed ? undefined : "var(--critical)" }}>{l.allowed ? "allowed" : "denied"}{l.reason ? `: ${l.reason}` : ""}</td></tr>)}</tbody></table>
           )}
         </section>
       </div>
@@ -323,7 +323,7 @@ async function RoomsTab({ scope, projectRows, docRows, nameOf }: { scope: Scope;
         ))}
         <section className={r.panel}>
           <p className={r.panelTitle}>Document views and downloads</p>
-          {views.length === 0 ? <p className={r.empty}>No portal opens yet.</p> : <table className={ui.table}><tbody>{views.map(v => <tr key={v.id}><td>{v.at.slice(0, 16).replace("T", " ")}</td><td>{nameOf.get(v.portalUserId)}</td><td>{docRows.find(d => d.id === v.entityId)?.title}</td><td style={{ color: v.allowed ? undefined : "#b0432f" }}>{v.allowed ? "opened" : `denied: ${v.reason}`}</td></tr>)}</tbody></table>}
+          {views.length === 0 ? <p className={r.empty}>No portal opens yet.</p> : <table className={ui.table}><tbody>{views.map(v => <tr key={v.id}><td>{v.at.slice(0, 16).replace("T", " ")}</td><td>{nameOf.get(v.portalUserId)}</td><td>{docRows.find(d => d.id === v.entityId)?.title}</td><td style={{ color: v.allowed ? undefined : "var(--critical)" }}>{v.allowed ? "opened" : `denied: ${v.reason}`}</td></tr>)}</tbody></table>}
         </section>
       </div>
       <aside>
@@ -468,7 +468,7 @@ async function MessagesTab({ scope, nameOf }: { scope: Scope; nameOf: Map<string
         const unread = ms.some(m => m.direction === "in" && !m.readAt);
         return (
           <section key={id} className={r.panel}>
-            <p className={r.panelTitle}><span>{nameOf.get(id)}</span>{unread && <span className={ui.chip} style={{ color: "#b0432f" }}>Unread</span>}</p>
+            <p className={r.panelTitle}><span>{nameOf.get(id)}</span>{unread && <span className={ui.chip} style={{ color: "var(--critical)" }}>Unread</span>}</p>
             <ul className={r.timeline}>{ms.slice(0, 8).map(m => <li key={m.id}><span className={r.when}>{m.createdAt.slice(0, 10)}</span><span style={{ whiteSpace: "pre-wrap" }}><b>{m.direction === "in" ? "Them" : m.author}</b>: {m.body}</span></li>)}</ul>
             <form action={replyPortalAction} className={styles.inline} style={{ marginTop: 8 }}><input type="hidden" name="portalUserId" value={id} /><input name="body" placeholder="Reply (shown in their portal)" aria-label="Reply" style={{ flex: 1 }} required /><button className={ui.miniBtn} type="submit">Reply</button></form>
           </section>

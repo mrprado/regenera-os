@@ -173,7 +173,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
               <>
                 <table className={ui.table}><tbody>{milestones.map(m => (
                   <tr key={m.id}>
-                    <td>{m.title}<span className={ui.sub} style={{ color: m.dueDate && m.dueDate < today && (m.status === "pending" || m.status === "invoiced") ? "#b0432f" : undefined }}>{m.dueDate ?? "no date"} · {money(m.amount, m.currency)}</span></td>
+                    <td>{m.title}<span className={ui.sub} style={{ color: m.dueDate && m.dueDate < today && (m.status === "pending" || m.status === "invoiced") ? "var(--critical)" : undefined }}>{m.dueDate ?? "no date"} · {money(m.amount, m.currency)}</span></td>
                     <td>
                       <form action={milestoneStatusAction} style={{ display: "flex", gap: 4 }}>
                         <input type="hidden" name="id" value={m.id} />

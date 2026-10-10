@@ -8,8 +8,8 @@
 .short { width: 40%; }
 .shim { background: linear-gradient(90deg, var(--line) 0%, var(--paper-2, var(--secondary-surface)) 50%, var(--line) 100%); background-size: 200% 100%; animation: shim 1.2s linear infinite; }
 .error { border: 1px solid var(--line); border-radius: 4px; padding: 16px; display: grid; gap: 8px; max-width: 720px; }
-.map { position: relative; height: calc(100vh - 120px); border-radius: 4px; background: #0f1512; overflow: hidden; }
-.mapLabel { position: absolute; left: 16px; bottom: 16px; color: #cfd8d2; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+.map { position: relative; height: calc(100vh - 120px); border-radius: 4px; background: var(--forest-carbon); overflow: hidden; }
+.mapLabel { position: absolute; left: 16px; bottom: 16px; color: var(--text-on-dark-2); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
 @keyframes shim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .shim { animation: none; } }
 @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }

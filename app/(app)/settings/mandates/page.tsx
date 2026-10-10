@@ -35,7 +35,7 @@ export default async function MandatesPage({ searchParams }: { searchParams: Pro
                   <button className={ui.miniBtn} name="confirm" value="0" type="submit">Withdraw</button></form>
               ) : (
                 <form action={counselAction}><input type="hidden" name="id" value={m.id} />
-                  <span className={ui.sub} style={{ display: "inline", marginRight: 8, color: "#b0432f" }}>Sending off: counsel has not confirmed</span>
+                  <span className={ui.sub} style={{ display: "inline", marginRight: 8, color: "var(--critical)" }}>Sending off: counsel has not confirmed</span>
                   <button className={ui.miniBtn} name="confirm" value="1" type="submit">Record counsel confirmation</button></form>
               )
             )}

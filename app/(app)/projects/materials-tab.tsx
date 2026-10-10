@@ -57,7 +57,7 @@ export default async function MaterialsTab({ project, scope }: { project: { id: 
                       i.leadTimeWeeks !== null && `${i.leadTimeWeeks} weeks lead`, i.recycledPct !== null && `${i.recycledPct}% recycled`, i.biobasedPct !== null && `${i.biobasedPct}% bio-based`,
                       i.serviceLifeYears && `${i.serviceLifeYears}-year life`, `circularity: ${CIRCULARITY[i.circularity]}`, i.designForDisassembly && "designed for disassembly", i.endOfLife && `end of life: ${i.endOfLife}`,
                       i.hazards && `hazards: ${i.hazards}`, i.certification].filter(Boolean).join(" · ")}</span>
-                    <span className={ui.sub} style={{ display: "block", color: l.status === "computed" ? undefined : "#b0432f" }}>
+                    <span className={ui.sub} style={{ display: "block", color: l.status === "computed" ? undefined : "var(--critical)" }}>
                       {l.status === "computed" ? `${t(kg)} CO₂e from ${e?.manufacturer} ${e?.product} EPD${e?.registrationNumber ? ` (${e.registrationNumber})` : ""}${l.expiredEpd ? " · EPD expired: replace it" : ""}` : STATUS[l.status]}</span></td>
                   <td>
                     <form action={updateBoqItemAction} className={styles.stack} style={{ minWidth: 190 }}>

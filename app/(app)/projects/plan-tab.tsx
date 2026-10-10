@@ -63,7 +63,7 @@ export default async function PlanTab({ projectId }: { projectId: string }) {
                 const ob = m.obligationId ? obligations.find(o => o.id === m.obligationId) : null;
                 return (
                   <tr key={m.id}>
-                    <td><b>{m.name}</b>{n?.critical ? <span className={ui.chip} style={{ marginLeft: 6, color: "#b0432f" }}>Critical</span> : null}
+                    <td><b>{m.name}</b>{n?.critical ? <span className={ui.chip} style={{ marginLeft: 6, color: "var(--critical)" }}>Critical</span> : null}
                       <span className={ui.sub} style={{ display: "block" }}>{[MILESTONE_CATEGORIES[m.category], `${m.durationDays} days of work`, m.dueDate && `due ${m.dueDate}`, n && m.status !== "done" && `forecast ${n.finish}`,
                         n && n.slackDays > 0 && m.status !== "done" && `${n.slackDays} days slack`, n?.lateDays && `${n.lateDays} days late`, n?.overdue && "overdue",
                         m.status === "done" && `done ${m.completedAt}`, m.owner && `owner ${m.owner}`, m.evidence && `evidence: ${m.evidence}`, ob && `obligation ${ob.status}`,

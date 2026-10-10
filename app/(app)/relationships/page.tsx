@@ -13,7 +13,7 @@ import styles from "../projects/projects.module.css";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Relationships" };
 
-const KIND_COLOR: Record<string, string> = { regenera: "#173b2a", person: "#476b5e", organization: "#b59a5b", project: "#7a8675" };
+const KIND_COLOR: Record<string, string> = { regenera: "var(--forest-carbon)", person: "var(--lichen)", organization: "var(--gold-ink)", project: "var(--text-3)" };
 const href = (k: string) => (k.startsWith("p:") ? `/people/${k.slice(2)}` : k.startsWith("o:") ? `/companies/${k.slice(2)}` : k.startsWith("prj:") ? `/projects/${k.slice(4)}` : "/today");
 
 /** Relationship graph (§14): who connects Regenera to a person, organization or project, and why. */
@@ -60,10 +60,10 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
           <section className={r.panel}>
             <p className={r.panelTitle}>{target ? `Network around ${g.nodes.get(target)!.label}` : "Direct connections of Regenera"}</p>
             <svg viewBox="0 0 600 420" style={{ width: "100%", maxHeight: 460 }} role="img" aria-label="Relationship graph">
-              {ego.edges.filter(e => pos.has(e.a) && pos.has(e.b)).map((e, i) => <line key={i} x1={pos.get(e.a)![0]} y1={pos.get(e.a)![1]} x2={pos.get(e.b)![0]} y2={pos.get(e.b)![1]} stroke="#b9b4a6" strokeWidth={0.6 + e.strength * 2} opacity={0.7}><title>{e.why}</title></line>)}
+              {ego.edges.filter(e => pos.has(e.a) && pos.has(e.b)).map((e, i) => <line key={i} x1={pos.get(e.a)![0]} y1={pos.get(e.a)![1]} x2={pos.get(e.b)![0]} y2={pos.get(e.b)![1]} stroke="var(--line)" strokeWidth={0.6 + e.strength * 2} opacity={0.7}><title>{e.why}</title></line>)}
               {[...pos.entries()].map(([k, [x, y]]) => {
                 const n = g.nodes.get(k)!;
-                return <a key={k} href={`?target=${encodeURIComponent(k)}`}><circle cx={x} cy={y} r={k === center ? 11 : 7} fill={KIND_COLOR[n.kind]} stroke="#fff" strokeWidth={1.5}><title>{n.label}</title></circle><text x={x} y={y + (k === center ? 24 : 18)} fontSize={k === center ? 12 : 10} textAnchor="middle" fill="#1d2522">{n.label.slice(0, 26)}</text></a>;
+                return <a key={k} href={`?target=${encodeURIComponent(k)}`}><circle cx={x} cy={y} r={k === center ? 11 : 7} fill={KIND_COLOR[n.kind]} stroke="var(--surface)" strokeWidth={1.5}><title>{n.label}</title></circle><text x={x} y={y + (k === center ? 24 : 18)} fontSize={k === center ? 12 : 10} textAnchor="middle" fill="var(--text-1)">{n.label.slice(0, 26)}</text></a>;
               })}
             </svg>
             <p className={ui.sub}>Forest: Regenera · teal: people · gold: organizations · grey: projects. Line weight = strength. Click a node to centre it.</p>

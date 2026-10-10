@@ -414,6 +414,13 @@
       "when": 1791604397104,
       "tag": "0058_same_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "6",
+      "when": 1791611197076,
+      "tag": "0059_married_serpent_society",
+      "breakpoints": true
     }
   ]
 }

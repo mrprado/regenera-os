@@ -72,7 +72,7 @@ export default async function PlaybookPage({ params, searchParams }: { params: P
                     <p className={ui.sub} style={{ marginTop: 0 }}>{d.purpose}</p>
                     {d.channel === "email" && <input name="subject" defaultValue={d.subject} aria-label="Subject" style={{ marginBottom: 6 }} />}
                     <textarea name="body" defaultValue={d.body} aria-label="Template" />
-                    {d.styleIssues?.length ? <p className={ui.sub} style={{ color: "#b0432f" }}>{d.styleIssues.map(i => i.detail).join(" ")}</p> : null}
+                    {d.styleIssues?.length ? <p className={ui.sub} style={{ color: "var(--critical)" }}>{d.styleIssues.map(i => i.detail).join(" ")}</p> : null}
                     <button className={ui.miniBtn} type="submit" style={{ marginTop: 6 }}>Save</button>
                   </form>
                 ))}

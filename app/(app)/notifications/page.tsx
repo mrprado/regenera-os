@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Notifications" };
 
 const TABS = [["inbox", "Inbox"], ["rules", "Trigger rules"], ["gates", "Stage gates"], ["events", "Event log"]] as const;
-const PRI_COLOR: Record<string, string | undefined> = { critical: "#b0432f", action: "var(--heading)", information: "var(--text-muted)" };
+const PRI_COLOR: Record<string, string | undefined> = { critical: "var(--critical)", action: "var(--heading)", information: "var(--text-muted)" };
 
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireOsUser("/notifications");

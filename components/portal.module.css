@@ -21,7 +21,7 @@
 .form label { display: grid; gap: 4px; font-size: 14px; color: var(--text-muted); }
 .form input, .form select, .form textarea { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 14px; color: var(--text); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
-.warn { color: #b0432f; }
+.warn { color: var(--critical); }
 .notice { border: 1px solid var(--line); border-left: 3px solid var(--heading); padding: 10px 14px; font-size: 14px; margin-bottom: 18px; }
 .foot { color: var(--text-muted); font-size: 14px; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }

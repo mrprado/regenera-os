@@ -4,13 +4,13 @@
 .card { display: block; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); padding: 9px 10px; margin-bottom: 8px; color: inherit; font-size: 14px; }
 .card b { display: block; font-size: 14px; color: var(--heading); margin-bottom: 2px; }
 .card span { display: block; color: var(--text-muted); font-size: 14px; }
-.flag { color: #b0432f; font-weight: 600; }
+.flag { color: var(--critical); font-weight: 600; }
 .readiness { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .dim { border: 1px solid var(--line); border-radius: 4px; padding: 10px; font-size: 14px; }
 .dim b { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
 .dim form { display: grid; gap: 5px; }
 .dim select, .dim input { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 14px; }
-.s_blocked { color: #b0432f; } .s_ready, .s_substantially_ready { color: var(--water); } .s_unknown { color: var(--text-muted); }
+.s_blocked { color: var(--critical); } .s_ready, .s_substantially_ready { color: var(--water); } .s_unknown { color: var(--text-muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
 .grid2 label, .stack label { display: grid; gap: 3px; font-size: 14px; color: var(--text-muted); }
 .grid2 input, .grid2 select, .grid2 textarea, .stack input, .stack select, .stack textarea { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 14px; font-family: inherit; }
@@ -26,7 +26,7 @@
 .gRow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gTrack { position: relative; height: 14px; background: color-mix(in srgb, var(--wax) 45%, var(--paper)); border-radius: 3px; }
 .gBar { position: absolute; top: 2px; height: 10px; border-radius: 2px; background: var(--water); min-width: 3px; }
-.gCrit { background: #b0432f; }
+.gCrit { background: var(--critical); }
 .gDone { background: var(--text-muted); opacity: .5; }
 .gDue { position: absolute; top: -2px; width: 2px; height: 18px; background: var(--heading); }
 .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 6px 0 10px; }

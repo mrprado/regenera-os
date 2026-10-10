@@ -10,7 +10,7 @@ import { ACTION_STATUS, RATINGS, RELEVANCE_DIMENSIONS, SIGNAL_ACTIONS, SIGNAL_TY
 import { addSignalActionAction, assessSignalAction, rateDimensionAction, saveInterpretationAction, updateSignalActionAction } from "../../intelligence-actions";
 import s from "../../projects/natural.module.css";
 
-const COLORS: Record<string, string> = { high: "#2f7d4f", conditional: "#b58a2a", low: "#8a8f86", none: "#8a8f86", unknown: "#b8b3a7" };
+const COLORS: Record<string, string> = { high: "var(--positive)", conditional: "var(--warning)", low: "var(--text-3)", none: "var(--text-3)", unknown: "var(--text-3)" };
 
 export default async function Assessment({ triggerId }: { triggerId: string }) {
   const [a] = await appDb().select().from(signalAssessments).where(eq(signalAssessments.triggerId, triggerId));

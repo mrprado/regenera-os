@@ -26,7 +26,7 @@ type Project = typeof projects.$inferSelect;
 type Scope = Parameters<typeof mandateCondition>[0];
 const SECTIONS = [["structure", "Structure & horizons"], ["production", "Production"], ["design", "Ecological design"], ["certification", "Certification & MRV"], ["inventory", "Inventory"], ["offtake", "Environmental offtake"], ["risk", "Risk transfer"]] as const;
 const n0 = (x: number | null | undefined) => (x === null || x === undefined ? "—" : Math.round(x).toLocaleString("en-US"));
-const LINK_COLORS: Record<string, string> = { ownership: "#161816", contract: "#6b9fb8", cash_flow: "#c9a227", service: "#8a8f86", liability: "#b0432f", land_right: "#6fa36f" };
+const LINK_COLORS: Record<string, string> = { ownership: "var(--text-1)", contract: "var(--steel)", cash_flow: "var(--gold)", service: "var(--text-3)", liability: "var(--critical)", land_right: "var(--positive)" };
 
 export default async function NaturalTab({ project, scope, sec }: { project: Project; scope: Scope; sec?: string }) {
   const section = SECTIONS.some(([k]) => k === sec) ? sec! : "structure";
@@ -54,7 +54,7 @@ async function Structure({ project }: { project: Project }) {
       <p className={r.panelTitle}>Asset → operating company → land / project SPVs → HoldCo → investors</p>
       {nodes.length === 0 ? <p className={r.empty}>No entities yet. Add the natural asset, operating company, nursery, land and project SPVs, HoldCo and investors, then link them by ownership, contract, cash flow, service, liability or land right.</p> : (
         <svg viewBox={`0 0 ${W} ${height}`} className={s.graph} role="img" aria-label="Structure graph">
-          <defs><marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#8a8f86" /></marker></defs>
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--text-3)" /></marker></defs>
           {links.map(l => { const a = pos.get(l.fromId), b = pos.get(l.toId); if (!a || !b) return null; const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2; return <g key={l.id}>
             <line x1={a.x} y1={a.y + 18} x2={b.x} y2={b.y - 18} stroke={LINK_COLORS[l.kind]} strokeWidth={l.kind === "ownership" ? 2.2 : 1.4} strokeDasharray={l.kind === "contract" || l.kind === "service" ? "5 4" : undefined} markerEnd="url(#arr)" />
             <text x={mx + 4} y={my} className={s.edgeLabel}>{LINK_KINDS[l.kind]}{l.pct !== null ? ` ${l.pct}%` : ""}{l.amount ? ` · ${compactMoney(l.amount, l.currency ?? "USD")}` : ""}</text>
@@ -265,7 +265,7 @@ async function Inventory({ project }: { project: Project }) {
             <input name="beneficiary" placeholder="retire for" aria-label="Retirement beneficiary" /><button className={ui.miniBtn} type="submit">Move</button></form>}</td></tr>; })}
       </tbody></table>}
       {cov.length > 0 && <><p className={r.panelTitle} style={{ marginTop: 12 }}>Offtake coverage by year</p>
-        <table className={ui.table}><thead><tr><th>Year</th><th>Contracted</th><th>Expected + on hand</th><th>Gap</th></tr></thead><tbody>{cov.map(c => <tr key={c.year}><td>{c.year}</td><td className={ui.num}>{n0(c.contracted)}</td><td className={ui.num}>{n0(c.expected)}</td><td className={ui.num} style={{ color: c.gap < 0 ? "#b0432f" : undefined }}>{n0(c.gap)}</td></tr>)}</tbody></table>
+        <table className={ui.table}><thead><tr><th>Year</th><th>Contracted</th><th>Expected + on hand</th><th>Gap</th></tr></thead><tbody>{cov.map(c => <tr key={c.year}><td>{c.year}</td><td className={ui.num}>{n0(c.contracted)}</td><td className={ui.num}>{n0(c.expected)}</td><td className={ui.num} style={{ color: c.gap < 0 ? "var(--critical)" : undefined }}>{n0(c.gap)}</td></tr>)}</tbody></table>
         <p className={ui.sub}>A negative gap means contracted delivery exceeds expected units: check replacement obligations and the buffer.</p></>}
     </section>
     <aside><section className={r.panel}><p className={r.panelTitle}>Add forecast lot</p>

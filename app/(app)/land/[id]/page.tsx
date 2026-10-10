@@ -48,7 +48,7 @@ export default async function LandDetail({ params, searchParams }: { params: Pro
           <p className={r.panelTitle} style={{ marginTop: 14 }}>Diligence</p>
           <table className={ui.table}><thead><tr><th>Item</th><th>Status</th><th>Note</th><th /></tr></thead><tbody>
             {c.diligence.map(d => <tr key={d.item}><td>{d.item}</td><td colSpan={3}><form action={landDiligenceAction} className={s.mini}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="item" value={d.item} />
-              <select name="status" defaultValue={d.status} aria-label={`${d.item} status`} style={{ color: d.status === "issue" ? "#b0432f" : undefined }}>{Object.entries(DSTATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+              <select name="status" defaultValue={d.status} aria-label={`${d.item} status`} style={{ color: d.status === "issue" ? "var(--critical)" : undefined }}>{Object.entries(DSTATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               <input name="note" defaultValue={d.note} aria-label={`${d.item} note`} style={{ width: 280 }} /><button className={ui.miniBtn} type="submit">Save</button></form></td></tr>)}
           </tbody></table>
           <form action={landDiligenceAction} className={s.inline}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="open" /><label>Add item<input name="item" required /></label><button className={ui.miniBtn} type="submit">Add</button></form>

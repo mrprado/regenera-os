@@ -54,7 +54,7 @@ export default async function GeneratorPage({ searchParams }: { searchParams: Pr
             {docs.length === 0 ? <p className={r.empty}>None yet.</p> : (
               <table className={ui.table}><tbody>{docs.map(d => (
                 <tr key={d.id}><td><Link href={`/documents/generator/${d.id}`}><b>{d.title}</b></Link><span className={ui.sub} style={{ display: "block" }}>v{d.version} · {d.createdAt.slice(0, 10)} · {d.createdBy}</span></td>
-                  <td>{d.legal ? <span className={ui.chip} style={{ color: d.legalReviewStatus === "approved" ? "var(--water)" : "#b0432f" }}>{d.legalReviewStatus === "approved" ? "Counsel approved" : "Counsel review required"}</span> : <span className={ui.chip}>Report</span>}</td></tr>
+                  <td>{d.legal ? <span className={ui.chip} style={{ color: d.legalReviewStatus === "approved" ? "var(--water)" : "var(--critical)" }}>{d.legalReviewStatus === "approved" ? "Counsel approved" : "Counsel review required"}</span> : <span className={ui.chip}>Report</span>}</td></tr>
               ))}</tbody></table>
             )}
           </section>

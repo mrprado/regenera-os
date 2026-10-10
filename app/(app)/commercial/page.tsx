@@ -106,7 +106,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
         <p className={ui.sub}>Status is derived from dates and payments: due within 7 days, overdue after the due date (escalated on Today at 7 and 30 days). The OS records invoices; sending and collection happen in your billing system (Stripe / accounting adapters are NOT CONNECTED).</p>
         {o.invoices.length === 0 ? <p className={r.empty}>No invoices yet. Draft them from an engagement&apos;s payment schedule.</p> : (
           <table className={ui.table}><thead><tr><th>Number</th><th>Engagement</th><th>Milestone</th><th>Amount</th><th>Paid</th><th>Due</th><th>Status</th></tr></thead><tbody>
-            {[...o.invoices].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")).map(i => <tr key={i.id}><td>{i.number}</td><td><Link href={`/commercial/engagements/${i.engagementId}`}>{o.rows.find(x => x.e.id === i.engagementId)?.e.name ?? "—"}</Link></td><td>{i.milestone}</td><td className={ui.num}>{money(i.amount, i.currency)}</td><td className={ui.num}>{money(i.paidAmount, i.currency)}</td><td style={{ color: i.derived === "overdue" ? "#b0432f" : undefined }}>{i.dueDate ?? "—"}</td><td><span className={ui.chip}>{INVOICE_STATUSES[i.derived as keyof typeof INVOICE_STATUSES]}</span></td></tr>)}
+            {[...o.invoices].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")).map(i => <tr key={i.id}><td>{i.number}</td><td><Link href={`/commercial/engagements/${i.engagementId}`}>{o.rows.find(x => x.e.id === i.engagementId)?.e.name ?? "—"}</Link></td><td>{i.milestone}</td><td className={ui.num}>{money(i.amount, i.currency)}</td><td className={ui.num}>{money(i.paidAmount, i.currency)}</td><td style={{ color: i.derived === "overdue" ? "var(--critical)" : undefined }}>{i.dueDate ?? "—"}</td><td><span className={ui.chip}>{INVOICE_STATUSES[i.derived as keyof typeof INVOICE_STATUSES]}</span></td></tr>)}
           </tbody></table>)}
         <p className={ui.sub}>Today {today}.</p>
       </section>}
@@ -145,7 +145,7 @@ async function Partners({ scope }: { scope: Parameters<typeof mandateCondition>[
   return <div className={r.grid}>
     <section className={r.panel}><p className={r.panelTitle}>Partners and vendors</p>
       {rows.length === 0 ? <p className={r.empty}>No partners or vendors recorded.</p> : <table className={ui.table}><thead><tr><th>Name</th><th>Kind</th><th>Capabilities</th><th>Geographies</th><th>Rates / terms</th><th>Insurance</th></tr></thead><tbody>
-        {rows.map(p => <tr key={p.id}><td className={ui.primary}>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td className={ui.sub}>{p.capabilities.join(", ")}</td><td className={ui.sub}>{p.geographies.join(", ")}</td><td className={ui.sub}>{[p.rates, p.paymentTerms, p.commercialTerms].filter(Boolean).join(" · ")}</td><td style={{ color: p.insuranceExpiry && p.insuranceExpiry < today ? "#b0432f" : undefined }}>{p.insuranceExpiry ?? "—"}</td></tr>)}
+        {rows.map(p => <tr key={p.id}><td className={ui.primary}>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td className={ui.sub}>{p.capabilities.join(", ")}</td><td className={ui.sub}>{p.geographies.join(", ")}</td><td className={ui.sub}>{[p.rates, p.paymentTerms, p.commercialTerms].filter(Boolean).join(" · ")}</td><td style={{ color: p.insuranceExpiry && p.insuranceExpiry < today ? "var(--critical)" : undefined }}>{p.insuranceExpiry ?? "—"}</td></tr>)}
       </tbody></table>}
       <p className={ui.sub}>Builders, EPCs and suppliers for projects live in <Link href="/network">Builders &amp; suppliers</Link>.</p>
     </section>
@@ -194,7 +194,7 @@ async function Entities({ scope }: { scope: Parameters<typeof mandateCondition>[
     <section className={r.panel}><p className={r.panelTitle}>Corporate entities and SPVs</p>
       <p className={ui.sub}>Client funds are never merged with Regenera corporate accounts; engagements and projects can reference the relevant entity or SPV.</p>
       {rows.length === 0 ? <p className={r.empty}>No entities recorded.</p> : <table className={ui.table}><thead><tr><th>Entity</th><th>Kind</th><th>Jurisdiction</th><th>Formed</th><th>Ownership</th><th>Registered agent</th><th>Annual filing</th></tr></thead><tbody>
-        {rows.map(x => <tr key={x.id}><td className={ui.primary}>{x.name}</td><td>{ENTITY_KINDS[x.kind]}</td><td>{x.jurisdiction}</td><td>{x.formationDate ?? "—"}</td><td className={ui.sub}>{x.ownership}</td><td>{x.registeredAgent}</td><td style={{ color: x.annualFilingDue && x.annualFilingDue < today ? "#b0432f" : undefined }}>{x.annualFilingDue ?? "—"}</td></tr>)}
+        {rows.map(x => <tr key={x.id}><td className={ui.primary}>{x.name}</td><td>{ENTITY_KINDS[x.kind]}</td><td>{x.jurisdiction}</td><td>{x.formationDate ?? "—"}</td><td className={ui.sub}>{x.ownership}</td><td>{x.registeredAgent}</td><td style={{ color: x.annualFilingDue && x.annualFilingDue < today ? "var(--critical)" : undefined }}>{x.annualFilingDue ?? "—"}</td></tr>)}
       </tbody></table>}
     </section>
     <aside><section className={r.panel}><p className={r.panelTitle}>Add entity</p>

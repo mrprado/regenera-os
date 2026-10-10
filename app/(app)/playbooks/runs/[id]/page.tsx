@@ -34,7 +34,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
     <>
       <PageHeader title={`${p.name}${run.entityLabel ? ` · ${run.entityLabel}` : ""}`} actions={<><Link className="btn" href={`/playbooks/${p.id}`}>Playbook</Link>{run.entityId && ENTITY_HREF[run.entityType] && <Link className="btn" href={ENTITY_HREF[run.entityType](run.entityId)}>Open {run.entityType.replace("_", " ")}</Link>}</>} />
       <Notice text={sp.notice} />
-      <p className={ui.sub} style={{ marginTop: -6 }}><span className={ui.chip} style={{ color: run.status === "needs_review" ? "#b0432f" : undefined }}>{RUN_LABEL[run.status]}</span> version {run.version} · started by {run.startedBy} {run.createdAt.slice(0, 10)}{run.approvedBy ? ` · approved by ${run.approvedBy}` : ""}</p>
+      <p className={ui.sub} style={{ marginTop: -6 }}><span className={ui.chip} style={{ color: run.status === "needs_review" ? "var(--critical)" : undefined }}>{RUN_LABEL[run.status]}</span> version {run.version} · started by {run.startedBy} {run.createdAt.slice(0, 10)}{run.approvedBy ? ` · approved by ${run.approvedBy}` : ""}</p>
       <div className={r.grid}>
         <div>
           <section className={r.panel}>
@@ -43,7 +43,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
               const st = run.steps.find(x => x.key === s.key)!;
               return (
                 <tr key={s.key}>
-                  <td><b>{s.title}</b> <span className={ui.chip}>{GOVERNANCE_LABEL[s.governance]}</span> <span className={ui.chip} style={{ color: st.status === "failed" ? "#b0432f" : undefined }}>{st.status}</span>
+                  <td><b>{s.title}</b> <span className={ui.chip}>{GOVERNANCE_LABEL[s.governance]}</span> <span className={ui.chip} style={{ color: st.status === "failed" ? "var(--critical)" : undefined }}>{st.status}</span>
                     {st.note && <span className={ui.sub} style={{ display: "block" }}>{st.note}</span>}
                     {st.by && <span className={ui.sub} style={{ display: "block" }}>{st.by} · {st.at?.slice(0, 16).replace("T", " ")}</span>}</td>
                   <td>{!closed && (
@@ -68,7 +68,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>{def.proof.map(x => {
                 const c = run.checks.find(y => y.id === x.id);
                 return <li key={x.id} style={{ padding: "6px 0", borderBottom: "1px solid var(--line)", fontSize: 13.5 }}>
-                  <span style={{ color: c?.pass === true ? "var(--water)" : c?.pass === false ? "#b0432f" : undefined }}>{c?.pass === true ? "✓" : c?.pass === false ? "✗" : "○"}</span> {x.text}
+                  <span style={{ color: c?.pass === true ? "var(--water)" : c?.pass === false ? "var(--critical)" : undefined }}>{c?.pass === true ? "✓" : c?.pass === false ? "✗" : "○"}</span> {x.text}
                   {x.check.type === "manual" && !closed && <label style={{ marginLeft: 8, fontSize: 12 }}><input type="checkbox" name="confirm" value={x.id} defaultChecked={c?.pass === true} /> I confirm</label>}
                   {c && <span className={ui.sub} style={{ display: "block" }}>{c.detail}</span>}
                 </li>;

@@ -43,7 +43,7 @@ export default async function LandPage({ searchParams }: { searchParams: Promise
               <td>{[c.country, c.subdivision].filter(Boolean).join(" · ") || "—"}</td><td><span className={ui.chip}>{LAND_STAGES[c.stage]}</span></td>
               <td className={ui.num}>{c.hectares ? Math.round(c.hectares).toLocaleString("en-US") : "—"}</td><td className={ui.num}>{c.askingPrice ? compactMoney(c.askingPrice, c.currency) : "—"}</td>
               <td>{TENURE[c.tenure]}</td><td>{c.intervention ? INTERVENTIONS[c.intervention] : "—"}</td><td className={ui.num}>{c.probabilityPct === null ? "—" : `${c.probabilityPct}%`}</td>
-              <td className={ui.num}>{c.capitalRequired ? compactMoney(c.capitalRequired, c.currency) : "—"}</td><td className={ui.sub}>{done}/{c.diligence.length}{issues ? <span style={{ color: "#b0432f" }}> · {issues} issue(s)</span> : ""}</td></tr>; })}
+              <td className={ui.num}>{c.capitalRequired ? compactMoney(c.capitalRequired, c.currency) : "—"}</td><td className={ui.sub}>{done}/{c.diligence.length}{issues ? <span style={{ color: "var(--critical)" }}> · {issues} issue(s)</span> : ""}</td></tr>; })}
           </tbody></table>}
         </section>
         <aside><section className={r.panel}><p className={r.panelTitle}>Add candidate</p>

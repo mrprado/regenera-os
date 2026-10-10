@@ -31,7 +31,7 @@ export default async function RegulatoryTab({ projectId, scope }: { projectId: s
               <select name="status" defaultValue={q.status} aria-label="Status">{Object.entries(REQUIREMENT_STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               <input name="evidence" placeholder="Evidence" aria-label="Evidence" />
               <input name="reviewer" placeholder="Reviewer" aria-label="Reviewer" />
-              <input name="nextVerification" type="date" defaultValue={q.nextVerification ?? ""} aria-label="Next verification" style={{ color: q.nextVerification && q.nextVerification <= today ? "#b0432f" : undefined }} />
+              <input name="nextVerification" type="date" defaultValue={q.nextVerification ?? ""} aria-label="Next verification" style={{ color: q.nextVerification && q.nextVerification <= today ? "var(--critical)" : undefined }} />
               <button className={ui.miniBtn} type="submit">Update</button>
             </form>
           </td>
@@ -82,7 +82,7 @@ export default async function RegulatoryTab({ projectId, scope }: { projectId: s
             <table className={ui.table}><tbody>{permitRows.map(p => (
               <tr key={p.id}>
                 <td><b>{p.name}</b><span className={ui.sub}>{[p.authority, p.jurisdiction, p.reference && `Ref ${p.reference}`, p.conditions && `Conditions: ${p.conditions}`, p.owner].filter(Boolean).join(" · ")}</span></td>
-                <td style={{ whiteSpace: "nowrap", color: p.expiresAt && p.expiresAt < today ? "#b0432f" : undefined }}>{p.expiresAt ? `Expires ${p.expiresAt}` : "No expiry"}<span className={ui.sub}>{p.approvedAt ? `Approved ${p.approvedAt}` : ""}</span></td>
+                <td style={{ whiteSpace: "nowrap", color: p.expiresAt && p.expiresAt < today ? "var(--critical)" : undefined }}>{p.expiresAt ? `Expires ${p.expiresAt}` : "No expiry"}<span className={ui.sub}>{p.approvedAt ? `Approved ${p.approvedAt}` : ""}</span></td>
                 <td>
                   <form action={updatePermitAction} className={styles.inline}>
                     <input type="hidden" name="id" value={p.id} />

@@ -147,9 +147,9 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <p className={r.empty}>Nothing recorded yet. Start with Readiness: every dimension is Unknown until someone records evidence.</p>
               ) : (
                 <ul className={r.timeline}>
-                  {blockedDims.map(b => <li key={b.id}><span className={r.when} style={{ color: "#b0432f" }}>Blocked</span><span>{READINESS_DIMENSIONS[b.dimension]}{b.evidence ? `: ${b.evidence}` : ""}</span></li>)}
+                  {blockedDims.map(b => <li key={b.id}><span className={r.when} style={{ color: "var(--critical)" }}>Blocked</span><span>{READINESS_DIMENSIONS[b.dimension]}{b.evidence ? `: ${b.evidence}` : ""}</span></li>)}
                   {openCons.slice(0, 8).map(c => (
-                    <li key={c.id}><span className={r.when} style={{ color: c.severity === "critical" || c.severity === "high" ? "#b0432f" : undefined }}>{SEVERITIES[c.severity]}</span>
+                    <li key={c.id}><span className={r.when} style={{ color: c.severity === "critical" || c.severity === "high" ? "var(--critical)" : undefined }}>{SEVERITIES[c.severity]}</span>
                       <span>{CONSTRAINT_CATEGORIES[c.category]}: {c.description}{c.owner ? ` · ${c.owner}` : ""}{c.deadline ? ` · due ${c.deadline}${c.deadline < today ? " (overdue)" : ""}` : ""}</span></li>
                   ))}
                   <li><span className={r.when}>Readiness</span><span>{knownDims} of 14 dimensions have a recorded status</span></li>
@@ -289,7 +289,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             {data.constraints.length === 0 ? <p className={r.empty}>No constraints recorded. Each one gets an owner, a resolution action and a deadline; high and critical ones appear on Today.</p> : (
               <table className={ui.table}><tbody>{data.constraints.map(c => (
                 <tr key={c.id}>
-                  <td><b>{CONSTRAINT_CATEGORIES[c.category]}</b> · <span style={{ color: c.severity === "critical" || c.severity === "high" ? "#b0432f" : undefined }}>{SEVERITIES[c.severity]}</span>
+                  <td><b>{CONSTRAINT_CATEGORIES[c.category]}</b> · <span style={{ color: c.severity === "critical" || c.severity === "high" ? "var(--critical)" : undefined }}>{SEVERITIES[c.severity]}</span>
                     <span style={{ display: "block" }}>{c.description}</span>
                     <span className={ui.sub}>{[c.resolutionAction && `Resolution: ${c.resolutionAction}`, c.owner && `Owner: ${c.owner}`, c.deadline && `Due ${c.deadline}${c.deadline < today && c.status !== "resolved" ? " (overdue)" : ""}`, c.evidence && `Evidence: ${c.evidence}`].filter(Boolean).join(" · ")}</span></td>
                   <td>

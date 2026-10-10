@@ -205,6 +205,7 @@ export function activeNavGroup(groups:NavGroup[],pathname:string,params:URLSearc
 
 export const SETTINGS_NAV: NavLeaf[] = [
   { label: "Your profile", href: "/profile", keywords: "account name user type access avatar" },
+  { label: "Appearance", href: "/appearance", keywords: "dark mode light theme colours night" },
   { label: "Organization", href: "/org", keywords: "users teams roles modules security branding api" },
   { label: "Connections", href: "/settings/connections" },
   { label: "Integrations", href: "/settings/integrations", keywords: "data sources health" },
@@ -234,7 +235,7 @@ export function navFor(u: NavUser): NavGroup[] {
   });
 }
 
-export const settingsFor = (u: NavUser) => (u.internal ? SETTINGS_NAV.filter(i=>!i.ownerOnly||u.owner!==false) : SETTINGS_NAV.filter(i => i.href === "/org" || i.href === "/profile" || (i.href === "/connect/mcp" && pathAllowed(u.modules, i.href))));
+export const settingsFor = (u: NavUser) => (u.internal ? SETTINGS_NAV.filter(i=>!i.ownerOnly||u.owner!==false) : SETTINGS_NAV.filter(i => i.href === "/org" || i.href === "/profile" || i.href === "/appearance" || (i.href === "/connect/mcp" && pathAllowed(u.modules, i.href))));
 
 /** Flat list for menu search and Cmd+K: "Systems › Energy › Power & large loads". */
 export function flatNav(u: NavUser) {

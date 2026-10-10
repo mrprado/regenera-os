@@ -1,0 +1,12 @@
+.form { display: grid; gap: 18px; max-width: 640px; }
+.choices { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+.choices legend { font-size: 15px; font-weight: 600; color: var(--heading); margin-bottom: 8px; }
+.choice { display: grid; grid-template-columns: auto 56px 1fr; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.choice:has(input:checked) { border-color: var(--action); box-shadow: inset 3px 0 0 var(--action); }
+.choice b { display: block; font-size: 15px; color: var(--heading); }
+.choice input { width: 18px; height: 18px; accent-color: var(--action); }
+.choice:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Fixed preview swatches: they show each theme whatever the current one is. */
+.swatch { width: 56px; height: 36px; border-radius: 6px; border: 1px solid var(--line); background: linear-gradient(90deg, #F6F7F3 0 50%, #FFFFFF 50%); }
+.choice[data-theme-preview="dark"] .swatch { background: linear-gradient(90deg, #1B211D 0 50%, #252D27 50%); }
+.choice[data-theme-preview="system"] .swatch { background: linear-gradient(135deg, #F6F7F3 0 50%, #1B211D 50%); }

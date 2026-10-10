@@ -41,7 +41,7 @@ export default async function SystemsPage({ searchParams }: { searchParams: Prom
               <thead><tr><th>Project</th>{cats.map(c => <th key={c} style={{ fontSize: 11 }}>{SYSTEM_CATEGORIES[c]}</th>)}</tr></thead>
               <tbody>{ps.map(p => <tr key={p.id}><td><Link href={`/projects/${p.id}?tab=systems`}>{p.name}</Link></td>{cats.map(c => {
                 const a = as.find(x => x.projectId === p.id && x.category === c);
-                return <td key={c} style={{ fontSize: 12, color: a?.capacity === "constrained" || a?.capacity === "exceeded" ? "#b0432f" : a ? undefined : "var(--text-muted)" }}>{a ? `${CAPACITY_LABELS[a.capacity]}${a.status === "reviewed" ? " ✓" : ""}` : "—"}</td>;
+                return <td key={c} style={{ fontSize: 12, color: a?.capacity === "constrained" || a?.capacity === "exceeded" ? "var(--critical)" : a ? undefined : "var(--text-muted)" }}>{a ? `${CAPACITY_LABELS[a.capacity]}${a.status === "reviewed" ? " ✓" : ""}` : "—"}</td>;
               })}</tr>)}</tbody>
             </table>
           </div>

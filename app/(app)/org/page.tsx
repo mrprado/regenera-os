@@ -231,13 +231,13 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
         <>
           <section className={r.panel}><p className={r.panelTitle}>Members</p>
             <table className={ui.table}><thead><tr><th>Member</th><th>Status</th><th>MFA</th><th>Active sessions</th><th>Failed sign-ins (24h)</th><th>API tokens</th></tr></thead><tbody>
-              {members.map(m => { const fails = sec[2].find(x => x.email === m.email)?.n ?? 0; return <tr key={m.id}><td>{m.email}</td><td>{m.status}</td><td className={ui.sub}>Not enrolled — MFA arrives with SSO (Google Workspace / Entra ID / OIDC), prepared, not connected</td><td className={ui.num}>{sec[1].find(x => x.email === m.email)?.n ?? 0}</td><td className={ui.num} style={fails >= 5 ? { color: "#b0432f", fontWeight: 700 } : undefined}>{fails}</td><td className={ui.num}>{tokens.filter(x => x.userEmail === m.email && !x.revokedAt).length}</td></tr>; })}
+              {members.map(m => { const fails = sec[2].find(x => x.email === m.email)?.n ?? 0; return <tr key={m.id}><td>{m.email}</td><td>{m.status}</td><td className={ui.sub}>Not enrolled — MFA arrives with SSO (Google Workspace / Entra ID / OIDC), prepared, not connected</td><td className={ui.num}>{sec[1].find(x => x.email === m.email)?.n ?? 0}</td><td className={ui.num} style={fails >= 5 ? { color: "var(--critical)", fontWeight: 700 } : undefined}>{fails}</td><td className={ui.num}>{tokens.filter(x => x.userEmail === m.email && !x.revokedAt).length}</td></tr>; })}
             </tbody></table>
             {sec[2].some(x => x.n >= 5) && <p className={ui.notice}>Suspicious: five or more failed sign-ins in 24 hours for {sec[2].filter(x => x.n >= 5).map(x => x.email).join(", ")}.</p>}
           </section>
           <div className={r.grid}>
             <section className={r.panel}><p className={r.panelTitle}>Sign-in history</p>
-              {sec[0].length === 0 ? <p className={r.empty}>No sign-ins recorded yet.</p> : <table className={ui.table}><tbody>{sec[0].map(e => <tr key={e.id}><td className={ui.sub}>{e.at.slice(0, 16).replace("T", " ")}</td><td>{e.email}</td><td>{e.ok ? "Signed in" : <b style={{ color: "#b0432f" }}>Failed</b>}</td><td className={ui.sub}>{e.method} · {e.ip}</td></tr>)}</tbody></table>}
+              {sec[0].length === 0 ? <p className={r.empty}>No sign-ins recorded yet.</p> : <table className={ui.table}><tbody>{sec[0].map(e => <tr key={e.id}><td className={ui.sub}>{e.at.slice(0, 16).replace("T", " ")}</td><td>{e.email}</td><td>{e.ok ? "Signed in" : <b style={{ color: "var(--critical)" }}>Failed</b>}</td><td className={ui.sub}>{e.method} · {e.ip}</td></tr>)}</tbody></table>}
             </section>
             <aside>
               <section className={r.panel}><p className={r.panelTitle}>External access</p>

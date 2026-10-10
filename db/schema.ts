@@ -164,3 +164,4 @@ export * from "./funding-match";
 export * from "./origination";
 export * from "./integrity";
 export * from "./pins";
+export * from "./preferences";

@@ -18,6 +18,8 @@ import WorkspaceTrail from './workspace-trail';
 import ErrorReporter from "@/components/error-reporter";
 import FormGuard from "@/components/form-guard";
 import PinnedTray from "./pinned-tray";
+import ThemeSync from "./theme-sync";
+import { getTheme } from "@/lib/preferences";
 import { listPins } from "@/lib/pins/queries";
 import { currentOsUser } from "@/lib/auth";
 
@@ -43,6 +45,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
   const [profile] = await appDb().select({ name: tenantMembers.name }).from(tenantMembers).where(and(eq(tenantMembers.email, user.email), eq(tenantMembers.status, "active"))).limit(1);
   // Pinned items (phase 25): access re-checked on every load; a failure never blocks the page.
   const pinned = user.visitor ? { pins: [], removed: 0 } : await listPins(appDb(), user.scope, user.email).catch(() => ({ pins: [], removed: 0 }));
+  const theme = user.visitor ? "light" as const : await getTheme(appDb(), user.email).catch(() => "light" as const);
   const focus = user.scope.mandateIds.length === 1 && memberOf.length > 1 ? user.scope.mandateIds[0] : "all";
 
   return (
@@ -58,12 +61,12 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <WorkspaceTrail user={navUser}/>
           <PinnedTray pins={pinned.pins} removed={pinned.removed} canPin={!user.visitor && user.scope.userType !== "read_only"} />
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
-          <ErrorReporter /><FormGuard viewOnly={!!user.visitor || user.scope.userType === "read_only"} />
+          <ErrorReporter /><ThemeSync theme={theme} /><FormGuard viewOnly={!!user.visitor || user.scope.userType === "read_only"} />
         </div>
         {/* Ask the OS lives in the sidebar above Settings; the header keeps the notification bell and the avatar menu. */}
         <div className={styles.account}>
-          <Link className={styles.notificationsButton} href="/notifications" aria-label={`Notifications: ${unread} unread`} title="Notifications"><Bell size={20} aria-hidden />{unread > 0 && <span className={styles.notificationCount} style={open.some(n => n.priority === "critical" && !n.readAt) ? { background: "#b0432f" } : undefined}>{unread > 99 ? "99+" : unread}</span>}</Link>
-          <AccountMenu name={profile?.name || user.displayName} email={user.email} typeLabel={USER_TYPES[user.scope.userType ?? "regenera_internal"].label} canManage={(isInternal(user.scope) && isOwner(user.scope)) || !!user.scope.adminOf?.length} visitor={!!user.visitor} />
+          <Link className={styles.notificationsButton} href="/notifications" aria-label={`Notifications: ${unread} unread`} title="Notifications"><Bell size={20} aria-hidden />{unread > 0 && <span className={styles.notificationCount} style={open.some(n => n.priority === "critical" && !n.readAt) ? { background: "var(--critical)" } : undefined}>{unread > 99 ? "99+" : unread}</span>}</Link>
+          <AccountMenu name={profile?.name || user.displayName} email={user.email} typeLabel={USER_TYPES[user.scope.userType ?? "regenera_internal"].label} canManage={(isInternal(user.scope) && isOwner(user.scope)) || !!user.scope.adminOf?.length} visitor={!!user.visitor} theme={theme} />
         </div>
       </header>
 

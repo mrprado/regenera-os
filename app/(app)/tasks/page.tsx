@@ -45,7 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                 const due = t.dueAt.slice(0, 10);
                 return (
                   <tr key={t.id} id={`task-${t.id}`} aria-current={sp.focus === t.id ? "true" : undefined} style={sp.focus === t.id ? { background: "color-mix(in srgb, var(--gold) 12%, transparent)" } : undefined}>
-                    <td style={{ whiteSpace: "nowrap", color: view === "open" && due < today ? "#b0432f" : undefined }}>{due}</td>
+                    <td style={{ whiteSpace: "nowrap", color: view === "open" && due < today ? "var(--critical)" : undefined }}>{due}</td>
                     <td><span className={ui.primary}>{t.title}</span><span className={ui.sub}>{TYPE[t.type]}</span></td>
                     <td>{t.contactId ? <Link href={`/people/${t.contactId}`}>{contactName}</Link> : "—"}<span className={ui.sub}>{orgName ?? ""}</span>
                       {linkedinUrl && t.type.startsWith("linkedin") && <a className={ui.sub} href={linkedinUrl} target="_blank" rel="noreferrer">Open LinkedIn profile</a>}</td>

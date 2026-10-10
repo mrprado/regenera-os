@@ -43,7 +43,7 @@ export default async function PlaybooksPage({ searchParams }: { searchParams: Pr
           <section className={r.panel}>
             <p className={r.panelTitle}>Recent runs</p>
             {runs.length === 0 ? <p className={r.empty}>No runs yet. Start one from a playbook or from a project.</p> : (
-              <ul className={r.timeline}>{runs.map(({ r: x, name }) => <li key={x.id}><span className={r.when} style={{ color: x.status === "needs_review" || x.status === "failed" ? "#b0432f" : undefined }}>{RUN_LABEL[x.status]}</span><span><Link href={`/playbooks/runs/${x.id}`}>{name}</Link>{x.entityLabel ? ` · ${x.entityLabel}` : ""} · {x.updatedAt.slice(0, 10)}</span></li>)}</ul>
+              <ul className={r.timeline}>{runs.map(({ r: x, name }) => <li key={x.id}><span className={r.when} style={{ color: x.status === "needs_review" || x.status === "failed" ? "var(--critical)" : undefined }}>{RUN_LABEL[x.status]}</span><span><Link href={`/playbooks/runs/${x.id}`}>{name}</Link>{x.entityLabel ? ` · ${x.entityLabel}` : ""} · {x.updatedAt.slice(0, 10)}</span></li>)}</ul>
             )}
           </section>
         </aside>

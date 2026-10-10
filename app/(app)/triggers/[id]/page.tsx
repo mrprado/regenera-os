@@ -23,7 +23,7 @@ function Conflicts({ items }: { items: Conflict[] }) {
   if (!items.length) return <p className={ui.sub} style={{ marginTop: 0 }}>Conflict check: clear.</p>;
   return (
     <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 13.5 }}>
-      {items.map((c, i) => <li key={i} style={{ color: c.blocking ? "#b0432f" : undefined }}>{c.blocking ? "Blocks enrollment: " : ""}{c.detail}</li>)}
+      {items.map((c, i) => <li key={i} style={{ color: c.blocking ? "var(--critical)" : undefined }}>{c.blocking ? "Blocks enrollment: " : ""}{c.detail}</li>)}
     </ul>
   );
 }
@@ -102,7 +102,7 @@ export default async function PursuePage({ params, searchParams }: { params: Pro
                     <option value="">Save only, no sequence</option>{seqs.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
                   </select>
                   <label style={{ fontSize: 13 }}><input type="checkbox" name="enrich" value="1" /> Find emails with Apollo (1 credit each when found)</label>
-                  {conflicts.some(c => c.blocking) && <label style={{ fontSize: 13, color: "#b0432f" }}><input type="checkbox" name="override" value="1" /> I checked the conflicts, enroll anyway</label>}
+                  {conflicts.some(c => c.blocking) && <label style={{ fontSize: 13, color: "var(--critical)" }}><input type="checkbox" name="override" value="1" /> I checked the conflicts, enroll anyway</label>}
                   <button className="btn btn--primary" type="submit">Pursue</button>
                 </div>
                 <p className={ui.sub}>Without Apollo credits, addresses are inferred for free from the organization&apos;s known email pattern when two or more addresses are already on record. Every draft still waits in the approval queue.</p>

@@ -80,7 +80,7 @@ export default async function CapitalOpportunityPage({ params, searchParams }: {
                     <tr key={m.id}>
                       <td>{href ? <Link href={href}>{nameOf(m.investorKey)}</Link> : nameOf(m.investorKey)}<span className={ui.sub}>{m.investorKey.startsWith("private:") ? "Private investor" : "Capital partner"}</span></td>
                       <td><FitEvidence reasons={m.commercialReasons} /></td>
-                      <td><span style={{ color: m.eligibility === "not_eligible" ? "#b0432f" : undefined }}>{ELIGIBILITY[m.eligibility]}</span><span className={ui.sub}>{m.eligibilityReasons.slice(0, 3).join(" · ")}</span></td>
+                      <td><span style={{ color: m.eligibility === "not_eligible" ? "var(--critical)" : undefined }}>{ELIGIBILITY[m.eligibility]}</span><span className={ui.sub}>{m.eligibilityReasons.slice(0, 3).join(" · ")}</span></td>
                       <td>
                         <form action={matchStatusAction} className={styles.inline}>
                           <input type="hidden" name="matchId" value={m.id} />

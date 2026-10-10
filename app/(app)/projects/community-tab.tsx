@@ -32,7 +32,7 @@ type State = Awaited<ReturnType<typeof projectCommunityState>>;
 const SECTIONS = [["overview", "Overview"], ["communities", "Communities & authority"], ["rights", "Rights"], ["knowledge", "Knowledge governance"], ["consent", "Consent / FPIC & engagement"], ["participation", "Economic participation"], ["ledgers", "Ledgers & funds"], ["commitments", "Commitments & grievances"]] as const;
 const P = ({ projectId }: { projectId: string }) => <input type="hidden" name="projectId" value={projectId} />;
 const Opts = ({ o }: { o: Record<string, string> }) => <>{Object.entries(o).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</>;
-const tone = (ok: boolean) => ({ color: ok ? "#2f7d4f" : "#b0432f" });
+const tone = (ok: boolean) => ({ color: ok ? "var(--positive)" : "var(--critical)" });
 
 export default async function CommunityTab({ project, scope, sec, sp }: { project: Project; scope: Scope; sec?: string; sp: Record<string, string | undefined> }) {
   const section = SECTIONS.some(([k]) => k === sec) ? sec! : "overview";
@@ -290,7 +290,7 @@ async function Participation({ project, scope, st, modelId, inflation, discount 
         <p className={ui.sub}>Model: {cmp.model.name} v{cmp.model.version}. Figures are modelled outputs from the model&apos;s assumptions, not commitments. No structure is recommended: compare the trade-offs.</p>
         {cmp.scenarios.map(x => <div key={x.name} style={{ margin: "8px 0" }}><span className={ui.sub}>{x.name}: community cash by year (nominal)</span>
           <svg viewBox={`0 0 ${x.result.rows.length * 14} 60`} style={{ width: "100%", height: 60, display: "block" }} role="img" aria-label={`Community cash by year, scenario ${x.name}`}>
-            {x.result.rows.map((row, i) => { const h = (Math.abs(row.participation) / max) * 54; return <rect key={i} x={i * 14 + 2} y={row.participation >= 0 ? 57 - h : 57} width={10} height={Math.max(0.5, h)} fill={row.participation >= 0 ? "#2f7d4f" : "#b0432f"}><title>{`Year ${row.year}: ${compactMoney(row.participation, cur)} (cumulative ${compactMoney(row.cumulative, cur)})`}</title></rect>; })}
+            {x.result.rows.map((row, i) => { const h = (Math.abs(row.participation) / max) * 54; return <rect key={i} x={i * 14 + 2} y={row.participation >= 0 ? 57 - h : 57} width={10} height={Math.max(0.5, h)} fill={row.participation >= 0 ? "var(--positive)" : "var(--critical)"}><title>{`Year ${row.year}: ${compactMoney(row.participation, cur)} (cumulative ${compactMoney(row.cumulative, cur)})`}</title></rect>; })}
           </svg></div>)}
       </>}
       <p className={r.panelTitle} style={{ marginTop: 14 }}>Community-aligned capital</p>

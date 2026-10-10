@@ -26,7 +26,7 @@ export function PathwayCard({ p, back, projectName }: { p: Pathway; back: string
       <dl className={r.kv}>
         <dt>Source</dt><dd>{PATHWAY_SOURCES[p.sourceType]}{p.provider ? ` · ${p.provider}` : ""}</dd>
         <dt>Amount</dt><dd>{p.amount != null ? compactMoney(p.amount, p.currency) : "Not set"}</dd>
-        <dt>Deadline</dt><dd>{p.deadline ? <span style={{ color: p.deadline < today ? "#c8553d" : undefined }}>{p.deadline}</span> : "None recorded"}</dd>
+        <dt>Deadline</dt><dd>{p.deadline ? <span style={{ color: p.deadline < today ? "var(--critical)" : undefined }}>{p.deadline}</span> : "None recorded"}</dd>
         <dt>Eligibility</dt><dd>{ELIGIBILITY_STATES[p.eligibility]}{p.eligibilitySource ? ` · source: ${p.eligibilitySource}` : ""}{p.eligibilityNotes ? ` · ${p.eligibilityNotes}` : ""}</dd>
         <dt>Owner</dt><dd>{p.owner ?? "Unassigned"}</dd>
       </dl>
@@ -35,7 +35,7 @@ export function PathwayCard({ p, back, projectName }: { p: Pathway; back: string
         {p.steps.map(s => (
           <li key={s.id} data-done={s.done}>
             <form action={toggleStepAction}><input type="hidden" name="pathwayId" value={p.id} /><input type="hidden" name="stepId" value={s.id} /><input type="hidden" name="back" value={back} /><button type="submit" aria-label={s.done ? `Reopen ${s.label}` : `Mark ${s.label} done`}>{s.done ? "✓" : ""}</button></form>
-            <span>{s.label}</span>{s.due && <small className={ui.sub} style={{ color: !s.done && s.due < today ? "#c8553d" : undefined }}>{s.due}</small>}
+            <span>{s.label}</span>{s.due && <small className={ui.sub} style={{ color: !s.done && s.due < today ? "var(--critical)" : undefined }}>{s.due}</small>}
           </li>
         ))}
       </ul>

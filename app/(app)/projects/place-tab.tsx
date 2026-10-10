@@ -42,7 +42,7 @@ export default async function PlaceTab({ project }: { project: { id: string; lat
                   <table className={ui.table}><tbody>{rows.map(f => (
                     <tr key={f.id}>
                       <td>{f.label}<span className={ui.sub}>{f.observedFor ?? ""}</span></td>
-                      <td><b>{f.value}</b>{f.state === "stale" && <span className={ui.sub} style={{ color: "#b0432f" }}>stale</span>}</td>
+                      <td><b>{f.value}</b>{f.state === "stale" && <span className={ui.sub} style={{ color: "var(--critical)" }}>stale</span>}</td>
                       <td className={ui.sub}>{f.sourceUrl ? <a href={f.sourceUrl} target="_blank" rel="noreferrer">{f.integrationKey}</a> : f.integrationKey} · {TIER[f.tier] ?? ""} · {f.retrievedAt.slice(0, 10)}<br />{f.license}</td>
                     </tr>
                   ))}</tbody></table>

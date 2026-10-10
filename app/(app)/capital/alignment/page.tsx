@@ -51,7 +51,7 @@ async function Overview({ mandateIds }: { mandateIds: string[] }) {
       <p className={r.panelTitle}><span>Portfolio capital by alignment</span><span className={ui.sub}>{t.currency}{t.mixedCurrency ? " · other currencies excluded from totals" : ""}</span></p>
       <div className={s.strip}>
         {ORDER.map(k => <div key={k}><span><i className={s.dot} style={{ background: ALIGNMENT_COLORS[k] }} />{ALIGNMENT[k]}</span><b>{compactMoney(t.byAlignment[k], t.currency)}</b></div>)}
-        <div><span><i className={s.dot} style={{ background: "#7a2e21" }} />Material nature risk</span><b>{compactMoney(t.materialRisk, t.currency)}</b></div>
+        <div><span><i className={s.dot} style={{ background: "var(--copper-ink)" }} />Material nature risk</span><b>{compactMoney(t.materialRisk, t.currency)}</b></div>
       </div>
       <div className={s.bar} aria-hidden>{ORDER.map(k => <i key={k} style={{ width: `${pct(t.byAlignment[k])}%`, background: ALIGNMENT_COLORS[k] }} />)}</div>
       <p className={ui.sub}>Material nature risk = capital in assessments with a high-materiality dependency or impact, or a scenario rated high nature risk. Projects without an assessment count as Unclassified at their CAPEX.</p>

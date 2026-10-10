@@ -97,7 +97,7 @@
 .sectionTitle { margin: 0; font-size: 14px; font-weight: 600; }
 .modes { display: flex; gap: 4px; flex-wrap: wrap; }
 .mode { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; color: var(--text-2); text-decoration: none; }
-.mode[aria-current="page"] { background: var(--graphite, #252D27); border-color: var(--graphite, #252D27); color: var(--text-on-dark); }
+.mode[aria-current="page"] { background: var(--graphite); border-color: var(--graphite); color: var(--text-on-dark); }
 .mode:focus-visible, .decisionAction:focus-visible, .shortcut:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .mapLinks { margin-left: auto; font-size: 14px; }
 .mapOff { margin: 0 0 18px; font-size: 14px; }
@@ -106,16 +106,16 @@
 .unmapped summary { cursor: pointer; color: var(--text-2); }
 .unmapped ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .decisions { margin: 0 0 22px; }
-.decisionList { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--white, #fff); }
+.decisionList { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .decision { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 14px 16px; }
 .decision + .decision { border-top: 1px solid var(--line); }
 .decision > div { display: grid; gap: 3px; min-width: 0; }
 .decision b { font-size: 15px; font-weight: 600; }
 .decisionWhy { font-size: 14px; color: var(--text-2); }
-.decisionAction { flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--copper-tint, #e8d3c8); border-radius: 6px; background: transparent; color: var(--copper-ink); font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.decisionAction { flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--copper-tint); border-radius: 6px; background: transparent; color: var(--copper-ink); font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .decisionAction:hover { border-color: var(--copper); }
 .shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 22px; }
-.shortcut { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: inherit; background: var(--white, #fff); }
+.shortcut { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: inherit; background: var(--surface); }
 .shortcut b { font-size: 15px; font-weight: 600; }
 .shortcut span { font-size: 14px; color: var(--text-2); }
 .shortcut:hover { border-color: var(--text-3); }

@@ -27,7 +27,7 @@ export default async function ObligationsView({ scope, sp }: { scope: Scope; sp:
             <thead><tr><th>Due</th><th>Obligation</th><th>Responsible</th><th>Contract</th><th>Evidence required</th><th>Status</th></tr></thead>
             <tbody>{rows.map(({ o, title, project }) => (
               <tr key={o.id}>
-                <td style={{ color: o.dueDate && o.dueDate < today && (o.status === "open" || o.status === "in_progress") ? "#b0432f" : undefined, whiteSpace: "nowrap" }}>{o.dueDate ?? "No date"}<span className={ui.sub}>{RECURRENCE[o.recurrence]}</span></td>
+                <td style={{ color: o.dueDate && o.dueDate < today && (o.status === "open" || o.status === "in_progress") ? "var(--critical)" : undefined, whiteSpace: "nowrap" }}>{o.dueDate ?? "No date"}<span className={ui.sub}>{RECURRENCE[o.recurrence]}</span></td>
                 <td>{o.obligation}<span className={ui.sub}>{OBLIGATION_CATEGORIES[o.category]}{o.sourceClause ? ` · ${o.sourceClause}` : ""}{o.riskIfMissed ? ` · if missed: ${o.riskIfMissed}` : ""}</span></td>
                 <td>{o.responsibleParty}<span className={ui.sub}>{o.owner ?? ""}</span></td>
                 <td><Link href={`/contracts/${o.contractId}`}>{title}</Link><span className={ui.sub}>{project ?? ""}</span></td>

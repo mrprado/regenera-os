@@ -12,7 +12,7 @@ import styles from "./projects.module.css";
 
 const SCORE: Record<string, number> = { rare: 1, unlikely: 2, possible: 3, likely: 4, almost_certain: 5, low: 1, medium: 2, high: 3, severe: 4 };
 const SEV: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-const red = (s: string) => (s === "critical" || s === "high" ? "#b0432f" : undefined);
+const red = (s: string) => (s === "critical" || s === "high" ? "var(--critical)" : undefined);
 
 /** Risk register (what may happen, how likely, how bad, who owns the mitigation, what would trigger it), environmental
  * and social issues against host law or lender standards with the mitigation hierarchy, and insurance. */

@@ -17,7 +17,7 @@ export async function ReviewsPanel({ subjectType, subjectId, back, scope, topics
       <p className={ui.sub} style={{ marginTop: 0 }}>The OS records conclusions by named reviewers with evidence. It never states that anything is compliant.</p>
       {rows.length === 0 ? <p className={r.empty}>No reviews recorded.</p> : (
         <ul className={r.timeline}>{rows.map(x => (
-          <li key={x.id}><span className={r.when} style={{ color: x.validUntil && x.validUntil < today ? "#b0432f" : undefined }}>{x.reviewedAt}</span>
+          <li key={x.id}><span className={r.when} style={{ color: x.validUntil && x.validUntil < today ? "var(--critical)" : undefined }}>{x.reviewedAt}</span>
             <span><b>{REVIEW_TOPICS[x.topic]}{x.jurisdiction ? ` (${x.jurisdiction})` : ""}: {REVIEW_CONCLUSIONS[x.conclusion]}</b>
               <span className={ui.sub}>{x.reviewer}, {x.reviewerRole} · {x.evidence}{x.conditions ? ` · Conditions: ${x.conditions}` : ""}{x.validUntil ? ` · valid until ${x.validUntil}` : ""}</span></span></li>
         ))}</ul>
@@ -53,7 +53,7 @@ export async function KycPanel({ contactId, orgId, back }: { contactId?: string 
       <p className={ui.sub} style={{ marginTop: 0 }}>Specialist providers run the checks; the OS keeps the status and provider reference, not identity documents.</p>
       {rows.length === 0 ? <p className={r.empty}>No checks recorded.</p> : (
         <ul className={r.timeline}>{rows.map(k => (
-          <li key={k.id}><span className={r.when} style={{ color: k.status === "flagged" || k.status === "failed" || (k.expiresAt && k.expiresAt < today) ? "#b0432f" : undefined }}>{KYC_STATUSES[k.status]}</span>
+          <li key={k.id}><span className={r.when} style={{ color: k.status === "flagged" || k.status === "failed" || (k.expiresAt && k.expiresAt < today) ? "var(--critical)" : undefined }}>{KYC_STATUSES[k.status]}</span>
             <span>{KYC_CHECKS[k.checkType]}{k.provider ? ` · ${k.provider}` : ""}{k.providerRef ? ` · ref ${k.providerRef}` : ""}{k.expiresAt ? ` · until ${k.expiresAt}` : ""}</span></li>
         ))}</ul>
       )}

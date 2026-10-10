@@ -142,7 +142,7 @@ async function ListsTab({ owner }: { owner: boolean }) {
           <tbody>
             {sources.map(s => (
               <tr key={s.key}>
-                <td><a className={ui.primary} href={s.url} target="_blank" rel="noreferrer">{s.name}</a>{s.lastError && <span className={ui.sub} style={{ color: "#b0432f" }}>{s.lastError}</span>}</td>
+                <td><a className={ui.primary} href={s.url} target="_blank" rel="noreferrer">{s.name}</a>{s.lastError && <span className={ui.sub} style={{ color: "var(--critical)" }}>{s.lastError}</span>}</td>
                 <td className={ui.num}>{s.lastCount ?? "—"}</td>
                 <td className={ui.num}>{tracked[s.key] ?? 0}</td>
                 <td className={ui.num}>{s.lastNew ?? "—"}</td>

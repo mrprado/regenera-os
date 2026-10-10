@@ -57,7 +57,7 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
                       <td>{CAPITAL_TYPES[p.capitalType]}</td>
                       <td>{p.ticketMin || p.ticketMax ? `${compactMoney(p.ticketMin, p.currency ?? "USD")}–${compactMoney(p.ticketMax, p.currency ?? "USD")}` : <span className={ui.chipMuted}>Unknown</span>}</td>
                       <td>{RELATIONSHIP_STRENGTH[p.relationshipStrength]}</td>
-                      <td>{p.nextAction ? <>{p.nextAction}<span className={ui.sub} style={{ color: p.nextActionDate && p.nextActionDate < today ? "#b0432f" : undefined }}>{p.nextActionDate}</span></> : "—"}</td>
+                      <td>{p.nextAction ? <>{p.nextAction}<span className={ui.sub} style={{ color: p.nextActionDate && p.nextActionDate < today ? "var(--critical)" : undefined }}>{p.nextActionDate}</span></> : "—"}</td>
                       <td>{p.lastVerifiedAt ? p.lastVerifiedAt.slice(0, 10) : <span className={ui.chipMuted}>Never</span>}</td>
                     </tr>
                   ))}</tbody>
@@ -165,7 +165,7 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
                       <td>{INTRO_STATUSES[i.status]}</td>
                       <td>{i.reviewStatus === "review_required" ? (
                         <>
-                          <b style={{ color: "#b0432f" }}>Compensation / regulatory review required</b>
+                          <b style={{ color: "var(--critical)" }}>Compensation / regulatory review required</b>
                           {owner && <form action={introductionReviewedAction} className={styles.inline}><input type="hidden" name="id" value={i.id} /><input name="notes" placeholder="Reviewer and conclusion" required /><button className={ui.miniBtn} type="submit">Record review</button></form>}
                         </>
                       ) : i.reviewStatus === "reviewed" ? "Reviewed" : "Not required"}</td>

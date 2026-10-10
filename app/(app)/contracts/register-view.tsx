@@ -34,7 +34,7 @@ export default async function RegisterView({ scope, sp }: { scope: Scope; sp: Re
                   <td>{LIFECYCLE[c.lifecycle]}{c.lockedAt ? <span className={ui.sub}>Executed, locked</span> : null}</td>
                   <td>{project ?? "—"}</td>
                   <td>{c.governingLaw ?? "—"}</td>
-                  <td>{c.effectiveDate ?? "—"}<span className={ui.sub} style={{ color: c.endDate && c.endDate < today ? "#b0432f" : undefined }}>{c.endDate ?? ""}</span></td>
+                  <td>{c.effectiveDate ?? "—"}<span className={ui.sub} style={{ color: c.endDate && c.endDate < today ? "var(--critical)" : undefined }}>{c.endDate ?? ""}</span></td>
                   <td>{compactMoney(c.value, c.terms.currency)}</td>
                 </tr>
               ))}</tbody>

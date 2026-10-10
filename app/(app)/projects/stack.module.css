@@ -10,7 +10,7 @@
 .seg span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg b { font-variant-numeric: tabular-nums; }
 .seg[data-assumption="true"] { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 4px, transparent 4px 9px) !important; }
-.gapSeg { display: flex; align-items: center; justify-content: center; min-height: 18px; border: 2px dashed #c8553d; color: #c8553d; font-size: 14px; font-weight: 700; background: rgba(200,85,61,.06); }
+.gapSeg { display: flex; align-items: center; justify-content: center; min-height: 18px; border: 2px dashed var(--critical); color: var(--critical); font-size: 14px; font-weight: 700; background: rgba(200,85,61,.06); }
 .axis { margin: 0; font-size: 12px; color: var(--text-muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
 .legend span { display: inline-flex; align-items: center; gap: 4px; }
@@ -21,7 +21,7 @@
 .metrics span { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--eyebrow); }
 .metrics b { font-size: 16px; color: var(--heading); font-variant-numeric: tabular-nums; }
 .metrics small { font-size: 14px; color: var(--text-muted); }
-.warnings { margin: 12px 0 0; padding-left: 18px; font-size: 14px; color: #8a4a2a; display: grid; gap: 4px; }
+.warnings { margin: 12px 0 0; padding-left: 18px; font-size: 14px; color: var(--copper-ink); display: grid; gap: 4px; }
 .fine { margin: 10px 0 0; font-size: 14px; color: var(--text-muted); }
 .layers { display: grid; gap: 6px; }
 .layer { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }

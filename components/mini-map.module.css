@@ -1,12 +1,12 @@
 .wrap { display: grid; gap: 0; }
-.map { position: relative; overflow: hidden; background: #e8e8e6; cursor: grab; touch-action: none; user-select: none; }
+.map { position: relative; overflow: hidden; background: var(--line); cursor: grab; touch-action: none; user-select: none; }
 .map:active { cursor: grabbing; }
 .tile { position: absolute; left: 0; top: 0; width: 256px; height: 256px; pointer-events: none; filter: sepia(.3) hue-rotate(115deg) saturate(.5) brightness(.8); }
 .dot, .cluster { position: absolute; left: 0; top: 0; border: 0; padding: 0; cursor: pointer; transition: box-shadow var(--t-fast) var(--ease); }
-.dot { width: 11px; height: 11px; border-radius: 50%; background: var(--copper); box-shadow: 0 0 0 2px #fff; }
+.dot { width: 11px; height: 11px; border-radius: 50%; background: var(--copper); box-shadow: 0 0 0 2px var(--surface); }
 .dot:hover, .dot.sel { background: var(--gold); box-shadow: 0 0 0 2px var(--forest-carbon), 0 0 0 6px rgba(211, 154, 52, .28); }
 .alert { background: var(--critical); }
-.cluster { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255, .9); border: 1px solid var(--copper); color: var(--volcanic); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cluster { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255, .9); border: 1px solid var(--copper); color: var(--heading); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cluster:hover { background: rgba(217,166,28, .4); }
 .zoom { position: absolute; right: 8px; top: 8px; display: grid; }
 .zoom button { width: 26px; height: 26px; border: 1px solid rgba(255, 255, 255, .14); background: var(--glass-dark); color: var(--text-on-dark); font-size: 15px; line-height: 1; cursor: pointer; }
@@ -16,7 +16,7 @@
 .preview { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 10px 12px; background: var(--volcanic); color: var(--text-on-dark); animation: rise var(--t-panel) var(--ease); }
 .preview b { display: block; font-size: 14px; font-weight: 600; }
 .preview span { display: block; font-size: 14px; color: var(--text-on-dark-2); }
-.preview .flag { color: #e0897f; }
+.preview .flag { color: var(--critical); }
 .actions { display: flex; gap: 12px; align-items: center; font-size: 14px; white-space: nowrap; }
 .actions a { color: var(--gold); }
 .actions button { background: none; border: 0; color: var(--text-on-dark-2); font-size: 16px; cursor: pointer; }
@@ -26,8 +26,8 @@
 .filters button { font: inherit; font-size: 14px; padding: 3px 9px; border: 1px solid var(--line); background: var(--paper); color: var(--text-2); border-radius: 4px; cursor: pointer; }
 .filters button[aria-pressed="true"] { color: var(--text); border-color: var(--text-2); }
 .filters button:focus-visible, .dot:focus-visible, .cluster:focus-visible, .zoom button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.dot[data-kind="prospect"] { background: var(--steel, #728087); }
-.dot[data-kind="partner"] { background: var(--lichen, #7b887e); }
+.dot[data-kind="prospect"] { background: var(--steel); }
+.dot[data-kind="partner"] { background: var(--lichen); }
 .dot[data-quality="approximate"] { background: transparent; box-shadow: inset 0 0 0 2px var(--text-on-dark), 0 0 0 1px rgba(16,32,28, .85); }
 .dot[data-quality="country"] { background: transparent; border: 1.5px dashed var(--text-on-dark-2); box-shadow: none; }
 .missing { margin: 6px 0 0; font-size: 14px; color: var(--text-2); }
@@ -35,8 +35,11 @@
 /* Light basemap (2026-10-02): marks and labels in Graphite Moss so they read on light grey. */
 .attr { color: var(--text-2) !important; background: rgba(255, 255, 255, .7); }
 .empty { color: var(--text-2); }
-.dot[data-quality="approximate"] { box-shadow: inset 0 0 0 2px var(--volcanic), 0 0 0 1px #fff; }
+.dot[data-quality="approximate"] { box-shadow: inset 0 0 0 2px var(--volcanic), 0 0 0 1px var(--surface); }
 .dot[data-quality="country"] { border-color: var(--volcanic); }
 
 /* Terrain orientation band, with recorded location quality retained. */
 .map{background:var(--dashboard-map-water);border-radius:8px}.tile{filter:saturate(.62) brightness(1.04)}.preview{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:0 0 8px 8px;padding:16px}.preview span{color:var(--text-2)}.actions a{color:var(--action)}.actions button{color:var(--text-2)}.zoom button{background:var(--surface);color:var(--text);border-color:var(--line);height:32px;width:32px}.filters button{min-height:32px;border-radius:6px}.filters button[aria-pressed=true]{background:var(--surface-selected);border-color:var(--lichen)}.dot:hover,.dot.sel{background:var(--copper);box-shadow:0 0 0 3px var(--surface),0 0 0 7px rgba(37,45,39,.2)}.attr{font-size:12px}.empty{padding:24px;text-align:center;background:rgba(255,255,255,.7);margin:24px;border-radius:8px}
+/* Phase 26: terrain tiles dimmed in dark mode so markers keep their contrast. */
+:global(:root[data-theme="dark"]) .tile{filter:saturate(.55) brightness(.62)}
+@media (prefers-color-scheme: dark){:global(:root[data-theme="system"]) .tile{filter:saturate(.55) brightness(.62)}}
