@@ -6,7 +6,9 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { changeRequests, clientRequests, contacts, deals, deliveryTemplates, engagementDeliverables, engagements, offerProposals, offerProposalVersions, organizations, partnerships, relationshipIntroductions, services } from "@/db/schema";
+import { changeRequests, clientRequests, contacts, deals, deliveryTemplates, engagementDeliverables, engagements, fieldReviews, offerProposals, offerProposalVersions, organizations, partnerships, projects, relationshipIntroductions, services, stewardFindings } from "@/db/schema";
+import { decideFieldReview } from "@/lib/lifecycle/reviews";
+import { createFinding, FINDING_DIMENSIONS, setFindingStatus } from "@/lib/steward/findings";
 import { captureContact, createIntroduction, movePartnership, setIntroductionOutcome, setRelationshipStage, upsertPartnership } from "@/lib/lifecycle/network";
 import { addRole, removeRole } from "@/lib/lifecycle/relationships";
 import { completeEngagement } from "@/lib/lifecycle/closeout";
@@ -327,4 +329,40 @@ export async function completeEngagementAction(f: FormData) {
     }, email);
     return `Completed. Relationship review scheduled for ${r.reviewDue}.${r.unpaid.length ? ` ${r.unpaid.length} invoice(s) still unpaid: collection tasks created.` : ""}`;
   }, "Completed.");
+}
+
+// ---------- Phase 29E: field reviews and Steward findings ----------
+export async function fieldReviewAction(f: FormData) {
+  const id = zId.parse(f.get("reviewId"));
+  const decision = z.enum(["accepted", "rejected"]).parse(f.get("decision"));
+  await run("/intelligence/reviews", await withOsUser(me), async ({ email, scope }) => {
+    const [r] = await appDb().select().from(fieldReviews).where(and(eq(fieldReviews.id, id), mandateCondition(scope, fieldReviews.mandateId)));
+    if (!r) throw new Error("Review not found");
+    await decideFieldReview(appDb(), id, decision, str(f, "note", 500), email);
+  }, decision === "accepted" ? "Proposed value accepted, with its source." : "Current value kept.");
+}
+
+export async function createFindingAction(f: FormData) {
+  const projectId = zId.parse(f.get("projectId"));
+  await run(`/projects/${projectId}?tab=steward#findings`, await withOsUser(me), async ({ email, scope }) => {
+    const [p] = await appDb().select({ id: projects.id, mandateId: projects.mandateId }).from(projects).where(and(eq(projects.id, projectId), mandateCondition(scope, projects.mandateId)));
+    if (!p) throw new Error("Project not found");
+    await createFinding(appDb(), {
+      mandateId: p.mandateId, projectId, placeId: zId.safeParse(f.get("placeId")).data ?? null, dimension: z.enum(keys(FINDING_DIMENSIONS)).parse(f.get("dimension")),
+      subject: str(f, "subject", 300), scope: str(f, "scope", 300), evidence: str(f, "evidence", 2000), affectedParties: str(f, "affectedParties", 500),
+      uncertainty: z.enum(["low", "moderate", "high", "unknown"]).catch("unknown").parse(f.get("uncertainty")), implication: str(f, "implication", 2000), requiredAction: str(f, "requiredAction", 1000),
+      materiality: f.get("minor") === "on" ? "minor" : "material", owner: str(f, "owner", 200) || null, reviewDate: date(f, "reviewDate"),
+    }, email);
+  }, "Finding recorded; the action is a task for its owner and the finding stays on readiness until resolved.");
+}
+
+export async function findingStatusAction(f: FormData) {
+  const id = zId.parse(f.get("findingId"));
+  const status = z.enum(["monitoring", "resolved", "open"]).parse(f.get("status"));
+  const projectId = zId.safeParse(f.get("projectId")).data;
+  await run(projectId ? `/projects/${projectId}?tab=steward#findings` : "/steward", await withOsUser(me), async ({ email, scope }) => {
+    const [x] = await appDb().select({ id: stewardFindings.id }).from(stewardFindings).where(and(eq(stewardFindings.id, id), mandateCondition(scope, stewardFindings.mandateId)));
+    if (!x) throw new Error("Finding not found");
+    await setFindingStatus(appDb(), id, status, { evidence: str(f, "evidence", 2000), reviewDate: date(f, "reviewDate") }, email);
+  }, status === "resolved" ? "Resolved, with its evidence." : status === "monitoring" ? "Now monitored." : "Reopened.");
 }

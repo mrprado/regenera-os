@@ -2,7 +2,7 @@
 // has not passed, its listed geography includes the project's country (or is explicitly global), and when both sides
 // state a sector they agree. Then reasons: what is met and what is still unknown (eligibility, amount, applicant type).
 // Public-pipeline (Market) projects are excluded: matches are for Regenera's own projects.
-import { and, eq, inArray, isNull, ne, notLike, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, ne, notLike, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { capitalRequirements, events, fundingOpportunities, fundingProjectMatches, organizations, projectParties, projects, segments } from "@/db/schema";
 import { assessEligibility } from "@/lib/origination/eligibility";
@@ -73,6 +73,7 @@ export async function matchFundingToProjects(db: Db, mandateId: string, now = ne
 export async function projectFundingMatches(db: Db, projectId: string) {
   return db.select({ id: fundingProjectMatches.id, status: fundingProjectMatches.status, geography: fundingProjectMatches.geography, reasons: fundingProjectMatches.reasons, eligibility: fundingProjectMatches.eligibility, checks: fundingProjectMatches.checks, questions: fundingProjectMatches.questions, capitalStage: fundingProjectMatches.capitalStage, title: fundingOpportunities.title, funder: fundingOpportunities.funder, source: fundingOpportunities.source, url: fundingOpportunities.url, deadline: fundingOpportunities.deadline, oppId: fundingOpportunities.id })
     .from(fundingProjectMatches).innerJoin(fundingOpportunities, eq(fundingOpportunities.id, fundingProjectMatches.opportunityId))
-    .where(and(eq(fundingProjectMatches.projectId, projectId), ne(fundingProjectMatches.status, "dismissed")))
+    // A call whose deadline has passed is not current financing, even before the nightly job closes it.
+    .where(and(eq(fundingProjectMatches.projectId, projectId), ne(fundingProjectMatches.status, "dismissed"), ne(fundingOpportunities.status, "closed"), or(isNull(fundingOpportunities.deadline), gte(fundingOpportunities.deadline, new Date().toISOString().slice(0, 10)))))
     .orderBy(sql`case ${fundingProjectMatches.geography} when 'listed' then 0 else 1 end`, sql`coalesce(${fundingOpportunities.deadline}, '9999')`).limit(25);
 }

@@ -204,3 +204,33 @@ export const engagementCloseouts = sqliteTable("engagement_closeouts", {
   reviewDue: text("review_due"),
   ...stamps,
 }, t => [uniqueIndex("engagement_closeouts_engagement").on(t.engagementId)]);
+
+/** Conflicting values found by ingestion (phase 29E). The kept value is never overwritten automatically; a person
+ *  accepts the proposed value or keeps the current one. One pending row per record, field and proposed value. */
+export const fieldReviews = sqliteTable("field_reviews", {
+  id: id(), mandateId: text("mandate_id").notNull(),
+  entityType: text("entity_type", { enum: ["organization", "contact"] }).notNull(), entityId: text("entity_id").notNull(),
+  field: text("field").notNull(), currentValue: text("current_value").notNull(), currentSource: text("current_source").notNull().default(""),
+  proposedValue: text("proposed_value").notNull(), source: text("source").notNull(), sourceUrl: text("source_url"), confidence: text("confidence"),
+  retrievedAt: text("retrieved_at").notNull(),
+  status: text("status", { enum: ["pending", "accepted", "rejected"] }).notNull().default("pending"),
+  decidedBy: text("decided_by"), decidedAt: text("decided_at"), note: text("note").notNull().default(""),
+  pendingKey: text("pending_key"),
+  createdAt: text("created_at").notNull().default(now),
+}, t => [uniqueIndex("field_reviews_pending").on(t.pendingKey), index("field_reviews_mandate").on(t.mandateId, t.status)]);
+
+/** A material stewardship finding (phase 29E) that turns a value into a decision: evidence, who is affected, how
+ *  sure, what it means for the project, the action, an owner and a review date. Resolution needs evidence. */
+export const stewardFindings = sqliteTable("steward_findings", {
+  id: id(), mandateId: text("mandate_id").notNull(), placeId: text("place_id"), projectId: text("project_id"),
+  dimension: text("dimension").notNull(), subject: text("subject").notNull(), scope: text("scope").notNull().default(""),
+  evidence: text("evidence").notNull(), affectedParties: text("affected_parties").notNull().default(""),
+  uncertainty: text("uncertainty", { enum: ["low", "moderate", "high", "unknown"] }).notNull().default("unknown"),
+  implication: text("implication").notNull(), requiredAction: text("required_action").notNull(),
+  materiality: text("materiality", { enum: ["material", "minor"] }).notNull().default("material"),
+  owner: text("owner"), reviewDate: text("review_date"),
+  status: text("status", { enum: ["open", "monitoring", "resolved"] }).notNull().default("open"),
+  resolutionEvidence: text("resolution_evidence"), resolvedBy: text("resolved_by"), resolvedAt: text("resolved_at"),
+  taskId: text("task_id"),
+  ...stamps,
+}, t => [index("steward_findings_project").on(t.projectId, t.status), index("steward_findings_place").on(t.placeId)]);

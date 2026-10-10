@@ -8,6 +8,8 @@ import { currentAssessments, indicatorsFor, placesForProject, summariseBudget } 
 import { ASSESSMENT_DIMENSIONS, ASSESSMENT_STATUS, GEOMETRY_ACCURACY } from "@/lib/steward/vocab";
 import { createPlaceAction } from "../steward/actions";
 import s from "../steward/steward.module.css";
+import FindingsPanel from "./findings-panel";
+import { findingsFor } from "@/lib/steward/findings";
 
 const fmt = (n: number, c: string) => `${c} ${Math.round(n).toLocaleString("en-US")}`;
 
@@ -27,6 +29,7 @@ export default async function StewardTab({ project, scope }: { project: { id: st
       <h2>No Steward place for this project</h2>
       <p className={s.lede}>Steward keeps the long-term care of the place: who holds rights there, governed knowledge, the care plan, its budget and the outcomes measured. Create the place from this project: its recorded boundary is used, or its point is kept as a point (no area conclusions).</p>
       <form action={createPlaceAction}><input type="hidden" name="projectId" value={project.id} /><button className="btn btn--primary" type="submit">Create place from this project</button></form>
+      <div style={{ marginTop: 14 }}><FindingsPanel projectId={project.id} placeIds={[]} /></div>
       <p className={s.empty} style={{ marginTop: 10 }}>Communities recorded for this project: {comms.length}. Consent processes: {consents.length ? consents.map(c => CONSENT_STATUS[c.status as keyof typeof CONSENT_STATUS]).join(", ") : "none recorded"}.</p>
     </section>
   );
@@ -41,6 +44,7 @@ export default async function StewardTab({ project, scope }: { project: { id: st
   return (
     <>
       <p className={s.note}>Funding or capital readiness never implies consent or ecological clearance. Each place below states its own evidence and gaps.</p>
+      <FindingsPanel projectId={project.id} placeIds={ids} />
       {await Promise.all(places.map(async place => {
         const [assess, inds] = await Promise.all([currentAssessments(db, place.id), indicatorsFor(db, place.id)]);
         const myPlans = plans.filter(p => p.placeId === place.id), myBudgets = budgets.filter(b => b.placeId === place.id);
@@ -76,7 +80,9 @@ export async function StewardReadiness({ projectId, mandateId }: { projectId: st
     db.select().from(fundingAllocations).where(eq(fundingAllocations.mandateId, mandateId)),
     places.length ? db.select({ id: carePlans.id }).from(carePlans).where(inArray(carePlans.placeId, places.map(p => p.id))) : Promise.resolve([]),
   ]);
+  const open = (await findingsFor(db, projectId, places.map(p => p.id))).filter(f => f.status !== "resolved" && f.materiality === "material");
   const gaps = [
+    ...open.map(f => `Open stewardship finding: ${f.subject} (action: ${f.requiredAction}${f.owner ? `, ${f.owner}` : ""}${f.reviewDate ? `, review ${f.reviewDate}` : ""})`),
     !places.length ? "No Steward place: long-term care, rights holders and outcomes are not recorded." : null,
     places.length && !plans.length ? "No care plan." : null,
     places.length && !budgets.length ? "No stewardship budget: operating care costs are unknown." : null,

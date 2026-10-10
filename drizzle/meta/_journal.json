@@ -470,6 +470,13 @@
       "when": 1791655360569,
       "tag": "0066_military_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "6",
+      "when": 1791655744618,
+      "tag": "0067_oval_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { desc, inArray } from "drizzle-orm";
 import r from "@/components/record.module.css";
 import ui from "@/components/ui.module.css";
 import { deals, deliveryTemplates, offerProposals, offerProposalVersions, organizations, services } from "@/db/schema";
+import { withBase } from "@/lib/base-path";
 import { appDb, isOwner, type Scope } from "@/lib/db/scoped";
 import { ownerEconomics } from "@/lib/lifecycle/economics";
 import { versionTotal } from "@/lib/lifecycle/proposals";
@@ -24,6 +25,7 @@ export async function OwnerEconomics({ scope }: { scope: Scope & { mandateIds: s
         </table></div>
       )}
       <p className={ui.sub}>Each currency is reported on its own; nothing is converted or weighted by probability. Project capital requirements and investor commitments are never included. Hover a heading for its definition.</p>
+      {scope.mandateIds.some(m => isOwner(scope, m)) && <p className={ui.sub}>Owner exports (JSON, your workspaces only): <a href={withBase("/api/export/commercial")}>commercial lifecycle</a> · <a href={withBase("/api/export/relationships")}>relationships and partners</a>. Full nightly backups go to R2 and are restored with scripts/restore-backup.mjs into a separate database (docs/DEPLOY.md).</p>}
     </section>
   );
 }

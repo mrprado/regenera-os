@@ -1,6 +1,7 @@
 // Find-or-create for organizations and contacts with multi-source merge (SPEC section 12b):
 // match on strong IDs first, fill empty fields only, keep per-field provenance, flag conflicts.
 import { and, eq } from "drizzle-orm";
+import { queueFieldConflicts, type FieldConflict } from "@/lib/lifecycle/reviews";
 import { isErasedAddress } from "@/lib/privacy";
 import type { Db } from "@/db";
 import { contacts, organizations, type FieldSources } from "@/db/schema";
@@ -45,6 +46,7 @@ function fill<T extends Record<string, unknown>>(existing: T, incoming: Partial<
   const set: Partial<T> = {};
   const sources: FieldSources = { ...((existing.fieldSources as FieldSources) ?? {}) };
   const conflicts: string[] = [];
+  const items: FieldConflict[] = [];
   for (const f of fields) {
     const v = incoming[f];
     if (v === undefined || v === null || v === "") continue;
@@ -54,9 +56,10 @@ function fill<T extends Record<string, unknown>>(existing: T, incoming: Partial<
       sources[f] = { source: prov.source, at: now, ...(prov.confidence ? { confidence: prov.confidence } : {}), ...(prov.url ? { url: prov.url } : {}) };
     } else if (String(cur).toLowerCase() !== String(v).toLowerCase() && !["lat", "lng", "geoSource", "description"].includes(f)) {
       conflicts.push(`${f}: kept "${cur}" (${sources[f]?.source ?? "earlier"}), ${prov.source} says "${v}"`);
+      items.push({ field: f, current: String(cur), currentSource: sources[f]?.source ?? "earlier", proposed: String(v), source: prov.source, url: prov.url ?? null, confidence: prov.confidence ?? null, at: now });
     }
   }
-  return { set, sources, conflicts };
+  return { set, sources, conflicts, items };
 }
 
 export async function upsertOrganization(db: Db, mandateId: string, input: OrgInput, source: Source, prov: Provenance): Promise<MergeResult<typeof organizations.$inferSelect>> {
@@ -93,7 +96,9 @@ export async function upsertOrganization(db: Db, mandateId: string, input: OrgIn
     return { row, created: true, conflicts: [] };
   }
 
-  const { set, sources, conflicts } = fill(existing as unknown as Record<string, unknown>, clean as Record<string, unknown>, ORG_FIELDS as unknown as string[], prov, now);
+  const { set, sources, conflicts, items } = fill(existing as unknown as Record<string, unknown>, clean as Record<string, unknown>, ORG_FIELDS as unknown as string[], prov, now);
+  // Phase 29E: a disagreement with a value already held goes to the review queue; the held value is kept.
+  if (items.length) await queueFieldConflicts(db, existing.mandateId, "organization", existing.id, items);
   if (Object.keys(set).length > 0) {
     const [row] = await db.update(organizations).set({ ...set, fieldSources: sources, updatedAt: now }).where(eq(organizations.id, existing.id)).returning();
     return { row, created: false, conflicts };
@@ -156,7 +161,8 @@ export async function upsertContact(db: Db, mandateId: string, input: ContactInp
     return { row, created: true, conflicts: [] };
   }
 
-  const { set, sources, conflicts } = fill(existing as unknown as Record<string, unknown>, clean as Record<string, unknown>, CONTACT_FIELDS as unknown as string[], prov, now);
+  const { set, sources, conflicts, items } = fill(existing as unknown as Record<string, unknown>, clean as Record<string, unknown>, CONTACT_FIELDS as unknown as string[], prov, now);
+  if (items.length) await queueFieldConflicts(db, existing.mandateId, "contact", existing.id, items);
   // The status follows the email: a newly added address brings its status, and a provider-verified
   // result upgrades a weaker status on the same address.
   if ((set as Record<string, unknown>).emailLower && clean.emailStatus) {

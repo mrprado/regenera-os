@@ -174,3 +174,48 @@ Plan: [phase-29-commercial-lifecycle.md](phase-29-commercial-lifecycle.md). Appr
 - **Validation.**
   - `tests/integration/followthrough.test.ts` passes, covering detection, meeting follow-up and completion. Route guard passes. Typecheck is clean.
   - Local Today shows the new items, and the opportunity page shows the meeting panel.
+
+## 29E: intelligence connections, Steward decisions, export and recovery (done, 2026-10-10, not deployed)
+
+- **Conflicting extracted values.**
+  - The entity merge (`lib/crm/entities.ts`, used by scans, imports, Apollo and identity enrichment) fills empty fields only.
+  - A disagreement with a held value is now queued in `field_reviews` with both values, their sources, confidence and retrieval date. Only one pending row is kept per record, field and value.
+  - Under Intelligence → "Data conflicts to review" (`/intelligence/reviews`): accepting writes the value with its source and the reviewer; keeping leaves the record unchanged. Nothing is overwritten automatically.
+- **Expired funding.**
+  - Matching already refused closed or past-deadline calls, and a nightly job closes them.
+  - A project's match list now also hides a call whose deadline passed before that job ran.
+- **Steward findings** (`steward_findings`, project Steward tab → "Stewardship findings").
+  - Ten dimensions, among them water, ecology, land-use history, soil, community, heritage, traditional knowledge, custodianship and consent, management and monitoring.
+  - Each finding has evidence, affected parties, uncertainty (unknown by default), what it means for the project and the required action.
+  - A material finding needs an owner and a review date. It creates a task for the owner and is listed on the project's Stewardship readiness until it is resolved.
+  - Monitoring needs a review date; resolving needs evidence and closes the task.
+- **Owner exports.**
+  - `/api/export/commercial` and `/api/export/relationships` return JSON for the owner's workspaces only, and each download is audited. Linked from the Commercial overview.
+- **Backup and restore.**
+  - Nightly R2 backups include every schema table automatically, so all phase 29 tables are included.
+  - Restoring into a fresh, migrated database is tested in `tests/integration/intel.test.ts`; it passed in this run.
+  - The procedure (`scripts/restore-backup.mjs` into a separate database, never production) is in docs/DEPLOY.md.
+- **Migration** `0067_oval_liz_osborn.sql`, additive only: `field_reviews` and `steward_findings`.
+- **Validation.**
+  - `tests/integration/intelligence-review.test.ts` passes.
+  - Existing entity, scan, import, funding, origination, integrity, outreach, send, radar and intel (backup and restore) tests pass: 124 tests.
+  - Route guard and nav inventory pass. Typecheck is clean, and lint is clean on the changed files.
+  - Local pages render: Data conflicts, Steward findings, Stewardship readiness, the export link and the export download.
+
+## Scenario coverage (synthetic records only)
+
+| Scenario | Where it is proven |
+|---|---|
+| A: casual relationship | `tests/integration/network.test.ts` |
+| B: solar developer, intake to paid delivery | `tests/integration/lifecycle.test.ts` and `network.test.ts` (intake). Readiness, capital matches and introductions use their existing modules |
+| C: partnership | `tests/integration/network.test.ts` |
+| D: AI implementation | `tests/integration/client-portal.test.ts` (delivery, client acceptance, support change) |
+| E: failures and permissions | Covered across files: duplicate submission (`network`), duplicate payment (`lifecycle`), failed conversion kept (`network`), expired funding (`intelligence-review`), conflicting extraction (`intelligence-review`), client isolation (`client-portal`), restricted knowledge kept from AI (`steward-analyst`), changed proposal keeps accepted scope (`lifecycle`). A reply stopping a sequence is covered by the existing outreach tests |
+
+## Not done, and why
+
+- **Payment provider.** Not added: it is a paid service and needs owner approval. Payments are recorded by hand with evidence; provider ids are already deduplicated.
+- **E-signature provider.** Not added. Agreements are recorded with signed evidence.
+- **Tenant logo and accent in the client portal.** Not applied yet; the header shows the client's name.
+- **Live AI meeting extraction into the new follow-up form.** Not connected. The existing extraction in lib/flow/meetings remains, and the new form is manual.
+- **Client portal in a browser.** Not opened: it needs a client portal session, which was not created locally.
