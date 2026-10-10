@@ -5,8 +5,9 @@ import { exportPerson } from "@/lib/privacy";
 
 // Access request (GDPR art. 15 and equivalents): owners download everything held about one person as JSON.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getOsApiUser();
-  if (!user || !isOwner(user.scope)) return Response.json({ error: "Owner only" }, { status: 403 });
+  // A signed-in owner only: the read-only visitor session (no password) never downloads data.
+  const user = await getOsApiUser({ write: true });
+  if (!user || user.visitor || !isOwner(user.scope)) return Response.json({ error: "Owner only" }, { status: 403 });
   const { id } = await params;
   const data = await exportPerson(appDb(), user.scope.ownerOf, id, user.email);
   if (!data) return Response.json({ error: "Not found" }, { status: 404 });

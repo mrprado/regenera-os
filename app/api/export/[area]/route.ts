@@ -5,8 +5,9 @@ import { EXPORT_AREAS, exportArea, type ExportArea } from "@/lib/lifecycle/expor
 
 // Owner export (phase 29E): one area of the workspaces this person owns, as a JSON download. Audited.
 export async function GET(_request: Request, { params }: { params: Promise<{ area: string }> }) {
-  const user = await getOsApiUser();
-  if (!user || !isOwner(user.scope) || user.scope.kind !== "user") return Response.json({ error: "Owner only" }, { status: 403 });
+  // A signed-in owner only: the read-only visitor session (no password) never downloads data.
+  const user = await getOsApiUser({ write: true });
+  if (!user || user.visitor || !isOwner(user.scope) || user.scope.kind !== "user") return Response.json({ error: "Owner only" }, { status: 403 });
   const { area } = await params;
   if (!(area in EXPORT_AREAS)) return Response.json({ error: "Unknown export" }, { status: 404 });
   const data = await exportArea(appDb(), user.scope.ownerOf, area as ExportArea);
