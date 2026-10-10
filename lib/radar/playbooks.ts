@@ -60,10 +60,14 @@ export type Playbook = ReturnType<typeof buildPlaybook>;
 
 export function buildPlaybook(s: Segment, region?: string) {
   const titles = uniqueTitles([...(s.titles ?? []), ...(((s.apolloFilters as { person_titles?: string[] }).person_titles) ?? [])])
-    .map(t => t.replace(/\b\w/g, c => c.toUpperCase())).slice(0, 6);
-  const sectorTerms = [...new Set(s.sectors.flatMap(k => SECTOR_TERMS[k] ?? []))].slice(0, 5);
+    // Capitalise words, not letters after an apostrophe ("Mayor's Office", never "Mayor'S Office").
+    .map(t => t.replace(/(^|[\s/-])(\w)/g, (_, sep: string, c: string) => sep + c.toUpperCase())).slice(0, 6);
+  // One term from each sector before a second from any, so a multi-sector audience is not searched on energy alone.
+  const bySector = s.sectors.map(k => SECTOR_TERMS[k] ?? []);
+  const sectorTerms = [...new Set(Array.from({ length: Math.max(0, ...bySector.map(t => t.length)) }, (_, i) => bySector.map(t => t[i]).filter(Boolean)).flat())].slice(0, 5);
   const practiceTerms = [...new Set(s.practices.flatMap(k => PRACTICE_TERMS[k] ?? []))].slice(0, 3);
-  const topics = [...new Set([...sectorTerms, ...practiceTerms])].slice(0, 6);
+  // Investors are found by how they invest (impact investing, blended finance, real assets) before sector words.
+  const topics = [...new Set(s.group === "capital" ? [...practiceTerms, ...sectorTerms] : [...sectorTerms, ...practiceTerms])].slice(0, 6);
   const companyTerms = companyTermsFor(s.key);
   const places = region ? REGIONS[region] ?? [] : [];
   const where = places.length ? ` ${or(places)}` : "";
