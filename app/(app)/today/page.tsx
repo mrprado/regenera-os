@@ -126,13 +126,13 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
 
 // The daily loop (phase 24), each step opening the work area that owns it (October 2026 sidebar).
 const SHORTCUTS = [
-  { label: "1 · Find", body: "Discover: the ranked opportunity queue and funding calls.", href: "/overview/discover" },
-  { label: "2 · Qualify", body: "Projects: integrity, readiness and scope before contact.", href: "/overview/projects" },
-  { label: "3 · Reach", body: "Network: decision makers, outreach drafts, replies.", href: "/overview/network" },
-  { label: "4 · Win", body: "Engage: proposals, terms and contracts.", href: "/overview/engage" },
-  { label: "5 · Deliver", body: "Workflows: playbooks and documents.", href: "/overview/workflows" },
-  { label: "6 · Capital", body: "Capital: needs, partners, introductions, applications.", href: "/overview/capital" },
-  { label: "7 · Steward", body: "Steward: obligations and impact records.", href: "/overview/steward" },
+  { label: "1 · Discover", body: "The ranked opportunity queue and funding calls.", href: "/overview/discover" },
+  { label: "2 · Projects", body: "Integrity, readiness and scope before contact.", href: "/overview/projects" },
+  { label: "3 · Network", body: "Decision makers, outreach drafts, replies.", href: "/overview/network" },
+  { label: "4 · Engage", body: "Proposals, terms and contracts.", href: "/overview/engage" },
+  { label: "5 · Workflows", body: "Playbooks and documents.", href: "/overview/workflows" },
+  { label: "6 · Capital", body: "Needs, partners, introductions, applications.", href: "/overview/capital" },
+  { label: "7 · Steward", body: "Obligations and impact records.", href: "/overview/steward" },
 ];
 // Decision dimensions, not measured results: no scores or totals are shown or implied.
 const LENS = [

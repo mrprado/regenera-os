@@ -180,6 +180,7 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
                 <form action={addIntroductionAction} className={styles.stack}>
                   <input type="hidden" name="back" value="/capital?tab=introductions" />
                   <label>Introducer<select name="fromContactId" required defaultValue=""><option value="" disabled>Choose</option>{people.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                  <p className={ui.sub}>Introduced to: choose a person, an organization or both (at least one).</p>
                   <label>To (person)<select name="toContactId" defaultValue=""><option value="">None</option>{people.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                   <label>To (organization)<select name="toOrgId" defaultValue=""><option value="">None</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
                   <label>For project (optional)<select name="projectId" defaultValue=""><option value="">None</option>{projs.map(p => <option key={p.id} value={p.id} disabled={isBlocked(p.state)}>{p.name}{isBlocked(p.state) ? ` (blocked: ${p.state!.replace(/_/g, " ")})` : p.state ? "" : " (not screened)"}</option>)}</select></label>

@@ -41,7 +41,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
               <label>Decision<select name="status" defaultValue="approved"><option value="approved">Approve</option><option value="approved_conditions">Approve with conditions</option><option value="rejected">Reject</option><option value="withdrawn">Withdraw (requester)</option></select></label>
               <label>Rationale<input name="rationale" /></label>
               <label>Conditions<input name="conditions" /></label>
-              <div className={f.full}><button className="btn btn-primary" type="submit">Record decision</button></div>
+              <div className={f.full}><button className="btn btn--primary" type="submit">Record decision</button></div>
             </form>
           ) : <p className={ui.sub}>{a.decidedBy} · {day(a.decidedAt)}: {a.rationale}{a.conditions ? ` · conditions: ${a.conditions}` : ""}</p>}
         </section>

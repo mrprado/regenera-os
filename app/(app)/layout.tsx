@@ -16,6 +16,7 @@ import { SidebarNav } from "./sidebar";
 import styles from "./shell.module.css";
 import WorkspaceTrail from './workspace-trail';
 import ErrorReporter from "@/components/error-reporter";
+import FormGuard from "@/components/form-guard";
 import { currentOsUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         <div className={styles.headerSlot}>
           <WorkspaceTrail user={navUser}/>
           {mandateOptions.length > 1 && <MandateSwitcher options={mandateOptions} current={focus} />}
-          <ErrorReporter />
+          <ErrorReporter /><FormGuard viewOnly={!!user.visitor || user.scope.userType === "read_only"} />
         </div>
         {/* Ask the OS lives in the sidebar above Settings; the header keeps the notification bell and the avatar menu. */}
         <div className={styles.account}>

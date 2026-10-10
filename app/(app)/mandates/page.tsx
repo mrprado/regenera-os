@@ -134,7 +134,7 @@ function Builder({ type }: { type: MandateType }) {
         <label className={f.full}>Compliance requirements<textarea name="complianceRequirements" placeholder="Jurisdictions, recipient types, securities / broker considerations, consent basis" /></label>
         <label className={f.full}>Legal restrictions<textarea name="legalRestrictions" /></label>
         <label className={f.full}>Next action<input name="nextAction" /></label>
-        <div className={f.full}><button className="btn btn-primary" type="submit">Create mandate</button> <Link href="/mandates" className={ui.clear}>Cancel</Link></div>
+        <div className={f.full}><button className="btn btn--primary" type="submit">Create mandate</button> <Link href="/mandates" className={ui.clear}>Cancel</Link></div>
       </form>
     </section>
   );

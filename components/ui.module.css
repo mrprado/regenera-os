@@ -47,7 +47,7 @@
 
 .read { font-size: 14px; line-height: 1.5; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 12px; margin: 6px 0 0; }
 .rowActions { display: flex; gap: 6px; flex-wrap: wrap; }
-.miniBtn { display: inline-flex; align-items: center; height: 26px; padding: 0 9px; border-radius: var(--radius-control); border: 1px solid var(--ash); background: var(--chalk); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--heading); transition: border-color var(--t-fast) var(--ease); }
+.miniBtn { display: inline-flex; align-items: center; min-height: 32px; height: auto; padding: 0 9px; border-radius: var(--radius-control); border: 1px solid var(--ash); background: var(--chalk); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--heading); transition: border-color var(--t-fast) var(--ease); }
 .miniBtn:hover { border-color: var(--text-3); }
 .miniPrimary { background: var(--volcanic); border-color: var(--volcanic); color: #fff; }
 

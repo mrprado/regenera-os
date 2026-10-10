@@ -60,7 +60,7 @@ export default async function PursuitPage({ params, searchParams }: { params: Pr
               <label>Risks (comma-separated)<textarea name="risks" defaultValue={p.risks.join(", ")} /></label>
               <label>Competitors<textarea name="competitors" defaultValue={p.competitors.join(", ")} /></label>
               <label className={f.full}>Commercial structure<input name="commercialStructure" defaultValue={p.commercialStructure} /></label>
-              <div className={f.full}><button className="btn btn-primary" type="submit">Save</button></div>
+              <div className={f.full}><button className="btn btn--primary" type="submit">Save</button></div>
             </form>
             <h3 className={f.kicker} style={{ marginTop: 18 }}>History</h3>
             {p.stageHistory.slice().reverse().map((h, i) => <p key={i} className={ui.sub}>{day(h.at)} · {label(h.from) || "—"} → {label(h.to)} · {h.by}: {h.reason}{h.evidence ? ` (evidence: ${h.evidence})` : ""}</p>)}
@@ -92,7 +92,7 @@ export default async function PursuitPage({ params, searchParams }: { params: Pr
             <input type="hidden" name="id" value={p.id} />
             <label>Decision<select name="decision" defaultValue="conditional_go">{Object.entries(BID_DECISIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
             <label>Rationale and evidence (required)<textarea name="rationale" /></label>
-            <div><button className="btn btn-primary" type="submit">Record decision</button></div>
+            <div><button className="btn btn--primary" type="submit">Record decision</button></div>
           </form>
         </>
       )}
@@ -125,7 +125,7 @@ export default async function PursuitPage({ params, searchParams }: { params: Pr
               <label>Value (final)<input name="value" /></label>
               <label className={f.full}>Why (required)<textarea name="reason" /></label>
               {["competitor", "pricing", "timing", "relationship", "technical", "financial", "risk", "clientFeedback", "lessons", "followUp"].map(k => <label key={k}>{label(k)}<input name={k} /></label>)}
-              <div className={f.full}><button className="btn btn-primary" type="submit">Record outcome</button></div>
+              <div className={f.full}><button className="btn btn--primary" type="submit">Record outcome</button></div>
             </form>
           )}
           <p className={ui.sub} style={{ marginTop: 10 }}>Outcomes feed institutional learning: which criteria, signals and sources preceded wins and losses. No statistic is reported until the sample is large enough to mean something.</p>

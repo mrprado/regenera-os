@@ -12,12 +12,13 @@ import { DECISION_STATE_LABEL } from "@/lib/integrity/policy";
 import { serviceName } from "@/lib/origination/labels";
 import type { Hub } from "@/lib/hubs";
 
+// The daily loop, named after the sidebar area that owns each step (one vocabulary; UX audit 2026-10-10).
 export const LOOP_STEPS = [
-  { key: "find", label: "Find", question: "What new projects, funding calls and needs appeared?" },
-  { key: "qualify", label: "Qualify", question: "Is it sound, ready and worth our time?" },
-  { key: "reach", label: "Reach", question: "Who decides, and how do we reach them?" },
-  { key: "win", label: "Win", question: "What do we propose, at what price, and is it signed?" },
-  { key: "deliver", label: "Deliver", question: "What is due, by whom, for which client?" },
+  { key: "find", label: "Discover", question: "What new projects, funding calls and needs appeared?" },
+  { key: "qualify", label: "Projects", question: "Is it sound, ready and worth our time?" },
+  { key: "reach", label: "Network", question: "Who decides, and how do we reach them?" },
+  { key: "win", label: "Engage", question: "What do we propose, at what price, and is it signed?" },
+  { key: "deliver", label: "Workflows", question: "What is due, by whom, for which client?" },
   { key: "capital", label: "Capital", question: "Which capital gets this project financed?" },
   { key: "steward", label: "Steward", question: "Is it doing what it promised?" },
 ] as const;

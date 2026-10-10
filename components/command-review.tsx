@@ -1,4 +1,6 @@
 "use client";
+// Command record review drawer (ChatGPT, 2026-10-09): a workspace link opens its record page in a right-side dialog with
+// the shell chrome hidden, so the existing guard, data, tabs and server actions apply unchanged.
 import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
 import { ArrowUpRight, X } from 'lucide-react';
 import { reviewTarget } from '@/lib/review-target';

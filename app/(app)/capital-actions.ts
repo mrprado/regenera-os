@@ -277,6 +277,8 @@ export async function addIntroductionAction(formData: FormData) {
     if (!c) throw new Error("Introducer not found");
     // Sanctions screening runs before an introduction (phase 19): a possible or confirmed match blocks it until reviewed.
     const toOrg = zId.safeParse(formData.get("toOrgId")).data, toPerson = zId.safeParse(formData.get("toContactId")).data;
+    // An introduction needs someone to be introduced to; say so instead of recording an empty one (UX law 14).
+    if (!toOrg && !toPerson) { blocked = "Choose who is being introduced: a person, an organization or both. Nothing was recorded."; return; }
     // Integrity gate (phase 23): no introduction for a project whose decision is excluded or awaiting human review.
     try { await assertProjectCleared(appDb(), zId.safeParse(formData.get("projectId")).data, "Capital introduction"); } catch (e) { if (e instanceof IntegrityBlocked) { blocked = e.message; return; } throw e; }
     const parties: { entityType: "organization" | "person"; entityId: string; name: string }[] = [];

@@ -53,6 +53,7 @@ import FundingMatches from "../funding-matches";
 import ReadinessPanel from "../readiness-panel";
 import { currentDecision } from "@/lib/integrity/engine";
 import { DECISION_STATE_LABEL } from "@/lib/integrity/policy";
+import { nextStep } from "@/lib/projects/next-step";
 import IntegrityPanel from "../integrity-panel";
 import { archiveProjectAction } from "../../casework-actions";
 import { appDb, isOwner } from "@/lib/db/scoped";
@@ -88,6 +89,9 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const openCons = data.constraints.filter(c => c.status === "open" || c.status === "in_progress");
   const blockedDims = data.readiness.filter(x => x.status === "blocked");
   const knownDims = data.readiness.filter(x => x.status !== "unknown").length;
+  const next = nextStep({ id: p.id, stage: p.stage, integrity: integrity?.state ?? null, highConstraints: openCons.filter(c => c.severity === "critical" || c.severity === "high").length,
+    blockedReadiness: blockedDims.map(b => READINESS_DIMENSIONS[b.dimension] ?? b.dimension), openFundingMatches: data.funding.filter(f => f.m.status === "suggested").length,
+    sponsorContact: data.parties.some(x => x.party.role === "sponsor" && (x.party.orgId || x.party.contactId)), deals: data.deals, capitalNeeds: data.capital.requirements.length });
   const sponsor = data.parties.find(x => x.party.role === "sponsor");
   const developer = data.parties.find(x => x.party.role === "developer");
   const needs = tab === "partners" || tab === "contracts" ? await projectPickers(user.scope) : null;
@@ -131,6 +135,12 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       {tab === "overview" && (
         <div className={r.grid}>
           <div>
+            <section className={r.panel} aria-labelledby="next-step-h" style={{ borderLeft: "3px solid var(--gold)" }}>
+              <p className={r.panelTitle}><span id="next-step-h">Next step</span></p>
+              <p style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 600, color: "var(--heading)" }}>{next.title}</p>
+              <p className={ui.sub} style={{ margin: "0 0 12px" }}>{next.why}</p>
+              <Link className="btn btn--primary" href={next.href}>{next.action}</Link>
+            </section>
             <section className={r.panel}>
               <p className={r.panelTitle}>What needs attention</p>
               {blockedDims.length === 0 && openCons.length === 0 && knownDims === 0 ? (

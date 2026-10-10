@@ -59,14 +59,13 @@ export default async function StartPage() {
   return (
     <>
       <PageHeader title="Start here" actions={<Link className="btn btn--primary" href="/today">Go to Command</Link>} />
-      <p className={s.lede}>Regenera earns fees by finding regenerative projects that need help, proving they are sound, and getting them to capital. The OS runs that loop with you, in seven steps. Each step lives in one sidebar area, named under the step.</p>
+      <p className={s.lede}>Regenera earns fees by finding regenerative projects that need help, proving they are sound, and getting them to capital. The OS runs that loop with you, in seven steps. Each step is a sidebar area with the same name.</p>
       <ol className={s.loop}>
         {LOOP_STEPS.map((step, i) => {
           const d = STEPS[step.key];
           return (
             <li key={step.key} className={s.step}>
               <h2><span>{i + 1}</span> {step.label}</h2>
-              <p className={s.q}>In the sidebar: {AREA_LABEL[LOOP_TO_AREA[step.key] ?? step.key]}</p>
               <p className={s.q}>{step.question}</p>
               <p><b>The OS does:</b> {d.auto}</p>
               <p><b>You decide:</b> {d.you}</p>

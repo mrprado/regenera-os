@@ -73,7 +73,7 @@ async function Queue({ scope, entrance }: { scope: Scope; entrance: keyof typeof
         {Object.entries(ENTRANCES).map(([k, v]) => <Link key={k} className={ui.chip} style={k === entrance ? { fontWeight: 700 } : undefined} href={`/origination?entrance=${k}`}>{v}</Link>)}
         <form action={refreshOriginationAction}><input type="hidden" name="back" value={back} /><button className={ui.miniBtn} type="submit">Refresh queue</button></form>
       </div>
-      <p className={ui.sub}>How to use: open the top items, then <b>Qualify</b> (worth pursuing: it moves to Reach) or <b>Dismiss</b>. Projects blocked by integrity screening show why and offer no service.</p>
+      <p className={ui.sub}>How to use: open the top items, then <b>Qualify</b> (worth pursuing: it moves to Network, where the decision maker is found) or <b>Dismiss</b>. Projects blocked by integrity screening show why and offer no service.</p>
       {rows.length === 0 ? <p className={r.empty}>Nothing queued yet. The queue rebuilds every 3 hours from funding matches, projects, site screens, hypotheses and open deals; or refresh now.</p> : (
         <div className={ui.tableWrap}><table className={ui.table}>
           <thead><tr><th>Opportunity</th><th>What to offer</th><th className={ui.num}>Expected fee</th><th>Next action</th><th>Decide</th></tr></thead>
@@ -89,7 +89,7 @@ async function Queue({ scope, entrance }: { scope: Scope; entrance: keyof typeof
                 <td className={ui.num} title={x.valueBasis ?? ""}>{money(x.expectedValueUsd)}</td>
                 <td className={ui.wrap}>{href ? <Link href={href}>{x.nextAction ?? "Open"}</Link> : x.nextAction}{x.proposalId && <span className={ui.sub}><a href={`/api/documents/generated/${x.proposalId}`}>Proposal draft</a></span>}</td>
                 <td><div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                  {x.stage === "discovered" || x.stage === "verified" ? stageForm(x.id, "qualified", "Qualify", true) : null}
+                  {x.stage === "discovered" || x.stage === "verified" ? stageForm(x.id, "qualified", "Qualify") : null}
                   {!["lost", "won", "deferred"].includes(x.stage) && stageForm(x.id, "lost", "Dismiss")}
                   {owner && x.projectId && !blocked && !x.proposalId && <form action={proposeDiagnosticAction}><input type="hidden" name="projectId" value={x.projectId} /><input type="hidden" name="back" value={back} /><button className={ui.miniBtn} type="submit">Draft proposal</button></form>}
                   <details><summary className={ui.sub}>Stage</summary>

@@ -16,7 +16,7 @@ h1 { font-size: var(--fs-display); }
 h2 { font-size: var(--fs-section); letter-spacing: -.015em; }
 h3 { font-size: var(--fs-sub); line-height: 1.25; letter-spacing: -.01em; color: var(--heading); }
 
-.eyebrow { margin: 0 0 12px; font-size: 11px; line-height: 1.2; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; color: var(--eyebrow); }
+.eyebrow { margin: 0 0 12px; font-size:12px; line-height: 1.2; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; color: var(--eyebrow); }
 
 /* Controls: 5 px radius, sentence case. Primary = forest-carbon fill; secondary = hairline outline; tertiary = text. Gold is never a button. */
 .btn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: var(--radius-control); border: 1px solid var(--ash); background: var(--chalk); color: var(--text); font-size: 13px; font-weight: 500; letter-spacing: 0; cursor: pointer; transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
@@ -53,3 +53,10 @@ html[data-record-panel=true] [data-shell-header],html[data-record-panel=true] #w
 html[data-record-panel=true] [data-shell-content]{margin:0!important;padding:0!important;width:100%!important;max-width:none!important}
 html[data-record-panel=true] #main-content{padding:24px!important;max-width:none!important;margin:0!important;min-width:0}
 html[data-record-panel=true] body{overflow-x:hidden}
+
+/* Shared form states (components/form-guard.tsx; docs/ux-laws.md laws 6 and 14). */
+form[data-pending] button:not([type="button"]){opacity:.65;cursor:progress;pointer-events:none}
+form[data-pending] button:not([type="button"])::after{content:" …";}
+button[data-armed]{background:var(--copper-ink)!important;border-color:var(--copper-ink)!important;color:var(--action-text)!important}
+button[data-armed]::after{content:" · again to confirm"}
+.form-guard-note{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1100;margin:0;padding:12px 16px;background:var(--surface);color:var(--text-1);border:1px solid var(--line);border-left:3px solid var(--copper);border-radius:6px;box-shadow:var(--shadow-overlay);font-size:14px;max-width:calc(100vw - 32px)}

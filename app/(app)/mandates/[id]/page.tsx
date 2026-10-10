@@ -168,7 +168,7 @@ async function ClientQueue({ m, scope }: { m: M; scope: Scope }) {
           <p className={ui.sub}>{money(c.estValue)} est. ({c.estValueBasis ? "inference" : "not estimated"}) · window {c.windowStart ? `${day(c.windowStart)} → ${day(c.windowEnd)}` : "unknown"} · {c.metCount} criteria met, {c.unknownCount} unknown</p>
           <p className={ui.sub}>Why surfaced: {String(c.data.priorityWhy ?? "")} {c.fit.timing?.basis ?? ""}</p>
           <div className={s.respond}>{(Object.keys(CLIENT_RESPONSES) as ClientResponse[]).map(r => (
-            <form key={r} action={clientRespondAction}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="response" value={r} /><input type="hidden" name="back" value={`/mandates/${m.id}?tab=client`} /><button className={r === "approve" ? "btn btn-primary" : "btn"} type="submit">{CLIENT_RESPONSES[r].label}</button></form>
+            <form key={r} action={clientRespondAction}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="response" value={r} /><input type="hidden" name="back" value={`/mandates/${m.id}?tab=client`} /><button className={r === "approve" ? "btn btn--primary" : "btn"} type="submit">{CLIENT_RESPONSES[r].label}</button></form>
           ))}</div>
         </section>
       ))}
@@ -360,7 +360,7 @@ function Profile({ m }: { m: M }) {
         <label className={f.full}>Next action<input name="nextAction" defaultValue={m.nextAction} /></label>
         <label>Next action date<input type="date" name="nextActionDate" defaultValue={m.nextActionDate ?? ""} /></label>
         <label className={f.full}>Anonymized public line (no names; publication needs owner approval)<input name="publicLabel" defaultValue={m.publicLabel} placeholder="UTILITY SOLAR + BESS · U.S. · EPC PROCUREMENT · 2027" /></label>
-        <div className={f.full}><button className="btn btn-primary" type="submit">Save</button></div>
+        <div className={f.full}><button className="btn btn--primary" type="submit">Save</button></div>
       </form>
       <form action={approvePublicationAction} className={f.inline} style={{ marginTop: 10 }}><input type="hidden" name="id" value={m.id} /><span className={ui.sub}>Publication: {m.publishApproved ? "approved" : "not approved"}</span><button className="btn" type="submit" disabled={!m.publicLabel || m.publishApproved}>Approve anonymized line</button></form>
     </>
