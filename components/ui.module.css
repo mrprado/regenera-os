@@ -93,12 +93,3 @@ a.stat:hover b { color: var(--accent-ink); }
 /* Shared action and table roles */
 .miniPrimary{background:var(--action);border-color:var(--action);color:var(--action-text)}.miniPrimary:hover{background:var(--action-hover);border-color:var(--action-hover);color:var(--action-text)}
 .tabActive{color:var(--accent-ink)}.table th{background:var(--secondary-surface)}
-
-/* Shared grouping and filter feedback across all record modules. */
-.activeFilters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
-.activeFilters > .sub { flex-basis: 100%; }
-.activeFilters .chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
-.stats .stat { min-width: 0; }
-.stat b { white-space: normal; overflow-wrap: anywhere; }
-.filters, .tableWrap, .stats { border-radius: var(--radius-card); }
-.miniBtn:focus-visible, .tab:focus-visible, .stat:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }

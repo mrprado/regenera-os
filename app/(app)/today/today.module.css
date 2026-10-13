@@ -171,14 +171,3 @@ ol.briefList { list-style: decimal; padding-left: 20px; }
 
 /* Command view tabs: the active view (Today by default) is the green action colour. */
 .mode[aria-current="page"]{background:var(--action);border-color:var(--action);color:var(--action-text)}
-
-/* Seven-rule dashboard: metrics remain visible above decisions. */
-.summary { background: var(--surface); border-radius: var(--radius-card); margin-bottom: 8px; }
-.metricBasis { margin: 0 0 24px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
-.metric, .metric:first-child { padding: 20px; }
-.metricValue { overflow-wrap: anywhere; }
-.metricLabel { color: var(--text-1); }
-.todayPanel, .outcomes, .recent, .mapBand, .decisionList { border-radius: var(--radius-card); }
-.decisionAction { background: var(--action); border-color: var(--action); color: var(--action-text); }
-.decisionAction:hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--action-text); }
-@media (max-width: 560px) { .metric, .metric:first-child { padding: 16px; } }

@@ -40,7 +40,7 @@ describe("navigation inventory", () => {
   });
 
   it("the authorized redesign preserves work areas and task-focused primary ordering", () => {
-    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Dashboard", "Atlas", "Discover", "Projects", "Capital", "Network", "Intelligence", "Engage", "Workflows", "Steward"]);
+    expect(NAV.filter(g=>g.tier==='primary').map(g => g.label)).toEqual(["Command", "Atlas", "Discover", "Projects", "Capital", "Network", "Intelligence", "Engage", "Workflows", "Steward"]);
     // October 2026 redesign: ten work areas (plus Settings, with your profile in it); no section headings.
     expect([...new Set(NAV.map(g => g.section ?? ""))]).toEqual([""]);
     expect(SETTINGS_NAV.some(i => i.href === "/profile")).toBe(true);

@@ -9,7 +9,7 @@ export type NavSection = { label?: string; items: NavLeaf[] };
 export type NavGroup = { key: string; label: string; icon: string; href?: string; sections: NavSection[]; internal?: boolean; mega?: boolean; tier?: "primary" | "workspace"; description?: string; section?: string };
 
 const LEGACY_NAV: NavGroup[] = [
-  { key: "command", label: "Dashboard", icon: "house", href: "/today", sections: [] },
+  { key: "command", label: "Command", icon: "house", href: "/today", sections: [] },
   { key: "atlas", label: "Atlas", icon: "earth", href: "/map", sections: [] },
   {
     key: "mandates", label: "Mandates", icon: "target", href: "/overview/mandates", sections: [{ items: [
@@ -149,7 +149,7 @@ const LEGACY_NAV: NavGroup[] = [
 // Command, Atlas, Discover, Projects, Capital, Network, Intelligence, Engage, Workflows, Steward. Ask the OS sits above
 // Settings in the sidebar. URLs never change; every legacy and phase 23/24 destination is placed (tested by UNPLACED).
 const GROUPS:{key:string;label:string;icon:string;href:string;description:string}[]=[
- {key:'command',label:'Dashboard',icon:'house',href:'/today',description:'Decisions, approvals and commitments that need you today.'},
+ {key:'command',label:'Command',icon:'house',href:'/today',description:'Decisions, approvals and commitments that need you today.'},
  {key:'atlas',label:'Atlas',icon:'earth',href:'/map',description:'Place, project boundaries and sourced geospatial evidence.'},
  {key:'discover',label:'Discover',icon:'target',href:'/overview/discover',description:'Find opportunities against a project need or a capital mandate: the ranked opportunity queue, funding calls, signals and searches.'},
  {key:'projects',label:'Projects',icon:'landmark',href:'/overview/projects',description:'Qualify and advance assets: integrity screening, readiness, constraints, stage movement and specialist systems.'},
