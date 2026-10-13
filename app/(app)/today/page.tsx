@@ -36,7 +36,7 @@ import { serviceName } from "@/lib/origination/labels";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Command" };
+export const metadata = { title: "Dashboard" };
 
 const BUCKETS: { key: Bucket; label: string; empty: string }[] = [
   { key: "overdue", label: "Overdue", empty: "Nothing overdue." },
@@ -85,7 +85,7 @@ export default async function CommandPage({ searchParams }: { searchParams: Prom
   );
   return (
     <>
-      <header className={t.commandHead}><div><h1 className="sr-only">Command</h1><p className={t.commandContext}>{date}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
+      <header className={t.commandHead}><div><h1 className="sr-only">Dashboard</h1><p className={t.commandContext}>{date}</p></div><nav className={t.actions} aria-label="Quick actions"><Link className="btn btn--primary" href="/origination">Review the queue</Link><Link className="btn" href="/approvals">Approvals</Link><Link className="btn" href="/start">Start here</Link></nav></header>
       <Notice text={sp.notice} />
       <CommandReview>
       <Suspense fallback={<div className={t.mapSkeleton} aria-label="Loading global activity"/>}><CommandActivityMap context={deskContext} mapMode={mapMode}/></Suspense>
@@ -198,6 +198,16 @@ async function Desk({user, now, fullOpen, context, afterDecisions, view = "today
 
   return (
     <>
+      <section className={t.summary} aria-label="Key operating metrics">
+        <Metric label="Qualified fee pipeline" value={s.qualifiedPipeline.count ? compactMoney(s.qualifiedPipeline.value, "USD") : "None"}
+          sub={s.qualifiedPipeline.count ? `${s.qualifiedPipeline.count} opportunities${s.qualifiedPipeline.valued < s.qualifiedPipeline.count ? `, ${s.qualifiedPipeline.count - s.qualifiedPipeline.valued} without a fee estimate` : ""}${s.weighted ? ` · weighted ${compactMoney(s.weighted.value, "USD")} (${s.weighted.basis} with a probability)` : ""}` : "No opportunity is past first contact"}
+          def={s.qualifiedPipeline.definition} href="/deals?view=table" />
+        <Metric label="Interested replies" value={String(s.interestedReplies)} sub="Interested, questions and introductions not yet handled" def="Unhandled inbox replies classified interested, question or referral; excludes test records, out-of-office, bounces and unsubscribes. Replies not yet classified are listed under Conversations." href="/inbox" />
+        <Metric label="Proposals awaiting decision" value={String(s.proposals.count)} sub={`${s.proposals.count ? `${compactMoney(s.proposals.value, "USD")} in estimated fees · ` : ""}${s.proposals.contractsAwaiting} agreement${s.proposals.contractsAwaiting === 1 ? "" : "s"} awaiting signature`} def="Opportunities at the Proposal stage, plus agreements marked sent and not yet signed. Fees are Regenera's own (USD)." href="/deals?stage=proposal" />
+        <Metric label="Client commitments at risk" value={desk.projectCount === 0 && obl.due.length === 0 ? "Not assessed" : String(obl.due.filter(o => o.overdue).length + del.milestones.filter(m => m.red).length)}
+          sub={desk.projectCount === 0 && obl.due.length === 0 ? "No projects or contract obligations recorded yet" : "Overdue obligations and slipping milestones"} def="Contract obligations past due plus project milestones flagged red on the plan. With no projects or obligations recorded, risk is not assessed, not zero." href="/contracts?tab=obligations" />
+      </section>
+      <p className={t.metricBasis}>Current workspace records · refreshed {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: COMMAND_TZ }).format(now)} · Pacific time. Open a metric for its records; expand its definition for counting rules.</p>
       <section className={t.decisions} aria-labelledby="dec-h">
         <p className={r.panelTitle}><span id="dec-h">{view === "all" ? `All priorities (${totalPriorities})` : "Today: needs your decision"}</span>{view === "today" && <Link href="/today?map=all">All priorities ({totalPriorities})</Link>}</p>
         {decisions.length === 0 && pending.length === 0 ? <p className={r.empty}>Nothing overdue, due today or blocked. {desk.prospects.length === 0 ? <><Link href={`/scans?preset=${BUILT_IN_PRESETS[0].key}`}>Run a prospect scan</Link> to build the pipeline.</> : null}</p> : (
@@ -236,16 +246,8 @@ async function Desk({user, now, fullOpen, context, afterDecisions, view = "today
       </div>
 
       <details className={t.full} id="full-desk" open={fullOpen}>
-        <summary>Full desk: metrics, all priorities, conversations, opportunities, delivery, pipeline and system readiness{notReady.length ? ` (${notReady.length} readiness item${notReady.length === 1 ? "" : "s"} need attention)` : ""}</summary>
-      <section className={t.summary} aria-label="Summary">
-        <Metric label="Qualified fee pipeline" value={s.qualifiedPipeline.count ? compactMoney(s.qualifiedPipeline.value, "USD") : "None"}
-          sub={s.qualifiedPipeline.count ? `${s.qualifiedPipeline.count} opportunities${s.qualifiedPipeline.valued < s.qualifiedPipeline.count ? `, ${s.qualifiedPipeline.count - s.qualifiedPipeline.valued} without a fee estimate` : ""}${s.weighted ? ` · weighted ${compactMoney(s.weighted.value, "USD")} (${s.weighted.basis} with a probability)` : ""}` : "No opportunity is past first contact"}
-          def={s.qualifiedPipeline.definition} href="/deals?view=table" />
-        <Metric label="Interested replies" value={String(s.interestedReplies)} sub="Interested, questions and introductions not yet handled" def="Unhandled inbox replies classified interested, question or referral; excludes test records, out-of-office, bounces and unsubscribes. Replies not yet classified are listed under Conversations." href="/inbox" />
-        <Metric label="Proposals awaiting decision" value={String(s.proposals.count)} sub={`${s.proposals.count ? `${compactMoney(s.proposals.value, "USD")} in estimated fees · ` : ""}${s.proposals.contractsAwaiting} agreement${s.proposals.contractsAwaiting === 1 ? "" : "s"} awaiting signature`} def="Opportunities at the Proposal stage, plus agreements marked sent and not yet signed. Fees are Regenera's own (USD)." href="/deals?stage=proposal" />
-        <Metric label="Client commitments at risk" value={desk.projectCount === 0 && obl.due.length === 0 ? "Not assessed" : String(obl.due.filter(o => o.overdue).length + del.milestones.filter(m => m.red).length)}
-          sub={desk.projectCount === 0 && obl.due.length === 0 ? "No projects or contract obligations recorded yet" : "Overdue obligations and slipping milestones"} def="Contract obligations past due plus project milestones flagged red on the plan. With no projects or obligations recorded, risk is not assessed, not zero." href="/contracts?tab=obligations" />
-      </section>
+        <summary>Full desk: all priorities, conversations, opportunities, delivery, pipeline and system readiness{notReady.length ? ` (${notReady.length} readiness item${notReady.length === 1 ? "" : "s"} need attention)` : ""}</summary>
+
 
       <div className={t.main}>
         <section className={t.priorities} aria-labelledby="prio-h">
